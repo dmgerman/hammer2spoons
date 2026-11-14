@@ -12,6 +12,9 @@ It also attaches windows to number keys, so that a key brings that window forwar
 everything except the window you are working in; moves the pointer to the middle of a window
 or a screen; and captures a window as an image.
 
+All of these are in one menu, which one key opens and in which each runs when you press its
+letter. See /The window menu/ below.
+
 The undo history works like Emacs's winner-mode. It is a ring of past positions, with
 consecutive identical ones stored once. Each =undo= goes one position further back through
 the ring without removing anything from it, and =redo= returns the window to where it was
@@ -20,16 +23,20 @@ windows records an entry for each and takes two undos.
 
 * Installing
 
-The Spoon needs [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]], whose events report when the focus moves and when a
-window closes. Load that one first. The first time this runs, Hammerspoon 2 downloads both Spoons
-from this repository:
+The Spoon needs two others from this repository, loaded before it:
+
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]], whose events report when the focus moves and when a window closes.
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], which displays the window menu.
+
+The first time this runs, Hammerspoon 2 downloads all three:
 
 #+begin_src js
 hs.spoons.use("hs_windowfilter-gt", { source: "dmgerman/hammer2spoons" })
+hs.spoons.use("hs_menu-gt", { source: "dmgerman/hammer2spoons" })
 hs.spoons.use("hs_window-gt", { source: "dmgerman/hammer2spoons", start: true })
 #+end_src
 
-Without hs_windowfilter-gt, =start()= stops with a message that names it.
+Without either of the two, =start()= stops with a message that names the one missing.
 
 To keep a particular version, add =ref= with a tag or a commit. To get a newer version, call
 =hs.spoons.update("hs_window-gt")=.
@@ -47,6 +54,30 @@ hs.hotkey.bind(["⌘", "⌥", "⌃"], "z",     () => win.undo(),      null)
 
 Every method that takes a window takes it as its last argument and uses the focused window
 when it is omitted, so the calls above need no window.
+
+* The window menu
+
+=menuShow()= opens a menu of everything this Spoon does, on the screen you are working on.
+Each button has a letter beneath it: press the letter to run the button. Bind it to a key:
+
+#+begin_src js
+hs.hotkey.bind(["alt"], "w", () => win.menuShow(), null)
+#+end_src
+
+#+ATTR_HTML: :alt The window menu: thirty-four buttons, such as Undo, Maximize, Left half, Next screen and Isolate, each with an icon and its letter
+[[./images/window-menu.png]]
+
+A press closes the menu, except Undo and Redo, which you can press several times in a row.
+Thirds, Quadrants and Widths open submenus, which stay open. Swap with, Tile with and To screen
+close the menu and then show a chooser of the other windows, or of the other screens.
+
+The menu is also =win.menu=, so a menu of your own can include it as a submenu:
+
+#+begin_src js
+{ label: "Windows", key: "w", children: hs.spoons["hs_window-gt"].menu }
+#+end_src
+
+See [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] for how menus work.
 
 * Methods
 
@@ -120,9 +151,11 @@ report whether a window fills its screen's height or width.
 
 ** Screens
 
-*** windowToScreenMove(direction, win)
+*** windowToScreenMove(target, win)
 
-Move a window to the ="next"= or ="previous"= screen, keeping its place within the screen.
+Move a window to another screen, keeping its place within the screen. =target= is ="next"=,
+="previous"=, a screen, or nothing, which shows a chooser of the other screens and returns a
+promise.
 A window that comes back to a screen it has been on returns to where it was there, unless it
 has been resized since. Screens showing a fullscreen window are stepped over, since a window
 sent there would be behind the fullscreen one and never visible.
@@ -137,11 +170,13 @@ screen is among them.
 *** tileWith(other, win)
 
 Put two windows side by side on this window's screen: /other/ on the left half, this window
-on the right. Both windows are brought forward, and focus is returned to this window.
+on the right. Both windows are brought forward, and focus is returned to this window. Without
+/other/, a chooser of the other windows is shown, and the result is a promise.
 
 *** windowWithWindowSwap(other, win), windowWithPreviousSwap(win)
 
-Exchange two windows' positions and sizes, across screens as well as within one.
+Exchange two windows' positions and sizes, across screens as well as within one. Without
+/other/, a chooser of the other windows is shown, and the result is a promise.
 =windowWithPreviousSwap= uses the window behind this one.
 
 *** windowPrevious()
@@ -233,9 +268,46 @@ was captured. Needs the Screen Recording permission.
 
 ** start() and stop()
 
-=start()= subscribes to hs_windowfilter-gt and attaches the windows saved in
-=config.attachFile= again. =stop()= ends isolation, removes any pointer ring, releases the
+=start()= checks that hs_windowfilter-gt and hs_menu-gt are loaded, subscribes to
+hs_windowfilter-gt, and attaches the windows saved in =config.attachFile= again. =stop()= ends isolation, removes any pointer ring, releases the
 number keys without forgetting them, and unsubscribes.
+
+* With hs_interactive-gt
+
+This Spoon does not need [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]. If you use it, you can give each function a
+command name, so that it can be run from the command chooser and bound to a key by name. These
+are the names that follow the functions they call:
+
+#+begin_src js
+interactive.use("hs_window-gt", {
+    commands: (interactive, win) => {
+        const onWindow = (name, doc, fn) => interactive.define({
+            name: name,
+            doc: doc,
+            interactive: [{ name: "window", reader: interactive.readers.window.auto }],
+            fn: fn
+        })
+
+        onWindow("window-maximize", "Fill the screen with a window.", (w) => win.maximize(w))
+        onWindow("window-left-half", "Move a window to the left half of its screen.", (w) => win.leftHalf(w))
+        onWindow("window-right-half", "Move a window to the right half of its screen.", (w) => win.rightHalf(w))
+        onWindow("window-to-screen-move-next", "Move a window to the next screen.", (w) => win.windowToScreenMove("next", w))
+        onWindow("window-with-previous-swap", "Swap a window with the window behind it.", (w) => win.windowWithPreviousSwap(w))
+        onWindow("key-to-window-attach", "Attach a window to a number key.", (w) => win.keyToWindowAttach(w))
+
+        interactive.define({ name: "window-undo", doc: "Put a window back where it was.", fn: () => win.undo() })
+        interactive.define({ name: "window-previous", doc: "Focus the previous window.", fn: () => win.windowPrevious() })
+        interactive.define({ name: "window-menu-show", doc: "Show the window menu.", fn: () => win.menuShow() })
+    },
+    keys: [
+        [["alt"], "m", "window-maximize"],
+        [["alt"], "w", "window-menu-show"]
+    ]
+})
+#+end_src
+
+A command named after its function is the function's name in hyphenated words, beginning with
+=window-= when the name does not already say what it acts on.
 
 * Configuration
 
@@ -266,7 +338,7 @@ win.config.mouseHighlightColor = "#00FF00"
 
 * Requirements
 
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]], loaded before this Spoon.
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] and [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], loaded before this Spoon.
 - The Accessibility permission, which Hammerspoon 2 needs in any case to move windows.
 - The Screen Recording permission, for =screenshot()= only.
 

@@ -156,3 +156,30 @@ from them. The screenshots were deleted afterwards.
 Nothing specific to one machine was found. The defaults =attachFile=
 (=${hs.appinfo.configDir}/logs/window-keys.json=) and =screenshotDir= (=/tmp=) are general, but
 the readme must say what each is.
+
+* What was done
+
+Decided by the user and done on 2026-11-14:
+
+- Items 1 to 4: the advice on =HSWindow='s =frame= setter is removed, and the Spoon records its
+  own moves through =frameSet()=. Isolation, the previous window and forgetting closed windows
+  follow events from =hs_windowfilter-gt=, which is now required, and from =hs.screen=. No timer
+  polls.
+- Items 9 and 10: =hide()= before =destroy()= is removed, and the number-row key codes are built
+  from =hs.keycodes.map=.
+- Items 5 to 8 stay, each described in the code, and are listed in =hammer2spoons-ei6.28=.
+- Item 11: the sixteen functions are renamed, and =forgetClosedWindows()= is removed. The user's
+  =init.js=, =menus.js= and =hs_selectWindow-gt= call the new names, and the window commands in
+  =init.js= are renamed after the functions they call.
+- Items 12 to 17 are done.
+- Item 18: =init.js= stays one file, at the user's decision.
+- Checking =hs_windowfilter-gt='s records showed they are not ordered by use, as the old comments
+  claimed. The previous window and the walk of the pointer no longer rely on that order.
+- The window menu moved from the user's =menus.js= into the Spoon, as =menu= and =menuShow()=,
+  with =hs_menu-gt= required. Its buttons use =fn:=. The user decided that no published Spoon
+  requires =hs_interactive-gt=, so =tileWith()=, =windowWithWindowSwap()= and
+  =windowToScreenMove()= show a chooser themselves when not given the other window or the
+  screen. The user's "window-to-screen-move" command no longer sets the frame itself, so its
+  moves can be undone.
+- The readme was rewritten from the user's side, with three screenshots: isolation, the pointer
+  ring and the window menu. It suggests command definitions for users of =hs_interactive-gt=.

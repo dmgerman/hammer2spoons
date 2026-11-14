@@ -206,9 +206,11 @@ Two kinds of button do not take the default:
 * Example: a window menu
 
 A menu that places and moves the focused window, using
-[[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]. Each button
-calls one of its functions with =fn:=, so the menu does not need hs_interactive-gt. The menu's
-keys do not take the keyboard focus, so the focused window is still yours when a button runs.
+[[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]. That Spoon provides
+this menu ready to use, with =menuShow()=, and as =menu= to include in a menu of your own. The
+example shows how such a menu is written. Each button calls one of its functions with =fn:=, so
+the menu does not need hs_interactive-gt. The menu's keys do not take the keyboard focus, so the
+focused window is still yours when a button runs.
 
 #+begin_src js
 const menu = hs.spoons["hs_menu-gt"]
@@ -238,6 +240,8 @@ const windowMenu = {
         { label: "Next screen", icon: "symbol:rectangle.on.rectangle", key: "space", fn: () => win.windowToScreenMove("next") },
         { label: "Prev screen", icon: "symbol:rectangle.on.rectangle", key: "B", fn: () => win.windowToScreenMove("previous") },
         { label: "Swap behind", icon: "symbol:arrow.left.arrow.right", key: "S", fn: () => win.windowWithPreviousSwap() },
+        { label: "Swap with",   icon: "symbol:arrow.triangle.swap",  key: "x", fn: () => win.windowWithWindowSwap() },
+        { label: "Tile with",   icon: "symbol:rectangle.split.2x1",  key: "t", fn: () => win.tileWith() },
         { label: "To back",     icon: "symbol:square.on.square",     key: "0", fn: () => win.windowToBackSend() },
         { label: "Prev window", icon: "symbol:arrow.uturn.left",     key: "p", fn: () => win.windowPrevious() },
         { label: "Isolate",     icon: "symbol:moon.fill",            key: "I", fn: () => win.isolationToggle() },
@@ -250,8 +254,9 @@ hs.hotkey.bind(["alt"], "w", () => menu.onScreenShow(windowMenu, { name: "Window
 #+end_src
 
 Undo and Redo set =keepOpen: true=, so they can be pressed several times in a row; every other
-button closes the menu. A larger version of this menu, with buttons for moving the pointer and
-taking a screenshot:
+button closes the menu. Swap with and Tile with show a chooser of the other windows once the
+menu has closed. The menu hs_window-gt provides, which also has buttons for moving the pointer
+and taking a screenshot:
 
 #+ATTR_HTML: :alt A window menu of thirty buttons, such as Undo, Maximize, Left half, Next screen and Isolate, each with an SF Symbol and its letter
 [[./images/window-menu.png]]

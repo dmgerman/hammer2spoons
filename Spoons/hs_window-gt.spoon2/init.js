@@ -16,9 +16,10 @@
 // window was moved in between, and both positions go on the ring. Undo then returns to where
 // it was left, and undo again to where the last command had put it.
 //
-// The Spoon needs hs_windowfilter-gt, and does not load it itself: the user's configuration
-// loads hs_windowfilter-gt first. Its events report which window was focused before the
-// current one, when a window closes, and when the isolation panels have to be redrawn.
+// The Spoon needs hs_windowfilter-gt and hs_menu-gt, and loads neither itself: the user's
+// configuration loads them first. hs_windowfilter-gt's events report which window was
+// focused before the current one, when a window closes, and when the isolation panels have
+// to be redrawn. hs_menu-gt displays the window menu.
 
 // MARK: - User-configurable settings
 
@@ -639,6 +640,80 @@ function screenFrameOf(window) {
     return screen ? screen.frame : null
 }
 
+// MARK: - Choosing a window or a screen
+//
+// For the operations that need a second window or a target screen and are not given one.
+// Each shows an hs.chooser and returns a promise of what was chosen, or of null when the
+// chooser was dismissed. The window the operation acts on is read before the chooser opens,
+// because the chooser takes the keyboard focus.
+
+/**
+ * Show a chooser of rows `{text, subText, value}` and resolve to the chosen row's value.
+ *
+ * @param {string} placeholder Shown in the empty search field.
+ * @param {object[]} rows The choices.
+ * @returns {Promise<*>} The chosen value, or null.
+ */
+function choose(placeholder, rows) {
+    return new Promise((resolve) => {
+        const chooser = hs.chooser.create()
+        chooser.placeholder = placeholder
+        chooser.searchSubText = true
+        chooser.setChoices(rows)
+        chooser.onSelect = (row) => resolve(row ? row.value : null)
+        chooser.show()
+    })
+}
+
+/**
+ * Choose a window other than `excluded`, from the windows hs_windowfilter-gt holds.
+ *
+ * @param {string} placeholder Shown in the empty search field.
+ * @param {object} [excluded] A window to leave out of the choices.
+ * @returns {Promise<object>} The chosen HSWindow, or null.
+ */
+function windowChoose(placeholder, excluded) {
+    const records = windowFilter ? windowFilter.records() : []
+    const rows = records
+        .filter((r) => r.state.standard && (!excluded || r.state.id !== excluded.id))
+        .map((r) => ({
+            // The application's name is in the text as well as below it: a window is often
+            // easier to find by its application than by its title.
+            text: `${r.state.application} — ${r.state.title || "(untitled)"}`,
+            subText: r.state.screenName ? `${r.state.application} · ${r.state.screenName}` : r.state.application,
+            value: r.window
+        }))
+    if (!rows.length) {
+        alert("No other window")
+        return Promise.resolve(null)
+    }
+    return choose(placeholder, rows)
+}
+
+/**
+ * Choose a screen for a window to move to: any screen but its own, and none showing a
+ * fullscreen window, which would hide it.
+ *
+ * @param {object} window The window that will move.
+ * @returns {Promise<object>} The chosen HSScreen, or null.
+ */
+function screenChoose(window) {
+    const current = screenOfWindow(window)
+    const occupied = fullscreenScreenIds()
+    const rows = screenList()
+        .filter((screen) => (!current || screen.id !== current.id) && !occupied.has(screen.id))
+        .map((screen) => ({
+            text: screen.name,
+            subText: `${Math.round(screen.frame.w)}×${Math.round(screen.frame.h)}`,
+            value: screen
+        }))
+    if (!rows.length) {
+        alert("No other screen to move to")
+        return Promise.resolve(null)
+    }
+    return choose("Screen", rows)
+}
+
 /**
  * The ids of the screens showing a fullscreen window.
  *
@@ -666,45 +741,61 @@ function screenHasFullscreenWindow(screen) {
 }
 
 /**
- * Move a window to the next or previous screen, keeping its place within the screen.
+ * Move a window to another screen, keeping its place within the screen.
  *
- * Screens showing a fullscreen window are skipped: a window moved there would be
- * behind the fullscreen one and never visible.
+ * Screens showing a fullscreen window are skipped: a window moved there would be behind the
+ * fullscreen one and never visible.
  *
- * @param {string} direction "next" or "previous".
+ * @param {string|object} [target] "next" or "previous", an HSScreen, or nothing to choose
+ *        the screen in a chooser.
+ * @param {object} [win] The window. Defaults to the focused one.
+ * @returns {boolean|Promise<boolean>} Whether the window moved. A promise when a chooser was
+ *          shown.
  */
-function windowToScreenMove(direction, win) {
+function windowToScreenMove(target, win) {
     const window = win || focused()
     if (!window) return false
+
+    const current = screenOfWindow(window)
+    if (!current) return false
+
+    if (target === undefined || target === null) {
+        return screenChoose(window).then((screen) => screen ? windowOnScreenPlace(window, current, screen) : false)
+    }
+    if (typeof target === "object") {
+        if (target.id === current.id) return false
+        if (fullscreenScreenIds().has(target.id)) {
+            alert("That screen is showing a fullscreen window")
+            return false
+        }
+        return windowOnScreenPlace(window, current, target)
+    }
 
     const screens = screenList()
     if (screens.length < 2) {
         alert("Only one screen")
         return false
     }
-
-    const current = screenOfWindow(window)
-    if (!current) return false
     const index = screens.findIndex((s) => s.id === current.id)
-    const step = direction === "previous" ? -1 : 1
+    const step = target === "previous" ? -1 : 1
 
     // Go through the screens in order until one without a fullscreen window is found,
     // stopping before coming back to the screen the window is already on.
     const occupied = fullscreenScreenIds()
-    let target = null
     for (let n = 1; n < screens.length; n++) {
         const position = (((index + step * n) % screens.length) + screens.length) % screens.length
         const candidate = screens[position]
-        if (!occupied.has(candidate.id)) {
-            target = candidate
-            break
-        }
+        if (!occupied.has(candidate.id)) return windowOnScreenPlace(window, current, candidate)
     }
-    if (!target) {
-        alert("Every other screen has a fullscreen window")
-        return false
-    }
+    alert("Every other screen has a fullscreen window")
+    return false
+}
 
+/**
+ * Put a window on another screen, where it was the last time it was there, or else at the
+ * same relative place and size it has on its current screen.
+ */
+function windowOnScreenPlace(window, current, target) {
     const from = current.frame
     const to = target.frame
     const frame = window.frame
@@ -765,12 +856,15 @@ function movable(windows, destinations) {
  * Put two windows side by side on this window's screen: the other one on the left half,
  * this one on the right.
  *
- * Hammerspoon 1 opened a chooser of the other windows from inside this function. Here the
- * other window is a parameter, and the command asks for it, so the Spoon does no prompting.
+ * Without `other`, a chooser of the other windows is shown, and the window is the one that
+ * was focused before it opened. Returns a promise in that case.
  */
 function tileWith(other, win) {
     const window = win || focused()
-    if (!window || !other) return false
+    if (!window) return false
+    if (!other) {
+        return windowChoose("Window to tile with", window).then((chosen) => chosen ? tileWith(chosen, window) : false)
+    }
     if (other.id === window.id) {
         alert("A window cannot be tiled with itself")
         return false
@@ -794,10 +888,18 @@ function tileWith(other, win) {
     return true
 }
 
-/** Exchange two windows' positions and sizes, across screens as well as within one. */
+/**
+ * Exchange two windows' positions and sizes, across screens as well as within one.
+ *
+ * Without `other`, a chooser of the other windows is shown, and the window is the one that
+ * was focused before it opened. Returns a promise in that case.
+ */
 function windowWithWindowSwap(other, win) {
     const window = win || focused()
-    if (!window || !other) return false
+    if (!window) return false
+    if (!other) {
+        return windowChoose("Window to swap with", window).then((chosen) => chosen ? windowWithWindowSwap(chosen, window) : false)
+    }
     if (other.id === window.id) {
         alert("A window cannot be swapped with itself")
         return false
@@ -1774,6 +1876,112 @@ function screenshotFailed(application, reason) {
     return null
 }
 
+// MARK: - The window menu
+//
+// The menu hs_menu-gt displays for this Spoon. Every button calls a function here directly,
+// with `fn:`, so it needs no command names and no hs_interactive-gt. The menu's keys do not
+// take the keyboard focus, so the focused window is still the user's when a button runs.
+
+/** Run `action` on the focused window, if there is one. */
+function onFocused(action) {
+    return () => {
+        const window = focused()
+        if (window) action(window)
+    }
+}
+
+// A press leaves the menu where it is, so reopening it comes back here, and closes it,
+// which is the menu's own keepOpen. The submenus are pressed several times in a row, so
+// they stay displayed.
+const stay = (button) => Object.assign({ navigate: "stay" }, button)
+const stayOpen = (button) => Object.assign({ navigate: "stay", keepOpen: true }, button)
+
+const MENU_THIRDS = [
+    { label: "Left", icon: "symbol:rectangle.leadinghalf.inset.filled", key: "h", fn: () => leftThird() },
+    { label: "Centre", icon: "symbol:rectangle.center.inset.filled", key: "j", fn: () => centerThird() },
+    { label: "Right", icon: "symbol:rectangle.trailinghalf.inset.filled", key: "l", fn: () => rightThird() },
+    { label: "Left ⅔", key: "u", fn: () => leftTwoThirds() },
+    { label: "Right ⅔", key: "i", fn: () => rightTwoThirds() }
+].map(stayOpen)
+
+const MENU_QUADRANTS = [
+    { label: "Top left", icon: "symbol:rectangle.inset.topleft.filled", key: "q", fn: () => topLeft() },
+    { label: "Top right", icon: "symbol:rectangle.inset.topright.filled", key: "w", fn: () => topRight() },
+    { label: "Bottom left", icon: "symbol:rectangle.inset.bottomleft.filled", key: "a", fn: () => bottomLeft() },
+    { label: "Bottom right", icon: "symbol:rectangle.inset.bottomright.filled", key: "s", fn: () => bottomRight() },
+    { label: "Top half", icon: "symbol:rectangle.tophalf.filled", key: "t", fn: () => topHalf() },
+    { label: "Bottom half", icon: "symbol:rectangle.bottomhalf.filled", key: "b", fn: () => bottomHalf() }
+].map(stayOpen)
+
+const MENU_WIDTHS = [2, 3, 4, 5, 6, 7, 8].map((n) => stayOpen({
+    label: `1/${n} width`,
+    key: String(n),
+    fn: () => fractionWidth(n)
+}))
+
+/**
+ * The window menu, for hs_menu-gt: `menuShow()` displays it, and a menu of your own can
+ * include it as a submenu with `children: hs.spoons["hs_window-gt"].menu`.
+ *
+ * A window is usually placed once, so a press closes the menu. Undo and Redo, which are
+ * pressed several times in a row, keep it open. Swap with, Tile with and To screen show a
+ * chooser, which needs the keyboard, so they close it as the others do.
+ */
+const menu = {
+    keepOpen: false,
+    buttons: [
+        { label: "Undo", icon: "symbol:arrow.uturn.backward", key: "[", fn: () => undo(), keepOpen: true },
+        { label: "Redo", icon: "symbol:arrow.uturn.forward", key: "]", fn: () => redo(), keepOpen: true },
+        { label: "Attach key", icon: "symbol:number", key: "a", fn: () => keyToWindowAttach() },
+
+        { label: "Maximize", icon: "symbol:arrow.up.left.and.arrow.down.right", key: "m", fn: () => maximize() },
+        { label: "Left half", icon: "symbol:rectangle.lefthalf.filled", key: "h", fn: () => leftHalf() },
+        { label: "Right half", icon: "symbol:rectangle.righthalf.filled", key: "l", fn: () => rightHalf() },
+        { label: "Centre", icon: "symbol:rectangle.center.inset.filled", key: "c", fn: () => center() },
+        { label: "Fullscreen", icon: "symbol:arrow.up.left.and.down.right.magnifyingglass", key: "f",
+          fn: onFocused((window) => window.toggleFullscreen()) },
+        { label: "Minimize", icon: "symbol:arrow.down.right.and.arrow.up.left", key: "n",
+          fn: onFocused((window) => window.minimize()) },
+
+        { label: "Vert max", icon: "symbol:arrow.up.and.down", key: "V", fn: () => verticalMaximize() },
+        { label: "Horiz max", icon: "symbol:arrow.left.and.right", key: "H", fn: () => horizontalMaximize() },
+        { label: "Half height", icon: "symbol:rectangle.tophalf.filled", key: "-", fn: () => halfHeight() },
+        { label: "Half width", icon: "symbol:rectangle.lefthalf.filled", key: "W", fn: () => halfWidth() },
+
+        { label: "Move left", icon: "symbol:arrow.left", key: "left", fn: () => moveByOwnSize("left") },
+        { label: "Move right", icon: "symbol:arrow.right", key: "right", fn: () => moveByOwnSize("right") },
+        { label: "Move up", icon: "symbol:arrow.up", key: "up", fn: () => moveByOwnSize("up") },
+        { label: "Move down", icon: "symbol:arrow.down", key: "down", fn: () => moveByOwnSize("down") },
+
+        { label: "To screen", icon: "symbol:display.2", key: "s", fn: () => windowToScreenMove() },
+        { label: "Next screen", icon: "symbol:rectangle.on.rectangle", key: "space", fn: () => windowToScreenMove("next") },
+        { label: "Prev screen", icon: "symbol:rectangle.on.rectangle", key: "B", fn: () => windowToScreenMove("previous") },
+
+        { label: "Swap behind", icon: "symbol:arrow.left.arrow.right", key: "S", fn: () => windowWithPreviousSwap() },
+        { label: "Swap with", icon: "symbol:arrow.triangle.swap", key: "x", fn: () => windowWithWindowSwap() },
+        { label: "Tile with", icon: "symbol:rectangle.split.2x1", key: "t", fn: () => tileWith() },
+        { label: "To back", icon: "symbol:square.on.square", key: "0", fn: () => windowToBackSend() },
+        { label: "Prev window", icon: "symbol:arrow.uturn.left", key: "p", fn: () => windowPrevious() },
+
+        { label: "Isolate", icon: "symbol:moon.fill", key: "I", fn: () => isolationToggle() },
+        { label: "Info", icon: "symbol:info.circle", key: "i", fn: () => info() },
+        { label: "Screenshot", icon: "symbol:camera", key: "P", fn: () => screenshot() },
+        { label: "Centre mouse", icon: "symbol:cursorarrow", key: "M", fn: () => mouseWindowCenter() },
+        { label: "Mouse next", icon: "symbol:cursorarrow.motionlines", key: "N", fn: () => mouseScreenCenterNext() },
+        { label: "Mouse screen", icon: "symbol:cursorarrow.rays", key: "C", fn: () => mouseScreenCenter() },
+
+        { label: "Thirds", icon: "symbol:square.split.1x2", key: "3", children: MENU_THIRDS },
+        { label: "Quadrants", icon: "symbol:square.split.2x2", key: "4", children: MENU_QUADRANTS },
+        { label: "Widths", icon: "symbol:ruler", key: "5", children: MENU_WIDTHS }
+    ].map(stay)
+}
+
+/** Display the window menu on screen, with hs_menu-gt. */
+function menuShow() {
+    spoonRequired("hs_menu-gt").onScreenShow(menu, { name: "Windows" })
+    return module.exports
+}
+
 // MARK: - Lifecycle
 
 /**
@@ -1802,6 +2010,9 @@ const WINDOW_EVENTS = ["windowFocused", "windowMoved", "windowResized", "windowD
 function start() {
     if (windowFilter) return module.exports
 
+    // Both are required. Checked here, so that a missing one is reported when the Spoon
+    // starts rather than the first time it is needed.
+    spoonRequired("hs_menu-gt")
     const windowfilter = spoonRequired("hs_windowfilter-gt")
     windowFilter = windowfilter.create({})
     windowFilter.on(WINDOW_EVENTS, windowEvent)
@@ -1897,6 +2108,9 @@ module.exports = {
     // Information.
     info,
     screenshot,
+    // The window menu.
+    menu,
+    menuShow,
     start,
     stop
 }
