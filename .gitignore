@@ -8,3 +8,6 @@
 
 # LLVM coverage output
 default.profraw
+
+# Generated files are never committed (see "What users download" in CLAUDE.md)
+__pycache__/

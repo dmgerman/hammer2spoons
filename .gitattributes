@@ -1,0 +1,19 @@
+# Files marked export-ignore stay in the repository but are left out of the zip file that
+# hs.spoons.install() downloads, so users do not download them. See "What users download"
+# in CLAUDE.md. They are still public on GitHub.
+
+# Planning and agent files
+/ai/ export-ignore
+/.beads/ export-ignore
+/.agents/ export-ignore
+/.claude/ export-ignore
+/.codex/ export-ignore
+/.cursor/ export-ignore
+/CLAUDE.md export-ignore
+/AGENTS.md export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+
+# What only a Spoon's developers need
+/Spoons/*.spoon2/tests/ export-ignore
+/Spoons/*.spoon2/makefile export-ignore

@@ -20,6 +20,66 @@ changes when the bead is closed, so that change goes into the next commit.
 This rule takes precedence over the session close protocol below, which tells agents to close
 finished work.
 
+## Publishing Spoons
+
+Users install these Spoons with `hs.spoons.install()` or `hs.spoons.use()`, straight from this
+repository. `ai/hs2-spoon-install.org` explains how Hammerspoon 2 does that. The rules below
+follow from it.
+
+### Nothing local to one machine
+
+A published Spoon contains nothing local to the machine it was written on. That excludes paths,
+user names, host names, device names, accounts, personal domains and identifiers (such as a
+launchd label), personal data, and any dependency on files or Spoons that are not published.
+Anything a user has to supply comes from the Spoon's configuration.
+
+If something local cannot be removed from a Spoon, the Spoon is not published.
+
+### Where a Spoon lives
+
+Each Spoon is a directory `Spoons/<name>.spoon2/`. `hs.spoons.install()` finds a Spoon only in
+a directory whose name ends in `.spoon2`, and takes the Spoon's name from that directory. The
+directory is installed as `Spoons/<name>` in the user's configuration, without the extension.
+
+`<name>` must be the same as the `name` in the Spoon's `spoon.json`. Nothing checks this, so
+check it by hand.
+
+### What a Spoon contains
+
+| File            | Holds                                                               |
+|-----------------|---------------------------------------------------------------------|
+| `spoon.json`    | `name`, `author`, `version` and `description`, none of them empty   |
+| `init.js`       | The Spoon, which sets `module.exports` to an object                 |
+| `readme.md`     | The documentation for users, in Markdown                            |
+| `images/`       | The screenshots the readme shows                                    |
+
+A Spoon may also hold the files it reads while it runs, such as elisp files, a server it
+starts, or sounds. It holds nothing else. A Spoon may not contain a symbolic link, because
+`hs.spoons.install()` refuses one.
+
+An installed Spoon has only its own directory. It cannot `require()` a file outside it, such as
+a shared `lib/` directory. Code it needs is either inside it or in another published Spoon that
+it loads.
+
+### What users download
+
+Installing any one Spoon downloads the whole repository as a zip file, and then copies only that
+Spoon. Two rules keep the download small:
+
+1. Files that only developers need are marked `export-ignore` in `.gitattributes`. That keeps
+   them in the repository and out of the zip. Tests, makefiles, and the planning files at the
+   top level (`ai/`, `.beads/` and the agent files) are marked this way. `export-ignore` only
+   shortens the download: the files stay public on GitHub.
+2. Images are stored at the size they are shown at. A screenshot or an image the Spoon displays
+   should be tens of kilobytes, not megabytes.
+
+Generated files, such as `__pycache__`, are never committed.
+
+### Versions
+
+`hs.spoons.update()` reinstalls a Spoon only when the `version` in its `spoon.json` has changed.
+Every change to a Spoon therefore raises its version, or users who update will not receive it.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:46cd31e7 -->
 ## Beads Issue Tracker
 
