@@ -20,6 +20,10 @@ changes when the bead is closed, so that change goes into the next commit.
 This rule takes precedence over the session close protocol below, which tells agents to close
 finished work.
 
+This repository is a submodule of the user's configuration repository. When a bead needs it,
+such as a Spoon moving out of that repository, commits may also be made there. The same rule
+applies: commit once the bead is approved, then close it.
+
 ## Publishing Spoons
 
 Users install these Spoons with `hs.spoons.install()` or `hs.spoons.use()`, straight from this
