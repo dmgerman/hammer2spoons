@@ -87,6 +87,26 @@ An installed Spoon has only its own directory. It cannot `require()` a file outs
 a shared `lib/` directory. Code it needs is either inside it or in another published Spoon that
 it loads.
 
+### When one Spoon uses another
+
+Hammerspoon 2 has no dependencies between Spoons, so each Spoon handles them itself.
+`ai/spoon-dependencies.org` lists them and explains the reasons.
+
+1. An optional dependency makes a Spoon better when the other Spoon is loaded. The Spoon reads
+   `hs.spoons["<name>"]` when it needs it, and works without it. It never loads or installs the
+   other Spoon; that is the user's choice.
+2. A required dependency is one the Spoon cannot work without. The Spoon checks for it in
+   `start()`. When it is missing, `start()` throws an `Error` that names the missing Spoon and
+   gives the address of its documentation:
+   `https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/<name>.spoon2`. The Spoon never
+   offers to install it.
+
+`hs.spoons.load()` throws `ENOTINSTALLED` for a Spoon that is not installed. It does not return
+`null`.
+
+Every readme lists the Spoons it uses, says whether each is optional or required, and says to
+load them first.
+
 ### What users download
 
 Installing any one Spoon downloads the whole repository as a zip file, and then copies only that

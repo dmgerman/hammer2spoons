@@ -1,0 +1,122 @@
+#+TITLE: How one Spoon depends on another
+#+DATE: 2026-11-14
+
+This file lists how the Spoons depend on each other, and proposes the code a Spoon uses to
+reach another one. It was written for the bead =hammer2spoons-ei6.3=. Hammerspoon 2 has no
+notion of dependencies between Spoons, as [[file:hs2-spoon-install.org][hs2-spoon-install.org]] explains, so each Spoon
+handles them itself.
+
+* The dependencies
+
+These were found by reading every place a Spoon in =../Spoons= refers to another one, on
+2026-11-14. They fall into two kinds:
+
+1. An optional dependency makes the Spoon better when the other Spoon is loaded, and the Spoon
+   works without it.
+2. A required dependency is one without which the Spoon cannot do its job.
+
+| Spoon                | Uses                 | Kind     | What it gets, and what happens without it                         | Where                          |
+|----------------------+----------------------+----------+-------------------------------------------------------------------+--------------------------------|
+| =hs_window-gt=       | =hs_windowfilter-gt= | Optional | The tracked list of windows. Without it, =null=, and the Spoon lists windows itself. | =init.js:178=        |
+| =hs_emacs-gt=        | =hs_windowfilter-gt= | Optional | Finding a window by its id quickly. Without it, it filters =hs.window.allWindows()=. | =init.js:437=        |
+| =hs_interactive-gt=  | =hs_windowfilter-gt= | Optional | The window list for choosing a window. Without it, =hs.window.orderedWindows()=, which is slower. | =init.js:331=, =397= |
+| =hs_selectWindow-gt= | =hs_windowfilter-gt= | Optional | Windows ordered by use. Without it, windows front to back. But see the bug below. | =init.js:141=, =941= |
+| =hs_selectWindow-gt= | =hs_window-gt=       | Optional | Its =fullscreenScreenIds()= and two other helpers. Without it, its own versions. | =init.js:660=, =712=, =743= |
+| =hs_menu-gt=         | =hs_interactive-gt=  | Required | Running the command a menu item names. Without it, the item logs an error and does nothing. | =init.js:697= |
+| =hs_streamdeck-gt=   | =hs_menu-gt=         | Required | The menus it displays. Without it, it throws "hs_menu-gt is not loaded". | =init.js:80= |
+
+There is no cycle. =hs_interactive-gt= mentions =hs_menu-gt= only in a comment (line 994).
+An earlier note in the beads said otherwise, and was wrong.
+
+** A bug in hs_selectWindow-gt
+
+At =init.js:141=, =hs_selectWindow-gt= calls =hs.spoons.load("hs_windowfilter-gt")= and
+expects =null= when that Spoon is missing. But =load()= throws an =Error= with the code
+=ENOTINSTALLED=. This was tested on 2026-11-14 through =hs2=, with a name that is not installed:
+
+#+begin_example
+threw: ENOTINSTALLED / hs.spoons.load(): No Spoon named 'hs_noSuchSpoon-gt' is installed in ...
+#+end_example
+
+So without =hs_windowfilter-gt=, the fallback it describes never runs, and the exception
+escapes instead. Its bead, =hammer2spoons-ei6.10=, fixes this.
+
+* The proposed pattern
+
+** Optional dependencies
+
+A Spoon reads the other Spoon from =hs.spoons= when it needs it, and works without it:
+
+#+begin_src js
+const tracker = hs.spoons["hs_windowfilter-gt"]   // undefined unless it has been loaded
+if (tracker) { /* use it */ } else { /* do without */ }
+#+end_src
+
+It never loads or installs the other Spoon. Whether to load it is the user's choice, made in
+the user's configuration. This is what four of the Spoons do already. Three changes are needed:
+
+1. =hs_selectWindow-gt= must not call =hs.spoons.load()= expecting =null=. It should read
+   =hs.spoons["hs_windowfilter-gt"]= like the others, or catch =ENOTINSTALLED=.
+2. The check =hs.spoons ? ... : null= can go, since =hs.spoons= always exists.
+3. Each readme says which Spoons it uses when they are loaded, and what they add.
+
+A Spoon that reads =hs.spoons[...]= finds the other Spoon only if it was loaded before it is
+used. The readme therefore says to load the optional Spoon first.
+
+** Required dependencies
+
+A Spoon checks for the Spoon it needs when it starts, and reports clearly what is missing.
+There are two ways to handle a missing Spoon. The user decides between them:
+
+1. Fail with a clear message. =start()= throws an =Error= that names the missing Spoon and
+   refers to the documentation, which explains how to install it:
+
+   #+begin_example
+   hs_streamdeck-gt needs hs_menu-gt, which is not loaded. See
+   https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2
+   #+end_example
+
+2. Ask, and then install. =start()= shows a dialog with =hs.ui.dialog()=, asking whether to
+   install the missing Spoon from this repository. If the user agrees, it calls
+   =hs.spoons.install()=, then loads the Spoon and starts itself.
+
+The recommendation is the first, for three reasons:
+
+1. Installing is asynchronous, but =start()= is not. A Spoon that installs another one would
+   have to start itself later, after the download, so the user's next line of configuration
+   could not count on it having started.
+2. Installing downloads and runs code. The user should choose to do that in the configuration,
+   not be asked by a dialog in the middle of loading it.
+3. =hs.spoons.use()= already installs a missing Spoon when it is given a =source=. A user who
+   loads both Spoons with =use()=, in order, gets both installed. The readme shows exactly
+   that.
+
+The code for the first way is short enough to copy into each Spoon that needs it. That is
+better than a shared library, which would itself be a dependency:
+
+#+begin_src js
+const SPOON_NAME = "hs_streamdeck-gt"
+const DOCUMENTATION = "https://github.com/dmgerman/hammer2spoons/tree/main/Spoons"
+
+// The Spoon `name`, which this Spoon cannot work without. Throws, naming the Spoon and
+// referring to its documentation, when it is not loaded.
+function spoonRequired(name) {
+    const spoon = hs.spoons[name]
+    if (spoon) return spoon
+    throw new Error(`${SPOON_NAME} needs ${name}, which is not loaded. ` +
+        `See ${DOCUMENTATION}/${name}.spoon2`)
+}
+#+end_src
+
+Only two Spoons need it: =hs_menu-gt= and =hs_streamdeck-gt=. Each calls it in =start()=, so
+that the problem is reported when the Spoon starts, not later when a menu item is chosen.
+
+* Decisions
+
+The user decided on 2026-11-14:
+
+1. A Spoon that lacks a required Spoon fails, with a clear message that names the missing
+   Spoon and refers to its documentation. It does not offer to install it.
+2. The repository is =dmgerman/hammer2spoons=, so the documentation of a Spoon is at
+   =https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/<name>.spoon2=, where GitHub
+   shows its readme.
