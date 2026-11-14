@@ -76,7 +76,7 @@ check it by hand.
 |-----------------|---------------------------------------------------------------------|
 | `spoon.json`    | `name`, `author`, `version` and `description`, none of them empty   |
 | `init.js`       | The Spoon, which sets `module.exports` to an object                 |
-| `readme.md`     | The documentation for users, in Markdown                            |
+| `readme.org`    | The documentation for users, in Org mode                            |
 | `images/`       | The screenshots the readme shows                                    |
 
 A Spoon may also hold the files it reads while it runs, such as elisp files, a server it
