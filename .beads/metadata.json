@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "hammer2spoons",
+  "project_id": "884cc641-ec54-436c-812a-aa9c2ac472a4"
+}
