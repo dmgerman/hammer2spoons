@@ -24,6 +24,28 @@ This repository is a submodule of the user's configuration repository. When a be
 such as a Spoon moving out of that repository, commits may also be made there. The same rule
 applies: commit once the bead is approved, then close it.
 
+## Keeping the user's configuration working
+
+The user's configuration loads the Spoons in this repository and runs every day. No change
+may break it. This applies to a change here, to a change in the configuration repository, and
+to moving a Spoon from one to the other.
+
+The configuration loads its Spoons through `hs_interactive-gt`'s `use()`, which records what
+happened to each one. Check it before and after a change, through the `hs2` command-line tool:
+
+```sh
+printf '%s\n' 'JSON.stringify(hs.spoons["hs_interactive-gt"].use.status().map(r => [r.name, r.state, r.error]))' | hs2 --no-prompt
+```
+
+1. Before the change, record the result. Every Spoon should be `loaded`.
+2. Make the change, tell the user that the configuration is about to be reloaded, and reload
+   it.
+3. Run the check again. The same Spoons must be `loaded`, and none may be `failed`.
+4. If anything differs, undo the change before doing anything else, and report what happened.
+
+A Spoon that loads can still fail when it is used. When a change touches a Spoon's behaviour,
+also try what it does, or ask the user to.
+
 ## Publishing Spoons
 
 Users install these Spoons with `hs.spoons.install()` or `hs.spoons.use()`, straight from this
