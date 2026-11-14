@@ -9,7 +9,7 @@ handles them itself.
 * The dependencies
 
 These were found by reading every place a Spoon in =../Spoons= refers to another one, on
-2026-11-14. They fall into two kinds:
+2026-11-14, and updated as decisions changed them. They fall into two kinds:
 
 1. An optional dependency makes the Spoon better when the other Spoon is loaded, and the Spoon
    works without it.
@@ -17,12 +17,14 @@ These were found by reading every place a Spoon in =../Spoons= refers to another
 
 | Spoon                | Uses                 | Kind     | What it gets, and what happens without it                         | Where                          |
 |----------------------+----------------------+----------+-------------------------------------------------------------------+--------------------------------|
-| =hs_window-gt=       | =hs_windowfilter-gt= | Optional | The tracked list of windows. Without it, =null=, and the Spoon lists windows itself. | =init.js:178=        |
+| =hs_window-gt=       | =hs_windowfilter-gt= | Required | Events for the previous window, closed windows and isolation. Changed from optional on 2026-11-14 (ei6.9). | =start()= |
+| =hs_window-gt=       | =hs_interactive-gt=  | Required | Its commands. Decided on 2026-11-14, when the window menu moved into the Spoon (ei6.9). | not yet written |
+| =hs_window-gt=       | =hs_menu-gt=         | Required | Its window menu. Decided on 2026-11-14 (ei6.9). | not yet written |
 | =hs_emacs-gt=        | =hs_windowfilter-gt= | Optional | Finding a window by its id quickly. Without it, it filters =hs.window.allWindows()=. | =init.js:437=        |
 | =hs_interactive-gt=  | =hs_windowfilter-gt= | Optional | The window list for choosing a window. Without it, =hs.window.orderedWindows()=, which is slower. | =init.js:331=, =397= |
 | =hs_selectWindow-gt= | =hs_windowfilter-gt= | Optional | Windows ordered by use. Without it, windows front to back. But see the bug below. | =init.js:141=, =941= |
 | =hs_selectWindow-gt= | =hs_window-gt=       | Optional | Its =fullscreenScreenIds()= and two other helpers. Without it, its own versions. | =init.js:660=, =712=, =743= |
-| =hs_menu-gt=         | =hs_interactive-gt=  | Required | Running the command a menu item names. Without it, the item logs an error and does nothing. | =init.js:697= |
+| =hs_menu-gt=         | =hs_interactive-gt=  | Required for buttons that name a command | Running a named command, and asking for its missing arguments. Buttons with =fn:=, =app:= or =url:= work without it; a =command:= button logs an error. Corrected on 2026-11-14. | =init.js:697= |
 | =hs_streamdeck-gt=   | =hs_menu-gt=         | Required | The menus it displays. Without it, it throws "hs_menu-gt is not loaded". | =init.js:80= |
 
 There is no cycle. =hs_interactive-gt= mentions =hs_menu-gt= only in a comment (line 994).

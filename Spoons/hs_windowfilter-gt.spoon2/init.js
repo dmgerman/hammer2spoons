@@ -696,30 +696,6 @@ function isFocused(id) {
     return focusedId === id
 }
 
-/**
- * Time a notification handler, when globalThis.__probeSlowCall is set.
- *
- * Nothing in the configuration sets that function. It is set by hand, over hs2, when
- * looking for what is slowing the main thread. Accessibility notifications are handled on
- * the main thread, so a slow handler delays everything else. The timing is added when the
- * handler is created rather than around hs.ax.on, so that the handler passed to hs.ax.off
- * is the same function that was registered.
- *
- * When the hook is not set, this costs one property read per notification.
- */
-function timed(label, handler) {
-    return (notification, ...rest) => {
-        const watcher = globalThis.__probeSlowCall
-        if (!watcher) return handler(notification, ...rest)
-        const started = Date.now()
-        try {
-            return handler(notification, ...rest)
-        } finally {
-            watcher(`${label}:${notification}`, Date.now() - started)
-        }
-    }
-}
-
 /** Hold an event until the burst it belongs to has finished. */
 function debounce(id, key, seconds, action) {
     const existing = pending.get(key)
@@ -760,7 +736,7 @@ function trackWindow(window) {
         return
     }
 
-    const handler = timed("window", (notification) => {
+    const handler = (notification) => {
         switch (notification) {
         case "uIElementDestroyed":
             forgetWindow(id, true)
@@ -784,7 +760,7 @@ function trackWindow(window) {
             // would then be discarded because the window no longer matches the filter.
             debounce(id, `${id}:state`, config.stateDebounce, () => refresh(id))
         }
-    })
+    }
 
     try {
         hs.ax.on(element, WINDOW_NOTIFICATIONS(), handler)
@@ -858,7 +834,7 @@ function trackApplication(application, attempt = 0) {
         debounce(pid, `app${pid}:createdLater`, config.createdRescanDelay, () => scanApplication(application))
     }
 
-    const handler = timed("app", (notification, created) => {
+    const handler = (notification, created) => {
         if (notification === "windowCreated") {
             scanSoon()
         } else if (notification === "created") {
@@ -884,7 +860,7 @@ function trackApplication(application, attempt = 0) {
             // scanned and has since changed. Scanning checks it again.
             if (focusedId !== null && !tracked.has(focusedId)) scanSoon()
         }
-    })
+    }
 
     const notifications = APPLICATION_NOTIFICATIONS()
     try {

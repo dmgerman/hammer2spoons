@@ -1,0 +1,158 @@
+#+TITLE: Review of hs_window-gt
+#+DATE: 2026-11-14
+
+This is the review of =hs_window-gt= for the bead =hammer2spoons-ei6.9=, made before it moves
+into this repository. The user asked that the code be of high quality and contain no
+workarounds. The file read is =../Spoons/hs_window-gt/init.js= (1,960 lines), read in full.
+
+Line numbers refer to that file.
+
+* Workarounds
+
+A workaround here is code that exists because something was missing when it was written. Each
+one is either removable now, or remains because Hammerspoon 2 or macOS still lacks something.
+
+** Removable now
+
+1. *Advice on HSWindow's frame setter* (=installAdvice()=, lines 421-465). To record undo
+   history, the Spoon replaces the =frame= setter on the prototype of Hammerspoon 2's
+   =HSWindow= class, so that every frame change anywhere in the configuration goes through it.
+   This patches a built-in type for all code, other Spoons included. The file's own header
+   (lines 18-21) says the reason no longer holds: windows can now be watched. Proposed
+   replacement: the Spoon records its own changes through one function, =frameSet(window,
+   frame)=, and a move made by hand is recovered as it already is, by comparing the window
+   with where the Spoon last put it (=record()=, lines 317-322). What would be lost is undo
+   for windows moved by other code that sets =frame= directly.
+
+2. *Isolation follows the focus by polling* (=startIsolation()=, lines 1713-1729). A timer runs
+   every 0.2 seconds while isolation is on. The comment explains that application activation
+   misses a change of window within one application, and moves and resizes. =hs_windowfilter-gt=
+   reports =windowFocused=, =windowMoved= and =windowResized=. Proposed: subscribe to those
+   when =hs_windowfilter-gt= is loaded, and keep the timer only as the fallback without it.
+
+3. *previousWindow() is driven by application activation* (=start()=, lines 1851-1866), so it
+   misses a change of window within one application, as the comment says. When
+   =hs_windowfilter-gt= is loaded, its records are already ordered by use, and the second
+   record is the previous window. Proposed: take it from there, and keep the activation watcher
+   only as the fallback.
+
+4. *forgetClosedWindows() is polled every 120 seconds* (=start()=, line 1848). Each sweep calls
+   =hs.window.allWindows()=, measured at 0.1 seconds. Proposed: when =hs_windowfilter-gt= is
+   loaded, drop a window's record on its =windowDestroyed= event; keep the sweep only as the
+   fallback.
+
+** Remaining, because Hammerspoon 2 lacks something
+
+Each of these stays, says so in the code, and is a candidate for an upstream issue
+(=hammer2spoons-ei6.28=):
+
+5. *The focus race* (=focusWindow()=, lines 188-260). After =focus()= returns, an application
+   can choose its own main window, so the Spoon calls =becomeMain()= and =raise()= again after
+   0.3 seconds. The comment records measurements and says upstream does the same for Finder
+   only. It refers to =ai/issue_unfiled_focus-main-window-race.md=, a file in the user's
+   configuration that is not published; the reference has to go, and the draft is input for
+   the upstream bead.
+
+6. *No hs.window.highlight* (line 35). Isolation draws its own panels with =hs.canvas=. This
+   is a feature implemented in the Spoon rather than a hack, but Hammerspoon 1 had it built in.
+
+7. *No spaces module* (=fullscreenScreenIds()=, lines 708-727). Whether a screen shows a
+   fullscreen window is found by asking the window at the centre of each screen. Hammerspoon 2's
+   pull request #371 would provide this.
+
+8. *Canvas coordinates* (=toUIRect()=, lines 1517-1535). A canvas is placed with its origin at
+   the bottom left of the primary screen, while window and screen frames have it at the top
+   left, so every canvas frame is converted. If that is how =hs.canvas= is meant to work, it is
+   not a workaround; if not, it is an upstream issue. Not yet checked.
+
+9. *destroy() leaves a canvas on screen* (=removeOverlay()=, lines 1672-1681). The comment says
+   =destroy()= on its own left panels visible, so =hide()= is called first. This looks like a
+   bug in =hs.canvas=. Not yet checked against the current build.
+
+10. *Number-row key codes* (lines 1090-1097). The comment says =hs.keycodes.map= cannot be used
+    for digits. Not yet checked against the current build.
+
+* Quality
+
+11. *Names.* =CLAUDE.md= requires the subject first and the action last, and names three of this
+    Spoon's functions as examples of the wrong order. The exported names that break the rule:
+
+    | Now                    | Following the rule        | Used outside the Spoon            |
+    |------------------------+---------------------------+-----------------------------------|
+    | =forgetClosedWindows=  | =closedWindowsForget=     | no                                |
+    | =previousWindow=       | =windowPrevious=          | =init.js=                         |
+    | =attachKeyToWindow=    | =keyToWindowAttach=       | =init.js=                         |
+    | =moveToScreen=         | =windowToScreenMove=      | =init.js=, =hs_selectWindow-gt=   |
+    | =swapWithWindow=       | =windowWithWindowSwap=    | =init.js=                         |
+    | =swapWithPrevious=     | =windowWithPreviousSwap=  | =init.js=                         |
+    | =sendToBack=           | =windowToBackSend=        | =init.js=                         |
+    | =toggleIsolation=      | =isolationToggle=         | =init.js=                         |
+    | =startIsolation=       | =isolationStart=          | no                                |
+    | =stopIsolation=        | =isolationStop=           | no                                |
+    | =focusWindow=          | =windowFocus=             | =menus.js=, =hs_selectWindow-gt=  |
+    | =focusAttached=        | =attachedFocus=           | no                                |
+    | =detachKey=            | =keyDetach=               | no                                |
+    | =detachAllKeys=        | =keysAllDetach=           | =init.js=                         |
+    | =attachDigit=          | =digitAttach=             | no                                |
+    | =clearHistory=         | =historyClear=            | no                                |
+    | =verticalMaximize=     | =verticalMaximize= (an adjective-noun pair; kept) | =init.js= |
+    | =mouseMoveTo=          | =mouseMove=               | no                                |
+
+    The new names in this table are proposals. Renaming changes the Spoon's interface, so
+    =init.js=, =menus.js= and =hs_selectWindow-gt= have to change at the same time, and the
+    commands named after these functions are renamed with them.
+
+12. *window.screen can be null* (the comment at lines 1584-1586 says so, for a window in another
+    space). =place()=, =center()=, =isMaximized()=, =verticalMaximize()=, =horizontalMaximize()=,
+    =fractionWidth()= and =moveToScreen()= read =window.screen.frame= without checking, so they
+    throw a =TypeError= for such a window. =screenOfWindow()= already handles it; they should
+    use it.
+
+13. *A debugging hook* (=globalThis.__probeSlowCall=, lines 236-247) times the steps of
+    =focusWindow()= when something sets it. It is not part of the Spoon's job, and should go.
+
+14. *swapWithWindow()* focuses with =window.focus()= (line 877), while every other function uses
+    =focusWindow()=, which handles the race in item 5.
+
+15. *An undocumented field.* =undo()= stores =entry.current= (line 364), which the description of
+    the record at lines 85-92 does not mention.
+
+16. *sendToBack()* focuses every other window, one by one, in reverse order (lines 912-925). With
+    twenty windows that is twenty activations, each going through accessibility, and the user
+    sees them. It should be measured, and the readme should say what it costs, unless a lighter
+    way exists.
+
+17. *Redundant checks.* =hs.spoons ? hs.spoons[...] : null= (line 178): =hs.spoons= always
+    exists.
+
+18. *Size.* The file holds seven separate concerns: placement, the undo history, screens, the
+    mouse, isolation, number keys and screenshots. A Spoon can =require()= files from its own
+    directory, so it could be split into one file for each, with =init.js= assembling them. That
+    would make each part reviewable on its own.
+
+* Tests of items 8, 9 and 10
+
+Run on 2026-11-14 through =hs2=, against the running Hammerspoon 2. Items 8 and 9 drew a red
+60-point square with =hs.canvas.create({x: 100, y: 100, w: 60, h: 60})= on the primary screen
+(1800 by 1169 points), took screenshots with =hs.screen.primary().snapshot()=, and read pixels
+from them. The screenshots were deleted afterwards.
+
+- *Item 8, canvas coordinates: the conversion stays.* The square appeared at y = 1039 counted
+  from the top (red there, white at y = 130), so a canvas is placed with y = 0 at the bottom.
+  =HSCanvasModule.swift= documents this on purpose, under "Coordinate systems", so it is not a
+  workaround. That documentation also says =hs.screen= uses the same coordinates as a canvas,
+  while this Spoon uses screen frames together with window frames, which have y = 0 at the top,
+  and its placements work. That inconsistency is a candidate for an upstream issue.
+- *Item 9, destroy() leaving a canvas on screen: fixed upstream; remove hide().* After
+  =destroy()= without =hide()=, the pixel where the square had been was white again.
+- *Item 10, number-row key codes: remove the table.* =hs.keycodes.map["1"]= is 18, and every
+  digit from "0" to "9" is present, mapped from name to code. The reverse is missing:
+  =map[18]= is =undefined=, and =map[0]= is 29, the code of the digit "0", because the name "0"
+  and the number 0 are the same key. The Spoon can build the reverse mapping from =map["0"]=
+  to =map["9"]= instead of keeping its own table.
+
+* Local details
+
+Nothing specific to one machine was found. The defaults =attachFile=
+(=${hs.appinfo.configDir}/logs/window-keys.json=) and =screenshotDir= (=/tmp=) are general, but
+the readme must say what each is.
