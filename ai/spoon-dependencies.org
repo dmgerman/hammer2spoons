@@ -18,8 +18,8 @@ These were found by reading every place a Spoon in =../Spoons= refers to another
 | Spoon                | Uses                 | Kind     | What it gets, and what happens without it                         | Where                          |
 |----------------------+----------------------+----------+-------------------------------------------------------------------+--------------------------------|
 | =hs_window-gt=       | =hs_windowfilter-gt= | Required | Events for the previous window, closed windows and isolation. Changed from optional on 2026-11-14 (ei6.9). | =start()= |
-| =hs_window-gt=       | =hs_interactive-gt=  | Required | Its commands. Decided on 2026-11-14, when the window menu moved into the Spoon (ei6.9). | not yet written |
-| =hs_window-gt=       | =hs_menu-gt=         | Required | Its window menu. Decided on 2026-11-14 (ei6.9). | not yet written |
+| =hs_window-gt=       | =hs_interactive-gt=  | None | Decided on 2026-11-14 that no published Spoon requires it. The readme suggests command definitions for its users. | — |
+| =hs_window-gt=       | =hs_menu-gt=         | Required | Its window menu, whose buttons use =fn:=. Decided on 2026-11-14 (ei6.9). | not yet written |
 | =hs_emacs-gt=        | =hs_windowfilter-gt= | Optional | Finding a window by its id quickly. Without it, it filters =hs.window.allWindows()=. | =init.js:437=        |
 | =hs_interactive-gt=  | =hs_windowfilter-gt= | Optional | The window list for choosing a window. Without it, =hs.window.orderedWindows()=, which is slower. | =init.js:331=, =397= |
 | =hs_selectWindow-gt= | =hs_windowfilter-gt= | Optional | Windows ordered by use. Without it, windows front to back. But see the bug below. | =init.js:141=, =941= |

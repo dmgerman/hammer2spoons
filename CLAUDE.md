@@ -107,6 +107,11 @@ Hammerspoon 2 has no dependencies between Spoons, so each Spoon handles them its
 Every readme lists the Spoons it uses, says whether each is optional or required, and says to
 load them first.
 
+No published Spoon requires `hs_interactive-gt`. Whether to use named commands is the user's
+choice, and any function can be made a command from outside the Spoon that defines it. A Spoon's
+readme may suggest command definitions for users of `hs_interactive-gt`, but the Spoon itself
+works without it.
+
 ### What users download
 
 Installing any one Spoon downloads the whole repository as a zip file, and then copies only that

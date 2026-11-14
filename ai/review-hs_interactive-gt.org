@@ -1,0 +1,109 @@
+#+TITLE: Review of hs_interactive-gt
+#+DATE: 2026-11-14
+
+This is the review of =hs_interactive-gt= for the bead =hammer2spoons-ei6.11=, made before it
+moves into this repository, against the same standard as [[file:review-hs_window-gt.org][review-hs_window-gt.org]]: high
+quality and no workarounds. The file read is =../Spoons/hs_interactive-gt/init.js= (1,301
+lines), read in full. Line numbers refer to that file.
+
+* Bugs
+
+1. *The application chooser shows no names* (=readers.application.prompted=, line 370). Its rows
+   use =a.title=, and =HSApplication.title= was renamed =name=, as =CLAUDE.md= lists. Tested on
+   2026-11-14 through =hs2=: for the frontmost application, =name= was ="kitty"= and =title= was
+   =undefined=. Every row of that chooser therefore has an empty text.
+
+* Workarounds
+
+** Removable now
+
+2. *Loading Spoons from other directories* (=spoonsLoadPath=, =spoonLoadFrom()=, =loadSpoon()=,
+   lines 985-1093). These repeat what =hs.spoons.load()= does, because Hammerspoon 2 loads Spoons
+   only from =Spoons/=. They exist so that the user's private Spoons can stay in =dmgSpoons/=.
+   A Spoon reached through a symbolic link from =Spoons/= loads normally, as the published
+   Spoons show, so each private Spoon can be linked from =Spoons/= in the same way. =use()= then
+   calls =hs.spoons.load()= directly, and the three functions go. The mechanism also exists only
+   for one machine's layout, which the "nothing local" rule excludes from a published Spoon.
+
+3. *A note about old builds* (lines 151-153). It says builds older than upstream issue #183
+   report the button index the other way round. Every release since then has the fix, so the
+   note can go.
+
+** Remaining, because Hammerspoon 2 lacks something
+
+Each stays, is described in the code as a workaround, and is a candidate for an upstream issue
+(=hammer2spoons-ei6.28=):
+
+4. *A text prompt cannot take the keyboard while Hammerspoon is in the background* (=ask()=,
+   lines 165-184). =hs.ui.textPrompt= is a plain window, not a non-activating panel as
+   =hs.chooser= is, so the Spoon brings Hammerspoon forward and then puts the previous
+   application back.
+
+5. *The chooser's position is copied* (=CHOOSER_WIDTH_FRACTION=, =CHOOSER_TOP_FRACTION=, lines
+   232-246). =hs.chooser= exposes neither its frame nor its window, so the arithmetic that places
+   it is repeated here to put an alert at its corner. An upstream change to the chooser's
+   placement would leave the alert behind.
+
+6. *A chooser opened while another is closing loses the keyboard* (=runDelay=, lines 544-550 and
+   802-811). A command that opens a chooser from the command chooser is run after a short delay.
+
+* Quality
+
+7. *Names.* =CLAUDE.md= allows a function to leave out the subject that the Spoon's name already
+   supplies, as =peek()= does in =hs_menubar-gt=. So =define=, =call=, =get=, =execute=,
+   =describe=, =commands= and =bindings= can stay: their subject is the command. These break the
+   rule, because they name a subject and put the action first:
+
+   | Now              | Following the rule | Used in the configuration |
+   |------------------+--------------------+---------------------------|
+   | =setOrder=       | =orderSet=         | no                        |
+   | =getOrder=       | =orderGet=         | no                        |
+   | =setKey=         | =keySet=           | no                        |
+   | =setKeys=        | =keysSet=          | 2 (=init.js=)             |
+   | =unsetKey=       | =keyUnset=         | no                        |
+   | =parseChord=     | =chordParse=       | no                        |
+   | =describeKey=    | =keyDescribe=      | no                        |
+   | =whereIs=        | =keysOfCommand=    | no                        |
+   | =onPromptChange= | =promptChangeOn=   | 2 (=hs_menu-gt=)          |
+   | =loadSpoon=      | removed by item 2  | no                        |
+
+   =loadSpoon= is also the name of Hammerspoon 2's old =hs.loadSpoon()=, which =CLAUDE.md= lists as
+   replaced.
+
+8. *Redundant checks.* =hs.spoons ? hs.spoons[...] : null= (lines 331 and 397): =hs.spoons= always
+   exists.
+
+9. *Duplicated reader.* =readers.number.prompted= (lines 435-451) repeats the body of
+   =readers.number.ranged= without bounds. It can be =ranged({})=.
+
+10. *The snapshot's screen can be null* (=snapshot()=, line 287). For a focused window whose
+    =screen= is null, such as one in another space, the snapshot has no screen, and
+    =readers.screen.auto= then prompts. Falling back to =hs.screen.main()= would match what the
+    snapshot does when there is no window.
+
+* Local details
+
+Nothing specific to one machine, apart from item 2, which exists for one machine's directory
+layout. =OWN_BUNDLE_ID= is Hammerspoon 2's own bundle identifier, =net.tenshu.Hammerspoon-2=,
+which every build of the project uses.
+
+* What was done
+
+Decided by the user and done on 2026-11-14:
+
+- Item 1 is fixed: the application chooser uses =a.name=.
+- Item 2 is done. =spoonsLoadPath=, =spoonLoadFrom()= and =loadSpoon()= are removed, and =use()=
+  calls =hs.spoons.load()=. The user's four private Spoons in =dmgSpoons/= are linked from
+  =Spoons/= instead.
+- Item 3 is done: the note about old builds is removed.
+- Items 4 to 6 stay, and are listed in the upstream bead =hammer2spoons-ei6.28=.
+- Item 7: the nine names are renamed, and key binding was redesigned at the same time. A key is
+  bound in the form =hs.hotkey.bind()= takes, =keySet(["cmd", "ctrl", "alt"], "v", "name")=, and
+  =use()='s =keys:= is a list of =[mods, key, name]=. =parseChord()= is no longer exported; a
+  smaller parser stays for the =commands-key-describe= command, which takes a key typed as
+  words. All 36 bindings in the user's =init.js= were converted.
+- Items 8 to 10 are done.
+- The user decided that no published Spoon requires this one. Its readme says so, and the
+  readmes of the other Spoons suggest commands for its users.
+- The readme now opens with what the Spoon does for the user, and has two screenshots: the
+  command chooser and an argument dialog.
