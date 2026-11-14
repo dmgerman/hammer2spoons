@@ -1,0 +1,117 @@
+#+TITLE: Review of hs_menu-gt
+#+DATE: 2026-11-14
+
+This is the review of =hs_menu-gt= for the bead =hammer2spoons-ei6.12=, made before it moves
+into this repository, against the same standard as the earlier reviews: high quality and no
+workarounds. The file read is =../Spoons/hs_menu-gt/init.js= (1,592 lines), read in full. Line
+numbers refer to that file.
+
+The code is careful, and most of its comments explain real constraints. What it carries that
+it no longer needs is legacy: from the SVG drawing that =hs.canvas= replaced, and from earlier
+spellings in the user's own menus.
+
+* Legacy that can be removed
+
+Each was checked on 2026-11-14 against the user's =init.js=, =menus.js=, the private Spoons and
+=hs_streamdeck-gt=. None of them is used.
+
+1. *SVG drawing* (=imageFromMarkup()=, lines 405-412, and its use at line 514). Before
+   =hs.canvas= existed, buttons were SVG rendered through =HSImage.fromURL()=. Every button is
+   now drawn with =hs.canvas=, and the only SVG left is an =imageProvider= that returns markup.
+   No provider does. Removing it removes the last drawing that is asynchronous of itself; the
+   pipeline stays promise-based, because an =imageProvider= may still return a promise.
+
+2. *Older spellings* (=navigationFor()= and =staysOpen()=, lines 1106-1136). A button may say
+   =deck:=, =dismiss:= or =screen:= instead of =navigate:= and =keepOpen:=. No menu does, and a
+   first publication has no older spellings to keep working.
+
+3. *The =icons/= prefix* (=resolveIconPath()=, lines 106-112). An icon may be written
+   ="icons/bus_7.png"=, as the Hammerspoon 1 configuration wrote them, and the prefix is
+   removed. No icon is written that way.
+
+* Workarounds
+
+None were found that exist because Hammerspoon 2 lacks something. Three things look like
+workarounds and are not:
+
+- The conversion in =centredOnScreen()= (lines 1177-1205) is needed because a canvas is placed
+  in coordinates with y = 0 at the bottom, which =hs.canvas= documents (see the test in
+  [[file:review-hs_window-gt.org][review-hs_window-gt.org]]).
+- Rasterising images at twice the tile size (=sizedForTile()=, lines 179-197) is needed
+  because a canvas draws an image at the resolution it already holds.
+- Giving up the menu's keys while a prompt is open (=suspendKeys()=, lines 1430-1443) is
+  needed because a global hotkey receives a key press before a chooser does. It works only
+  with =hs_interactive-gt='s prompts; without that Spoon there are none to wait for.
+
+* Dependencies
+
+=hs_interactive-gt= is optional, as =CLAUDE.md= now requires of every Spoon: a button with
+=command:= needs it, and buttons with =fn:=, =app:= or =url:= do not. The readme must say so.
+
+* Quality
+
+4. *Names.* =CLAUDE.md= gives =toggleOnScreen()= → =onScreenToggle()= as its own example. These
+   exported names put the action first:
+
+   | Now                   | Following the rule      | Used outside the Spoon          |
+   |-----------------------+-------------------------+---------------------------------|
+   | =showOnScreen=        | =onScreenShow=          | 6 (=init.js=)                   |
+   | =hideScreen=          | =onScreenHide=          | 1 (=init.js=)                   |
+   | =toggleOnScreen=      | =onScreenToggle=        | no                              |
+   | =resetScreenPosition= | =onScreenPositionReset= | no                              |
+   | =isShowingOnScreen=   | =onScreenIsShown=       | no                              |
+   | =openSession=         | =sessionOpen=           | 2 (=hs_streamdeck-gt=)          |
+   | =openURL=             | =urlOpen=               | no                              |
+   | =assignLetters=       | =lettersAssign=         | no                              |
+   | =resolveButtons=      | =buttonsResolve=        | no                              |
+   | =clearImageCache=     | =imageCacheClear=       | no                              |
+   | =clearDiskCache=      | =diskCacheClear=        | no                              |
+
+   Internal functions follow the same rule, and are renamed with them: =runCommand=,
+   =activateApp=, =expandPath=, =resolveIconPath=, =hashKey=, =fitLabel=, =renderButton=,
+   =drawButton=, =cancelHolds=, =stopUpdateTimers=, =startUpdateTimers=, =releaseKeys=,
+   =stopTimer=, =watchPrompts=.
+
+5. *Exports nothing uses.* Eleven exported functions are used by nothing outside the Spoon. Some
+   are documented for writing a presenter (=buttonImage=, =sessionOpen=), and the cache ones are
+   useful to a user. =tileImage=, =iconImage=, =lettersAssign=, =buttonsResolve= and =urlOpen=
+   are steps a presenter does not need, since a session does them. They can stop being
+   exported, which makes the Spoon's interface smaller.
+
+6. *The cache directory is created when the file is loaded* (line 99), before the user's
+   configuration can change =config.cacheDir=. It should be created when the first tile is
+   saved, in the directory configured by then.
+
+7. *Figurative language* in the comments, which =CLAUDE.md= and the user rule out: "walks that
+   menu", "hands the page", "the escape hatch", letters that "answer", a letter as an
+   "address", "Two questions follow a press", a hotkey that "outranks" a chooser, the menu that
+   "stops listening", "a detour through AppKit's idea of focus". The readme needs the same
+   reading.
+
+* Local details
+
+None. =config.iconDir= defaults to =icons/= in the configuration directory, which is general,
+but the readme must say that the user supplies the icons there.
+
+* What was done
+
+Decided by the user and done on 2026-11-14:
+
+- Items 1 to 3 are done: the SVG drawing, the older spellings and the =icons/= prefix are
+  removed.
+- Item 4 is done: the eleven exported names and fourteen internal ones are renamed, and the
+  presenter's =suspendKeys= and =resumeKeys= are now =keysSuspend= and =keysResume=. The
+  user's =init.js= calls =onScreenShow= and =onScreenHide=, and =hs_streamdeck-gt= calls
+  =sessionOpen=.
+- Item 5 is done: =tileImage=, =iconImage=, =lettersAssign=, =buttonsResolve= and =urlOpen= are
+  no longer exported.
+- Item 6 is done: the cache directory is created when the first tile is saved.
+- Item 7 is done: seventeen figurative passages in the comments are rewritten, and the variable
+  =address= is now =modifiers=.
+- The readme is rewritten from the user's side, with one screenshot of a menu. It no longer
+  mentions =stays= and =navigates=, which are helpers in the user's own =menus.js=, not part of
+  the Spoon.
+
+The first attempt at the move stopped one edit short and still reloaded the configuration, so
+=hs_streamdeck-gt= failed to load until the change was undone. The move was then done again with
+every edit checked before any file changed.
