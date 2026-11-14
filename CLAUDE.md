@@ -121,6 +121,34 @@ Spoon. Two rules keep the download small:
 
 Generated files, such as `__pycache__`, are never committed.
 
+### Screenshots
+
+A readme shows a screenshot wherever the Spoon has something to see. Screenshots are taken one
+Spoon at a time, in that Spoon's own bead.
+
+1. Capture with Hammerspoon 2, through `hs2`. `HSWindow.snapshot()` captures a window,
+   `HSScreen.snapshot()` followed by `croppedCopy()` captures an overlay such as an alert, and
+   `imageFromCanvas()` captures a Spoon's canvas. Something that closes when the focus moves,
+   such as an open menu, is captured by the user with `screencapture -i`. All of these need the
+   Screen Recording permission.
+2. Crop each image to the part that shows the feature, not the whole screen.
+3. Shrink it to at most 1200 pixels wide and 128 colours, as PNG:
+   `magick in.png -resize '1200x>' -colors 128 -strip out.png`. An image should be under
+   200 KB. A whole Retina window is about 2.9 MB as captured and about 165 KB after this.
+4. Store it as `Spoons/<name>.spoon2/images/<what-it-shows>.png`. Images stay in the download,
+   so that an installed Spoon's readme shows them too.
+5. Give every image in a readme alt text that says what it shows.
+
+Before capturing, set up neutral content: sample text, generic window titles, and no real file
+names, messages, accounts or clipboard contents.
+
+**The user approves the contents of every screenshot before it is committed.** Show each image
+to the user, and commit it only once the user has said it may be published.
+
+The user can help take a screenshot when that is needed, for example when the Spoon has to be
+used by hand to show something, or when a capture from `hs2` does not show it properly. Ask
+rather than settle for a screenshot that does not show the feature.
+
 ### Versions
 
 `hs.spoons.update()` reinstalls a Spoon only when the `version` in its `spoon.json` has changed.
