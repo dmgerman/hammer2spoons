@@ -1,3 +1,39 @@
 #+TITLE: hammer2spoons
 
-Spoons for Hammerspoon 2.
+Spoons for [[https://github.com/cmsj/Hammerspoon2][Hammerspoon 2]].
+
+#+ATTR_HTML: :alt The window menu of hs_window-gt: thirty-four buttons, each with an icon and the letter that runs it
+[[./Spoons/hs_window-gt.spoon2/images/window-menu.png]]
+
+The window menu of [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]].
+
+* The Spoons
+
+| Spoon                | What it does                                                                         | Needs                          |
+|----------------------+--------------------------------------------------------------------------------------+--------------------------------|
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]       | Place, resize and move windows from the keyboard or a menu, with undo. Attach windows to number keys, and dim everything but the focused window. | hs_windowfilter-gt, hs_menu-gt |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]         | Menus of buttons on screen, each run by a letter. The same menus can be shown on a Stream Deck. |                    |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]  | Named commands, a chooser to run them by name, and key bindings by name, in the manner of Emacs's =M-x=. |              |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] | Window events filtered by rules, like Hammerspoon 1's =hs.window.filter=.            |                                |
+
+Load the Spoons in the last column first. No Spoon requires hs_interactive-gt; each readme
+suggests commands for those who use it.
+
+* Installing
+
+#+begin_src js
+hs.spoons.use("hs_windowfilter-gt", { source: "dmgerman/hammer2spoons" })
+hs.spoons.use("hs_menu-gt", { source: "dmgerman/hammer2spoons" })
+hs.spoons.use("hs_window-gt", {
+    source: "dmgerman/hammer2spoons",
+    start: true,
+    hotkeys: { menuShow: [["alt"], "w"] }
+})
+#+end_src
+
+Add =ref= with a tag or commit to keep a version, and use =hs.spoons.update()= to update.
+
+* Requirements
+
+A build of Hammerspoon 2 from its main branch on 2026-11-02 or later. Release 0.0.16 and earlier
+cannot install Spoons from a repository, and lack =hs.spoons.load()=.

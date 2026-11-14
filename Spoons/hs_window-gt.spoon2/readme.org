@@ -33,7 +33,11 @@ The first time this runs, Hammerspoon 2 downloads all three:
 #+begin_src js
 hs.spoons.use("hs_windowfilter-gt", { source: "dmgerman/hammer2spoons" })
 hs.spoons.use("hs_menu-gt", { source: "dmgerman/hammer2spoons" })
-hs.spoons.use("hs_window-gt", { source: "dmgerman/hammer2spoons", start: true })
+hs.spoons.use("hs_window-gt", {
+    source: "dmgerman/hammer2spoons",
+    start: true,
+    hotkeys: { menuShow: [["alt"], "w"] }
+})
 #+end_src
 
 Without either of the two, =start()= stops with a message that names the one missing.
@@ -44,24 +48,50 @@ To keep a particular version, add =ref= with a tag or a commit. To get a newer v
 * Simple usage
 
 #+begin_src js
-const win = hs.spoons["hs_window-gt"]
-
-hs.hotkey.bind(["⌘", "⌥", "⌃"], "left",  () => win.leftHalf(),  null)
-hs.hotkey.bind(["⌘", "⌥", "⌃"], "right", () => win.rightHalf(), null)
-hs.hotkey.bind(["⌘", "⌥", "⌃"], "up",    () => win.maximize(),  null)
-hs.hotkey.bind(["⌘", "⌥", "⌃"], "z",     () => win.undo(),      null)
+hs.spoons.use("hs_window-gt", {
+    source: "dmgerman/hammer2spoons",
+    start: true,
+    hotkeys: {
+        menuShow:  [["alt"], "w"],
+        leftHalf:  [["cmd", "ctrl", "alt"], "left"],
+        rightHalf: [["cmd", "ctrl", "alt"], "right"],
+        maximize:  [["cmd", "ctrl", "alt"], "up"],
+        undo:      [["cmd", "ctrl", "alt"], "z"]
+    }
+})
 #+end_src
 
-Every method that takes a window takes it as its last argument and uses the focused window
-when it is omitted, so the calls above need no window.
+From your own code, every method that takes a window takes it as its last argument, and uses
+the focused window when it is omitted: =hs.spoons["hs_window-gt"].leftHalf()=.
+
+* Hotkeys
+
+=hotkeys= binds a key to any function of the Spoon that takes no argument. The function runs on
+the focused window:
+
+#+begin_src js
+hotkeys: {
+    menuShow: [["alt"], "w"],
+    undo:     [["cmd", "ctrl", "alt"], "z"],
+    leftHalf: [["cmd", "ctrl", "alt"], "left"]
+}
+#+end_src
+
+Nothing is bound by default. A name that is not such a function is an error, and then nothing is
+bound. =stop()= releases the keys.
 
 * The window menu
 
 =menuShow()= opens a menu of everything this Spoon does, on the screen you are working on.
-Each button has a letter beneath it: press the letter to run the button. Bind it to a key:
+Each button has a letter beneath it: press the letter to run the button. The example under
+/Installing/ opens it with ⌥W.
+
+The menu is drawn by hs_menu-gt, and appears at once. You can set a delay before it is drawn.
+The letters work during the delay, so a letter pressed in time runs its button and the menu is
+never drawn:
 
 #+begin_src js
-hs.hotkey.bind(["alt"], "w", () => win.menuShow(), null)
+hs.spoons["hs_menu-gt"].config.screen.showDelay = 0.5
 #+end_src
 
 #+ATTR_HTML: :alt The window menu: thirty-four buttons, such as Undo, Maximize, Left half, Next screen and Isolate, each with an icon and its letter

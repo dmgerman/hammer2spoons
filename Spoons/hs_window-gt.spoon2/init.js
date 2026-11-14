@@ -1982,6 +1982,59 @@ function menuShow() {
     return module.exports
 }
 
+// MARK: - Hotkeys
+//
+// hs.spoons.use() binds keys through its `hotkeys` option, which calls bindHotkeys(). The name
+// is the one hs.spoons.use() calls, so it keeps that spelling rather than this project's
+// subject-first order.
+
+// The hotkeys bindHotkeys() created, so that stop() and the next bindHotkeys() release them.
+let hotkeys = []
+
+// Functions a key cannot run, because they need an argument a key press cannot give, or
+// because they report something rather than act.
+const HOTKEY_EXCLUDED = new Set([
+    "place", "fractionWidth", "moveByOwnSize", "mouseMove", "mouseHighlight",
+    "digitAttach", "attachedFocus", "keyDetach", "screenHasFullscreenWindow",
+    "historyDepth", "isMaximized", "isVerticallyMaximized", "isHorizontallyMaximized",
+    "fullscreenScreenIds", "attachedWindows", "isolationOn",
+    "start", "stop", "bindHotkeys"
+])
+
+function hotkeysRelease() {
+    for (const hotkey of hotkeys) hotkey.destroy()
+    hotkeys = []
+}
+
+/**
+ * Bind keys to this Spoon's functions. Each function runs on the focused window. Called by
+ * hs.spoons.use() with its `hotkeys` option; a second call replaces the bindings of the first.
+ *
+ * @param {object} mapping Function name -> `[modifiers, key]`, for example
+ *        `{ menuShow: [["alt"], "w"], undo: [["cmd", "ctrl", "alt"], "z"] }`.
+ * @returns {object} The Spoon.
+ * @throws If a name is not a function a key can run. Nothing is bound in that case.
+ */
+function bindHotkeys(mapping) {
+    const entries = Object.entries(mapping || {})
+    for (const [name, binding] of entries) {
+        if (HOTKEY_EXCLUDED.has(name) || typeof module.exports[name] !== "function") {
+            throw new Error(`hs_window-gt: bindHotkeys(): ${name} is not a function a key can run`)
+        }
+        if (!Array.isArray(binding) || !Array.isArray(binding[0]) || typeof binding[1] !== "string") {
+            throw new Error(`hs_window-gt: bindHotkeys(): ${name} needs [modifiers, key], such as [["alt"], "w"]`)
+        }
+    }
+
+    hotkeysRelease()
+    for (const [name, [mods, key]] of entries) {
+        const hotkey = hs.hotkey.bind(mods, key, () => module.exports[name](), null)
+        if (hotkey) hotkeys.push(hotkey)
+        else console.error(`[hs_window-gt] could not bind ${mods.join("-")} ${key} to ${name}`)
+    }
+    return module.exports
+}
+
 // MARK: - Lifecycle
 
 /**
@@ -2025,6 +2078,7 @@ function start() {
 }
 
 function stop() {
+    hotkeysRelease()
     isolationStop()
     mouseHighlightClear()
     // Released without saving, so that config.attachFile still lists them for start().
@@ -2111,6 +2165,8 @@ module.exports = {
     // The window menu.
     menu,
     menuShow,
+    // Keys, for the hotkeys option of hs.spoons.use().
+    bindHotkeys,
     start,
     stop
 }
