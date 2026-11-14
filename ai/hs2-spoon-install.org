@@ -1,0 +1,99 @@
+#+TITLE: How Hammerspoon 2 installs Spoons
+#+DATE: 2026-11-14
+
+This file records how Hammerspoon 2 finds, installs, loads and updates a Spoon, and what that
+means for this repository. It was written for the bead =hammer2spoons-ei6.1=.
+
+The source read is =Hammerspoon 2/Modules/hs.spoons= in the clone at =~/git.w/Hammerspoon2=,
+at commit =7efbe802= (2026-11-14), together with =Hammerspoon 2/Managers/SpoonManager.swift=.
+Nothing here has been tested yet.
+
+* The functions
+
+=hs.spoons= has six functions:
+
+| Function                    | What it does                                                          |
+|-----------------------------+-----------------------------------------------------------------------|
+| =load(name)=                | Loads an installed Spoon and stores it as =hs.spoons.<name>=.          |
+| =install(name, options)=    | Downloads a source and installs one Spoon from it. Returns a promise.  |
+| =use(name, options)=        | Loads a Spoon, installing it first if =source= is given and it is missing, then configures and starts it. |
+| =available(source)=         | Lists the Spoons a source contains, without installing anything.       |
+| =update(name)=              | Downloads the Spoon again from where it came from, and reinstalls it if its version changed. |
+| =uninstall(name)=, =installed()= | Remove a Spoon, and list the installed ones.                      |
+
+A source is a GitHub repository, written ="owner/repo"=, or the =https://= URL of a zip file.
+For a repository, =ref= chooses a branch, tag or commit, and the default branch is used
+without it. For a zip file, =sha256= checks the download.
+
+* Where installed Spoons live
+
+Spoons are installed in the =Spoons= directory next to the configuration file, so normally
+=~/.config/Hammerspoon2/Spoons/<name>= (=spoonsDirectory= in =SpoonManager.swift=). The
+directory is named after the Spoon, without any extension. =install()= also writes
+=.hs-source.json= in it, recording the source, the ref and the commit, which =update()= uses.
+
+* How a Spoon is found in a repository
+
+=install()= downloads the repository as a zip file
+(=https://github.com/<owner>/<repo>/archive/<ref>.zip=). If the archive holds a single
+directory, as a repository's does, that directory is looked inside. =findSpoons()= in
+=SpoonArchive.swift= (line 238) then looks for Spoons in two places:
+
+1. every directory whose name ends in =.spoon2=, at the top level of the archive
+2. every directory whose name ends in =.spoon2=, inside a directory named =Spoons=
+
+The Spoon's name is the directory's name without =.spoon2=. Only if neither place has any
+=.spoon2= directory is the whole archive treated as a single Spoon, named by its =spoon.json=.
+
+A directory without the =.spoon2= extension is not found. The Spoons in =../Spoons= are named
+=hs_window-gt= and so on, without it.
+
+* What a Spoon must contain
+
+=validateSpoon()= in =SpoonManager.swift= (line 100) requires two files:
+
+1. =spoon.json=, with the fields =name=, =author=, =version= and =description=, none of them
+   empty.
+2. =init.js=, which must set =module.exports= to an object or a function.
+
+Three more rules apply:
+
+- A name may contain only letters, digits, =_=, =.= and =-=, and may not start with =.= or
+  =-= (=isValidSpoonName()=). =hs_window-gt= is valid.
+- A Spoon may not be named after a member of =hs.spoons= itself, such as =load= or =use=.
+- A Spoon may not contain a symbolic link. Such a Spoon is refused when the archive is read
+  (=findSpoons()=).
+
+* How a Spoon is loaded
+
+=load(name)= runs the Spoon's =init.js= through =require()=, so =init.js= can =require()= other
+files inside the Spoon's own directory by relative path. It then copies =author=,
+=description= and =version= from =spoon.json= onto the exported object, and calls its =init()=
+method if it has one. =init()= runs again on every =load()= of the same Spoon.
+
+Errors carry a =code=. =load()= throws =ENOTINSTALLED= when the Spoon is missing. That is the
+code a Spoon checks for when it needs another Spoon.
+
+=use(name, options)= applies =config= by assigning each property to the Spoon's object, passes
+=hotkeys= to =bindHotkeys()=, calls =fn= with the Spoon, and calls =start()= if =start= is
+true. When it installs a Spoon, it shows a notification.
+
+* What this means for this repository
+
+1. Each Spoon must be a directory named =<name>.spoon2=, either at the top level or inside
+   =Spoons/=. One repository can hold all of them, and a user installs each one by name from
+   it: =hs.spoons.install("hs_window-gt", {source: "<owner>/hammer2spoons"})=.
+2. Installing one Spoon downloads the whole repository, and copies only that Spoon. Large files
+   in one Spoon, such as the 2.7 MB kanji data, are downloaded by everyone who installs any
+   Spoon from the repository.
+3. An installed Spoon has only its own directory. A Spoon cannot rely on a sibling directory
+   such as =../lib=. Code it needs must be inside it, or in another Spoon that it loads.
+4. =hs.spoons= has no notion of dependencies. =spoon.json= has no field for them, and
+   =install()= installs only the Spoon it is asked for. A Spoon that needs another one must load
+   it with =hs.spoons.load()=, catch =ENOTINSTALLED=, and then either install it with
+   =hs.spoons.install()= from this repository or fail with a message that names it. This is
+   also a candidate for an upstream issue: a =dependencies= field in =spoon.json=.
+5. =update()= reinstalls a Spoon only when the =version= in its =spoon.json= changes. A change
+   to a Spoon must come with a new version, or users will not receive it.
+6. A Spoon installed from a tag or a commit never changes. The readme should tell users how to
+   pin a version and how to update.
