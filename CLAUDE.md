@@ -137,9 +137,11 @@ Spoon at a time, in that Spoon's own bead.
    such as an open menu, is captured by the user with `screencapture -i`. All of these need the
    Screen Recording permission.
 2. Crop each image to the part that shows the feature, not the whole screen.
-3. Shrink it to at most 1200 pixels wide and 128 colours, as PNG:
-   `magick in.png -resize '1200x>' -colors 128 -strip out.png`. An image should be under
-   200 KB. A whole Retina window is about 2.9 MB as captured and about 165 KB after this.
+3. Shrink it to at most 1200 pixels wide and 256 colours, as PNG, without dithering:
+   `magick in.png -resize '1200x>' +dither -colors 256 -strip out.png`. An image should be
+   under 200 KB. Without `+dither`, ImageMagick approximates the dropped colours with a dot
+   pattern, which shows on gradients such as a translucent chooser; 256 colours without it
+   looks the same as the full image, at about a third of the size.
 4. Store it as `Spoons/<name>.spoon2/images/<what-it-shows>.png`. Images stay in the download,
    so that an installed Spoon's readme shows them too.
 5. Give every image in a readme alt text that says what it shows.

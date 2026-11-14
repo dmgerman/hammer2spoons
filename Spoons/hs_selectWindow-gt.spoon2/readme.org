@@ -1,0 +1,198 @@
+* hs_selectWindow-gt
+
+Switch to a window by typing part of its title or its application's name. The windows are
+listed by when you last used them, so the one you want is usually first or second, and a picture
+of the selected window can be shown while you move through the list.
+
+It also switches between two applications with one key each: press the key for an application
+to go to it, and press it again to go back to where you were.
+
+This is a port of the Hammerspoon 1 Spoon =hs_select_window=.
+
+The chooser limited to Chrome's windows, with the picture of the selected window beside it:
+
+#+ATTR_HTML: :alt The window chooser listing two Google Chrome windows, with a picture of the selected one, an EmacsWiki page, to its left
+[[./images/window-chooser.png]]
+
+* Installing
+
+The Spoon needs two others from this repository, loaded before it:
+
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]], which keeps a record of the open windows and reports which one gets the focus.
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]], which focuses the chosen window and moves it between screens. It needs
+  [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] in turn.
+
+#+begin_src js
+hs.spoons.use("hs_windowfilter-gt", { source: "dmgerman/hammer2spoons" })
+hs.spoons.use("hs_menu-gt", { source: "dmgerman/hammer2spoons" })
+hs.spoons.use("hs_window-gt", { source: "dmgerman/hammer2spoons", start: true })
+hs.spoons.use("hs_selectWindow-gt", {
+    source: "dmgerman/hammer2spoons",
+    start: true,
+    hotkeys: { allWindows: [["alt"], "b"], previousWindow: [["alt"], "`"] }
+})
+#+end_src
+
+Without either Spoon, =start()= stops with a message that names the one missing.
+
+* Simple usage
+
+#+begin_src js
+const sw = hs.spoons["hs_selectWindow-gt"]
+
+sw.windowSelect()                       // choose from every window
+sw.applicationWindowSelect()            // choose from the focused application's windows
+sw.applicationSelect()                  // choose an application, by its most recent window
+sw.windowPreviousSelect()               // switch to the last used window, with no chooser
+sw.applicationByBundleSelect("org.gnu.Emacs")   // go to Emacs, or back again
+#+end_src
+
+* The chooser
+
+Typing filters the list. Both the window's title and the line under it, which names the
+application and the screen, are searched, so =mail chrome= finds a Chrome window with "mail" in
+its title.
+
+Minimized windows and windows of a hidden application are listed too, and marked as such.
+
+While the chooser is open, =Tab= turns the picture of the selected window on or off, and
+=Shift+Tab= takes it again. Both keys can be changed; see /Settings/.
+
+** The picture
+
+The picture of the selected window is off by default. Set =config.showThumbnail = true=, or press
+=Tab= while the chooser is open.
+
+A picture is taken once per window and kept while the chooser is open, so going back to a window
+you have already looked at shows it at once. =Shift+Tab= takes it again, for a window that has
+changed. Taking a picture needs the Screen Recording permission. Without it, the chooser works
+and shows no pictures.
+
+* Functions
+
+** windowSelect()
+
+Choose from every window, most recently used first.
+
+** applicationWindowSelect([application])
+
+Choose from one application's windows: the focused application's, or the one named.
+
+#+begin_src js
+sw.applicationWindowSelect()            // the application in front
+sw.applicationWindowSelect("Emacs")     // a particular one, by name
+#+end_src
+
+** applicationSelect()
+
+Choose an application rather than a window: one entry per application, showing its most
+recently used window, and switching to that window.
+
+** windowPreviousSelect()
+
+Switch to the window used before the current one, with no chooser.
+
+hs_window-gt's =windowPrevious()= does nearly the same. The difference is in what they count:
+this one follows this Spoon's order, which includes minimized windows and windows of hidden
+applications.
+
+** applicationWindowPreviousSelect()
+
+Switch to the previously used window of the focused application, with no chooser. Useful for
+moving between two windows of one editor or browser.
+
+** applicationByBundleSelect(bundleID, [titlePattern])
+
+Switch to an application's most recently used window, or back to the previous window when that
+application is already in front. One key per application then switches between two
+applications.
+
+#+begin_src js
+sw.applicationByBundleSelect("org.gnu.Emacs")
+sw.applicationByBundleSelect("net.kovidgoyal.kitty", /^notes/)
+#+end_src
+
+"Back" means the most recently used window of another application, not simply the previous
+window. Otherwise an application with two windows would switch between its own, which is what
+=applicationWindowPreviousSelect()= does.
+
+The application is found by its bundle identifier, so a renamed or translated application is
+still found. An application that is not running, or has no window yet, is started or brought
+forward.
+
+=titlePattern= is optional: a =RegExp=, or a string that is made into one. Only the
+application's windows whose title matches are switched to, the most recently used first, and
+"back" then means the most recently used window whose title does not match. When none of the
+application's windows matches, its current window is used and an alert says so. An empty
+pattern is the same as none. A title is worth matching only when it does not change: a browser
+window's title changes with its tab, while a terminal window you have named keeps its name.
+
+** order()
+
+The order the chooser will use, as =Application: title= strings.
+
+** bindHotkeys(mapping)
+
+Called by =hs.spoons.use()= with its =hotkeys= option. The names it takes are =allWindows=,
+=applicationWindows=, =firstWindowPerApp=, =previousWindow= and =previousApplicationWindow=.
+
+* Settings
+
+| Setting                    | Default | Meaning                                                  |
+|----------------------------+---------+----------------------------------------------------------|
+| =rowsToDisplay=            |      14 | Rows visible in the chooser at once                      |
+| =width=                    |     0.4 | Chooser width, as a fraction of the screen's width       |
+| =wideWidth=                |    0.22 | The fraction used on a display wider than =wideScreenPoints= |
+| =wideScreenPoints=         |    3000 | Above this width, in points, =wideWidth= is used         |
+| =showThumbnail=            |   false | Whether the picture is shown when the chooser opens      |
+| =thumbnailHeightRatio=     |     0.4 | Largest height of the picture, as a fraction of the screen |
+| =thumbnailTopRatio=        |    0.12 | Where the picture's top is, when the chooser cannot be found |
+| =thumbnailGap=             |      12 | Space between the picture and the chooser, in points     |
+| =selectionPollSeconds=     |    0.15 | How often the selected row is checked, for the picture   |
+| =persistentThumbnailCache= |   false | Keep pictures after the chooser closes                   |
+| =thumbnailToggleKey=       |   "tab" | Key that turns the picture on and off                    |
+| =thumbnailRefreshKey=      |   "tab" | Key, with Shift, that takes the picture again            |
+| =skipApplications=         |  a list | Applications whose windows are never offered             |
+| =fullscreenScreenSkip=     |   false | Move the chosen window off a screen showing a fullscreen window |
+
+A smaller =selectionPollSeconds= makes the picture follow the selection sooner.
+
+=persistentThumbnailCache= makes the chooser faster to open, with older pictures.
+
+** Windows on a screen showing a fullscreen window
+
+When the window you choose is on a screen showing a fullscreen window, macOS leaves the
+fullscreen window's Space and shows the window you chose. That is what happens with
+=fullscreenScreenSkip= false, the default.
+
+With =fullscreenScreenSkip= true, the chosen window is first moved to the next screen that is not
+showing a fullscreen window, with hs_window-gt's =windowToScreenMove()=, and focused there. The
+fullscreen window stays where it is. When every other screen shows a fullscreen window too, the
+window is focused where it is. A window that is itself fullscreen or minimized is not moved.
+
+* What this Spoon does not do
+
+- *Anything with Spaces.* The Hammerspoon 1 Spoon could restrict a chooser to the current Space,
+  move a window to it, and show each window's Space. Hammerspoon 2 has no spaces module, so the
+  bindings =all_windows_ws=, =app_windows_ws=, =previous_window_ws=, =previous_app_window_ws=
+  and =all_windows_move_to_current_workspace= are not ported.
+- *Windows of the applications in =config.skipApplications=,* which are Hammerspoon's own by
+  default.
+
+* Coming from Hammerspoon 1
+
+| Hammerspoon 1 binding    | Here                                  |
+|--------------------------+---------------------------------------|
+| =all_windows=            | =windowSelect()=                      |
+| =app_windows=            | =applicationWindowSelect()=           |
+| =first_window_per_app=   | =applicationSelect()=                 |
+| =previous_window=        | =windowPreviousSelect()=              |
+| =previous_app_window=    | =applicationWindowPreviousSelect()=   |
+| the =_ws= bindings       | not ported; see above                 |
+
+=fontSize= is gone: the Hammerspoon 2 chooser has no font setting.
+
+* Requirements
+
+- hs_windowfilter-gt and hs_window-gt, loaded before this Spoon.
+- The Screen Recording permission, for the pictures only.

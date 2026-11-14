@@ -1,0 +1,109 @@
+#+TITLE: Review of hs_selectWindow-gt
+#+DATE: 2026-11-15
+
+This is the review of =hs_selectWindow-gt= for the bead =hammer2spoons-ei6.10=, made before it
+moves into this repository, against the same standard as the earlier reviews. The file read is
+=../Spoons/hs_selectWindow-gt/init.js= (970 lines), read in full. Line numbers refer to that
+file.
+
+* Bugs
+
+1. *Loading hs_windowfilter-gt* (line 141). =hs.spoons.load()= is expected to return =null= when
+   the Spoon is missing, but it throws =ENOTINSTALLED= (tested in =hammer2spoons-ei6.3=). The
+   message on line 143 is never shown; the exception escapes instead.
+
+2. *=timings()= throws* (lines 587-592 and 617). The entry records =front.title=, and
+   =HSApplication.title= was renamed =name=, so =front= is =undefined=, and =timings()= then fails
+   on =t.front.padEnd=. Tested on 2026-11-15 through =hs2=: it throws "undefined is not an object
+   (evaluating 't.front.padEnd')".
+
+* Dependencies
+
+3. *hs_windowfilter-gt is required in practice.* Without it, =switchableRecords()= (line 200)
+   returns an empty list, so every chooser says "No windows to choose from". The comments call
+   it optional and describe a fallback to front-to-back order that does not exist. It should be
+   required, checked in =start()=, as =hs_window-gt= does.
+
+4. *hs_window-gt is optional,* and three functions repeat what it does when it is not loaded:
+   =fullscreenScreenIds()= (lines 649-670), the move in =fullscreenScreenLeave()= (lines
+   709-725), and the focus with its second assertion in =focusWindowById()= (lines 743-763).
+   That is about 50 lines kept in step with another Spoon by hand. Either hs_window-gt becomes
+   required, which brings hs_menu-gt with it, or the copies stay.
+
+* Workarounds
+
+Both remain because Hammerspoon 2 lacks something, and both are candidates for upstream issues
+(=hammer2spoons-ei6.28=):
+
+5. *The chooser's frame is found by looking for it among Hammerspoon's own windows*
+   (=chooserGeometry()=, lines 476-512), matching the left edge and width it is expected to
+   have. =hs.chooser= exposes neither its frame nor its window. The same limitation is in
+   =hs_interactive-gt=.
+
+6. *The selected row is read every 0.15 seconds while the chooser is open* (=startPolling()=,
+   lines 398-411), because =hs.chooser= has no callback for the selection changing. The timer
+   runs only while the chooser is open, and only for the preview.
+
+* Diagnostics
+
+7. *Timing and state reports* (=timings()=, =thumbnailState()=, =reportTimings()=, and the
+   settings =logTimings= and =logTimingsOver=, about 70 lines). They record how long each step of
+   opening the chooser took, to find why it was slow. Like the debugging hooks removed from
+   =hs_window-gt= and =hs_windowfilter-gt=, they are not something a user of the Spoon needs, and
+   one of them is broken (item 2).
+
+* Quality
+
+8. *Names.* =CLAUDE.md= uses =selectApplicationWindow()= as its example of the wrong order:
+
+   | Now                               | Following the rule                 | Command now                             |
+   |-----------------------------------+------------------------------------+-----------------------------------------|
+   | =selectWindow=                    | =windowSelect=                     | =window-select=                         |
+   | =selectApplicationWindow=         | =applicationWindowSelect=          | =window-select-in-application=          |
+   | =selectApp=                       | =applicationSelect=                | =window-select-application=             |
+   | =selectPreviousWindow=            | =windowPreviousSelect=             | =window-select-previous=                |
+   | =selectPreviousApplicationWindow= | =applicationWindowPreviousSelect=  | =window-select-previous-in-application= |
+   | =selectApplicationByBundle=       | =applicationByBundleSelect=        | =window-select-emacs= and two others    |
+
+   The commands in the user's =init.js= would be renamed after the functions:
+   =window-select=, =application-window-select=, =application-select=, =window-previous-select=
+   and =application-window-previous-select=. The three per-application commands are the user's
+   own; =emacs-select=, =kitty-select= and =chrome-select= would follow the rule.
+
+9. *=bindHotkeys()= differs from hs_window-gt's.* It takes its own action names
+   (=allWindows=, =firstWindowPerApp=, ...) rather than the function names, does not release
+   earlier bindings when called again, and only logs an unknown name. It should work as
+   hs_window-gt's does: names are the functions', a second call replaces the first, and an
+   unknown name is an error.
+
+10. *=windowPreviousSelect= and hs_window-gt's =windowPrevious= do nearly the same thing.* The
+    difference is that this Spoon's order counts minimized windows and windows of hidden
+    applications. The readme explains it; both stay.
+
+11. *Redundant checks*: =hs.spoons ? ... : null= (lines 660, 712, 743, 941).
+
+12. *The author* in =spoon.json= is "dmg"; the others give the full name.
+
+* Local details
+
+None. =skipApplications= names Hammerspoon itself, and =HAMMERSPOON_BUNDLE_ID= is Hammerspoon
+2's own identifier.
+
+* What was done
+
+Decided by the user and done on 2026-11-15:
+
+- Items 1 and 2 are fixed. The Spoon checks for hs_windowfilter-gt with the =spoonRequired()=
+  pattern, and =timings()= is removed with the other diagnostics.
+- Items 3 and 4: hs_windowfilter-gt and hs_window-gt are both required, checked in =start()=. The
+  copies of hs_window-gt's fullscreen detection, screen move and focusing are removed.
+- Item 5 is left for =hammer2spoons-ei6.37=, and item 6 for =hammer2spoons-ei6.38=.
+- Item 7: the diagnostics are removed.
+- Item 8: the six functions are renamed, and the user's commands with them: =window-select=,
+  =application-window-select=, =application-select=, =window-previous-select=,
+  =application-window-previous-select=, and =emacs-select=, =kitty-select= and =chrome-select= on
+  ⌥E, ⌥K and ⌥C.
+- Items 11 and 12 are done. Item 9 is not yet decided.
+- The readme is rewritten from the user's side, with a screenshot of the chooser limited to
+  Chrome's windows. Taking it showed that the =-colors 128= reduction dithers gradients, so the
+  screenshot rule in =CLAUDE.md= now uses =+dither -colors 256=.
