@@ -13,6 +13,10 @@ the human says it is accepted.
 The only exception is a bead whose description or acceptance criteria say explicitly that
 approval is not required. A bead without that statement always needs approval.
 
+Approving a bead also authorizes committing the changes made while working on it. Commit
+them first, and close the bead after the commit. The beads export in `.beads/issues.jsonl`
+changes when the bead is closed, so that change goes into the next commit.
+
 This rule takes precedence over the session close protocol below, which tells agents to close
 finished work.
 
