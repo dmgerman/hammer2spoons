@@ -1,6 +1,6 @@
 {
     "name": "hs_window-gt",
     "author": "Daniel German <dmg@turingmachine.org>",
-    "version": "2.3.1",
+    "version": "2.3.2",
     "description": "Window placement, movement and resizing, with an undo history of where each window has been."
 }

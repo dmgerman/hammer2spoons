@@ -81,7 +81,8 @@ const config = {
         // page is presented, so a letter pressed within this time acts, and the window is
         // never drawn: someone who knows the menu does not see it. Zero draws at once.
         showDelay: 0.5,
-        // Dismisses the menu. Escape is always bound.
+        // Keys that close the menu. Only these keys are bound, so a list without "escape"
+        // leaves Escape free and does not close the menu with it.
         cancelKeys: ["escape"],
         // Returns to the parent menu.
         backKeys: ["delete"],

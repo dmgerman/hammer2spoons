@@ -34,10 +34,8 @@ const config = {
 
     // The ring drawn around the pointer after it is moved, so it can be found again. Its
     // size is the diameter, in pixels, and its width the thickness of the line.
-    //
-    // The ring ignores mouse events, so a click inside it reaches what is underneath
-    // rather than on the window beneath. mouseHighlightSeconds is therefore also how long
-    // that square is unclickable, and is the reason it is short.
+    // mouseHighlightSeconds is how long the ring is displayed. The ring ignores mouse events,
+    // so a click inside it reaches the window underneath while it is displayed.
     mouseHighlightColor: "#FF0000",
     mouseHighlightSize: 60,
     mouseHighlightWidth: 4,
