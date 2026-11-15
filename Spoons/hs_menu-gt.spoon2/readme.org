@@ -1,28 +1,32 @@
 * hs_menu-gt
 
-hs_menu-gt displays a menu of options on screen, opened with one key. Pressing the letter
-beneath an option selects it.
+hs_menu-gt creates menus of actions. A menu is displayed on screen as a grid of options, with a
+letter beneath each option, and pressing an option's letter selects it. Selecting an option runs
+its action, or opens a submenu of further options.
 
-A menu is a grid of options, each with an icon, a label and a letter. Selecting an option can
-bring an application forward, open a web page, run a command or a function, or open a submenu.
-Holding the letter, or pressing it with Control, runs a second action, such as hiding the
-application instead of bringing it forward.
+A menu is opened with one key combination, and gives access to all of its actions. The key
+combinations available for binding are few, and there are usually more actions than key
+combinations. A menu therefore lets the user run actions that are not bound to a key
+combination.
 
 * Features
 
 - *Keyboard operation.* The on-screen menu accepts keyboard input only. It does not respond to
   the mouse, and a click goes to the window beneath it.
-- *Two actions per option.* A short press runs an option's action, and a hold, or Control with
-  the letter, runs its second action.
-- *Submenus*, to any depth. Delete returns to the parent menu, and a menu opened again returns
-  to the submenu it was closed in.
-- *Menus computed when they are opened*, such as a menu of the windows open at that moment.
-- *Options that draw themselves*, which show information that changes, such as the time or the
-  audio device in use, and are redrawn when it changes.
-- *A delay before the menu is drawn.* The letters work during the delay, so a menu whose letters
-  are known can be used without being drawn at all.
-- *One menu on several devices.* The same menu can be displayed on a Stream Deck with
-  [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_streamdeck-gt.spoon2][hs_streamdeck-gt]], so each action is written once.
+- *Two actions per option.* A short press of an option's letter runs its action. Holding the
+  letter, or pressing it with Control, runs a second action, such as hiding an application
+  instead of bringing it forward.
+- *Submenus, to any depth.* Delete returns to the parent menu, and a menu opened again returns
+  to the submenu that was displayed when it closed.
+- *Menus computed when they are opened.* A menu of the open windows, for example, lists the
+  windows that are open at that moment.
+- *Options whose picture changes.* An option can show information that changes, such as the time,
+  and its picture is redrawn when the information changes.
+- *Use without looking.* The menu is drawn half a second after it opens, and its letters work
+  during that time. A user who knows a menu's letters therefore selects an option before the menu
+  is drawn.
+- *The same menu on a Stream Deck.* A menu can also be displayed on an Elgato Stream Deck, a
+  keypad with a small screen on each key, so each action is defined once for both.
 
 A menu of four options, each with its letter beneath it:
 
@@ -31,7 +35,7 @@ A menu of four options, each with its letter beneath it:
 
 * Installing
 
-The Spoon is installed and loaded with =hs.spoons.use()=:
+This Spoon is installed and loaded with =hs.spoons.use()=:
 
 #+begin_src js
 hs.spoons.use("hs_menu-gt", { source: "dmgerman/hammer2spoons" })
@@ -90,7 +94,7 @@ field is optional. An option with none of them is drawn as an empty square.
 | =labelColor=     | Colour of the label, as a hex string.                                |
 | =symbolColor=    | Colour of an SF Symbol icon. Overrides =config.symbolColor=.         |
 | =image=          | A ready-made =HSImage=, displayed as it is instead of being drawn.   |
-| =imageProvider=  | A function that draws the option. See /Options that draw themselves/. |
+| =imageProvider=  | A function that draws the option's picture. See /Options whose picture changes/. |
 | =stateProvider=  | A function returning what the option's picture depends on.           |
 | =updateInterval= | Seconds between calls to =stateProvider=.                            |
 
@@ -162,6 +166,10 @@ Two fields decide what happens after an option's action has run. =navigate= deci
 is displayed next, and applies to every device. =keepOpen= decides whether the menu stays
 displayed, and applies only to a device that can hide the menu.
 
+The code that displays a menu on one kind of device is called a /presenter/. This Spoon's
+on-screen menu is one presenter, and a Spoon for the Stream Deck provides another. /Writing a
+presenter/ describes the interface between a presenter and this Spoon.
+
 *** navigate
 
 =navigate= decides which menu is displayed after the action. It applies to every presenter,
@@ -190,8 +198,9 @@ option that is selected several times in a row.
 { label: "Choose album", command: "album-choose", navigate: "stay" }
 #+end_src
 
-Because the two fields are separate, one option definition suits both devices. A presenter
-added later uses =navigate= like any other, and uses =keepOpen= only if it can hide.
+Because the two fields are separate, the same option definition works on the on-screen menu and
+on a Stream Deck. A presenter added later uses =navigate= as every presenter does, and uses
+=keepOpen= only if it can hide the menu.
 
 An option with a submenu uses neither field: a short press of its letter opens the submenu.
 
@@ -224,12 +233,13 @@ Two kinds of option do not take the default:
 
 * Example: a window menu
 
-This example is a menu that places and moves the focused window, using
-[[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]. That Spoon provides
-this menu ready to use, opened with =menuShow()= and exported as =menu=. The example shows how
-such a menu is written. Each option calls one of hs_window-gt's functions with =fn:=, so the
-menu does not require hs_interactive-gt. The menu's keys do not take the keyboard focus, so the
-focused window is still the one acted on when an option's action runs.
+This example is a menu that places and moves the focused window. Each option calls a function of
+[[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]], a Spoon in this
+repository that places, resizes and moves windows, and that provides a menu like this one ready
+to use. The example shows how such a menu is written.
+
+The menu's keys do not take the keyboard focus. The window acted on is therefore the window that
+had the focus before the menu opened.
 
 #+begin_src js
 const menu = hs.spoons["hs_menu-gt"]
@@ -282,10 +292,10 @@ screenshot:
 #+ATTR_HTML: :alt A window menu of thirty options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an SF Symbol and its letter
 [[./images/window-menu.png]]
 
-* Options that draw themselves
+* Options whose picture changes
 
-An option with =imageProvider= draws its own picture each time what it shows changes. Such an
-option can show the time, a temperature, or which audio device is selected.
+The picture of an option with =imageProvider= is drawn again each time the information it shows
+changes. Such an option can show the time, for example, or the audio device in use.
 
 #+begin_src js
 const clockOption = {
@@ -323,14 +333,14 @@ then work as they do for any other option.
 
 ** What is not cached
 
-An option that draws itself is never written to the cache of options on disk. Otherwise a clock
-would leave a new file behind every minute. Such an option is redrawn whenever its state
-changes, so =imageProvider= should be fast. Anything slow belongs in =stateProvider=, whose
-result is passed to =imageProvider= as =state=.
+The picture of an option with =imageProvider= is never saved in the cache on disk, because a
+clock would otherwise add a file every minute. The picture is drawn again whenever the state
+changes, so =imageProvider= must be fast. Slow work is done in =stateProvider= instead, whose
+result =imageProvider= receives as =state=.
 
-** Where they are redrawn
+** Where the pictures are drawn again
 
-Options that draw themselves are redrawn on any presenter that can change what it displays,
+The pictures of these options are drawn again on any presenter that can change what it displays,
 such as the on-screen menu and a Stream Deck. A presenter that cannot change what it displays
 draws them once, when the menu opens. =session.update(index)= redraws one option at once,
 without waiting for its interval.
@@ -380,9 +390,8 @@ button callback, and the on-screen menu binds each letter with a handler for the
 and one for it coming up. The same code then decides whether the press was short or long.
 
 A press is long when the key is held for =config.holdSeconds=. The second action runs as soon as
-that time has passed, while the key is still down, as in the Hammerspoon 1 Spoon. The release
-that follows is ignored. An option without a second action does not wait for a hold, and runs
-its action when the key comes up.
+that time has passed, while the key is still down. The release that follows is ignored. An option
+without a second action does not wait for a hold, and runs its action when the key comes up.
 
 ** From the keyboard
 
@@ -458,13 +467,15 @@ The settings are fields of =menu.config=, where =menu= is =hs.spoons["hs_menu-gt
 =<config>= is Hammerspoon 2's configuration directory. The default alphabet is
 =asdfghjklqwertyuiopzxcvbnm=.
 
-=alpha= runs from 0, invisible, to 1, opaque. It applies to the panel behind the options and to
-each option with its background, icon and label, so the whole menu has the same opacity. The
-letters beneath the options are always opaque, so that they can be read. =alpha= is applied
-when the menu is displayed, not when an option is drawn, so changing it does not require
-clearing the cache. A Stream Deck cannot display transparency and ignores it. The panel's own
-colour may also have an alpha, given as an eight-digit hex colour. The default panel colour,
-=#1C1C1EF5=, has one, and the two values are multiplied.
+=alpha= runs from 0, invisible, to 1, opaque. It applies to the whole menu, the panel and the
+options alike, except the letters beneath the options, which are always opaque so that they can
+be read. =alpha= is applied when the menu is displayed, not when an option is drawn, so changing
+it does not require clearing the cache. A Stream Deck cannot display transparency and ignores
+=alpha=.
+
+The panel's colour, =config.screen.background=, can include an opacity, as an eight-digit
+hex colour, such as the default =#1C1C1EF5=. The menu's opacity is then that value multiplied by
+=alpha=.
 
 =font= is a font's PostScript name, such as ="Helvetica-Bold"=, not its display name
 ="Helvetica Bold"=. Null selects the system font. A name that cannot be found also selects the
@@ -492,11 +503,12 @@ The default =columnsFor= gives at least four columns, and more for a large menu,
 grid is wider than it is tall.
 
 =showDelay= sets how long the menu waits, in seconds, before it is drawn. The default is 0.5,
-and 0 draws the menu at once. The letters are bound as soon as the menu is opened. With a delay, a letter pressed
-within it selects its option, and the menu is never drawn. A menu whose letters are known can
-therefore be used without being seen, while the menu is still drawn for a user who waits. A
-submenu opened before the menu is drawn waits the delay again, so opening a submenu quickly
-draws nothing either. Once the menu is on screen, a new submenu replaces it at once.
+and 0 draws the menu at once. The letters are bound as soon as the menu opens. A letter pressed
+during the wait therefore selects its option, and the menu is never drawn. A user who waits sees
+the menu drawn after =showDelay=.
+
+A submenu opened during the wait starts the wait again, so a submenu selected quickly is not drawn
+either. Once the menu is on screen, a submenu replaces it at once.
 
 * How options are drawn
 
@@ -510,7 +522,7 @@ milliseconds.
 
 Three details of the drawing:
 
-1. *An SF Symbol is recoloured in a canvas of its own.* The symbol gives the shape, and a filled
+1. *An SF Symbol is recoloured in a separate canvas.* The symbol gives the shape, and a filled
    rectangle drawn with the =sourceIn= composite rule colours it. This cannot be done in the
    option's own canvas, because a composite rule applies to everything already drawn in the same
    canvas. It would colour the option's background instead of the symbol.
@@ -543,9 +555,9 @@ again.
 
 * Writing a presenter
 
-A presenter displays a menu on one kind of device. The on-screen menu is one presenter, and
-hs_streamdeck-gt provides another. This section describes what a new presenter implements, and
-what hs_menu-gt provides to it.
+A presenter displays a menu on one kind of device. The on-screen menu is one presenter, and a
+Spoon for the Stream Deck provides another. This section describes what a new presenter
+implements, and what hs_menu-gt provides to it.
 
 =sessionOpen(menu, presenter, options)= opens =menu= on =presenter= and returns a session.
 =options.name= is the root menu's title. The session displays the menu at once, and keeps track
@@ -573,11 +585,12 @@ ready, with each option's =image= field already set.
 null when it cannot be drawn. =options.context= is passed to the option's =imageProvider=. A
 presenter calls it only when it draws options itself.
 
-A presenter that uses the keyboard implements =keysSuspend= and =keysResume=. They are called
-when hs_interactive-gt opens a chooser or a text prompt. A hotkey receives a key press before a
-chooser does, so without them the on-screen menu would act on the arrow keys meant for the
-chooser. While the keys are suspended, =present= must not bind them again, even when the menu
-is redrawn. A presenter without a keyboard, such as a Stream Deck, omits both.
+A presenter that uses the keyboard implements =keysSuspend= and =keysResume=. They are called when
+hs_interactive-gt opens a chooser or a text prompt, and when the prompt closes. A hotkey receives
+a key press before a chooser does. Without these two functions, a letter typed into the chooser
+would select an option of the menu instead. While the keys are suspended, =present= must not bind
+them again, even when the menu is redrawn. A presenter without a keyboard, such as a Stream Deck,
+omits both.
 
 ** The session
 
