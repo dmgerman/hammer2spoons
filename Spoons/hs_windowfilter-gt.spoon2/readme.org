@@ -1,57 +1,45 @@
 * hs_windowfilter-gt
 
-hs_windowfilter-gt invokes handlers for window events, such as =windowCreated=, =windowDestroyed=,
-=windowMoved=, =windowFocused=, =windowMinimized= and =windowTitleChanged=. A handler is
-registered on a filter, which is a set of rules that matches windows by attributes such as title
-and application, and the handler is invoked only for events of windows that match those rules.
+hs_windowfilter-gt invokes a handler when a window event is emitted, such as =windowFocused= when
+a window gains the focus. A handler is registered on a filter, which is a set of rules that
+selects windows, for example by title or by application. The handler is invoked only for events
+of the windows that the filter selects.
 
 - *Nineteen window events,* with the names and semantics of Hammerspoon 1's =hs.window.filter=.
-- *Rules* that match windows by title, application, screen, region and role, and by whether a
-  window is visible, focused or fullscreen.
+- *Rules* that select windows by their attributes, such as the title, the application or the
+  screen.
 - *Per-application rules,* and override rules that take precedence over all other rules.
 - *Debounced events,* so that dragging a window emits a single =windowMoved= when the drag ends,
   rather than one event for each intermediate position.
 - *A snapshot of the window's state with every event,* so that a handler can still read the
   title of a window that has already been destroyed.
-- *The list of windows a filter matches,* read from the Spoon's cache of window state rather than
+- *The list of windows a filter matches,* read from this Spoon's cache of window state rather than
   queried from each application through the Accessibility API.
-- *No overhead while no handler is registered,* because the Spoon starts observing windows only
+- *No overhead while no handler is registered,* because this Spoon starts observing windows only
   when the first handler is registered on a filter.
 
 The Accessibility API of macOS posts window creation and focus changes to an observer registered
 on the application, but posts the other window notifications, such as moves, resizes and
-destruction, only to an observer registered on the window itself. The Spoon therefore registers
-an observer on every application and on every window, and derives the remaining events, such as
-=windowVisible= and =windowAllowed=, by comparing a window's state before and after each
-notification. It then invokes the handlers of every filter whose rules match the window.
+destruction, only to an observer registered on the window itself. This Spoon therefore registers
+an observer on every application and on every window. It derives the remaining events, such as
+=windowVisible=, by comparing a window's state before and after each notification, and then
+invokes the handlers of every filter whose rules match the window.
 
 * Installing
 
-The Spoon is installed and loaded with =hs.spoons.use()=:
+This Spoon is installed and loaded with =hs.spoons.use()=:
 
 #+begin_src js
 hs.spoons.use("hs_windowfilter-gt", { source: "dmgerman/hammer2spoons" })
 #+end_src
 
-The =ref= option of =hs.spoons.use()= installs the Spoon from a particular tag or commit of the
-repository instead of its main branch. =hs.spoons.update("hs_windowfilter-gt")= downloads the Spoon
-again from the same source and ref, and reinstalls it when the version in its =spoon.json= has
-changed. A Spoon installed from a tag or a commit is therefore never changed by an update.
-
-* Spoons that use it
-
-Three Spoons in this repository use hs_windowfilter-gt. Each of them has to be loaded after it.
-
-| Spoon                | Kind     | What it takes from hs_windowfilter-gt                       |
-|----------------------+----------+-------------------------------------------------------------|
-| =hs_window-gt=       | Required | The list of windows, and the events it uses to find the previous window, forget closed windows and redraw isolation |
-| =hs_selectWindow-gt= | Required | The windows, in the order in which they were last focused   |
-| =hs_interactive-gt=  | Optional | The list of windows to choose from, which it otherwise reads more slowly |
+Other Spoons in this repository that use window events require this Spoon, and their readmes say
+so. Each of them must be loaded after this Spoon.
 
 * Usage
 
-The Spoon provides a default filter, =default=, which accepts the visible windows of every
-application except Hammerspoon. A handler is added to a filter with =on()=:
+This Spoon provides a default filter, =default=, which accepts the visible windows of every
+application except Hammerspoon 2 itself. A handler is registered on a filter with =on()=:
 
 #+begin_src js
 const wf = hs.spoons["hs_windowfilter-gt"]
@@ -61,7 +49,7 @@ wf.default.on("windowCreated", (event, window, state) => {
 })
 #+end_src
 
-A filter is a set of rules together with the handlers added to it. =create()= makes a filter
+A filter is a set of rules together with the handlers registered on it. =create()= makes a filter
 with rules of its own, for when the default filter accepts too many windows:
 
 #+begin_src js
@@ -72,9 +60,9 @@ editors.on(["windowFocused", "windowTitleChanged"], (event, window, state) => {
 })
 #+end_src
 
-The Spoon watches no window until the first handler is added to any filter, and it stops
-watching when the last handler is removed. Loading the Spoon without adding a handler costs
-nothing.
+This Spoon observes no window until the first handler is registered on any filter, and it stops
+observing when the last handler is removed. Loading this Spoon without registering a handler
+therefore costs nothing.
 
 * Rules
 
@@ -122,8 +110,7 @@ wf.create({ allowTitles: ["Inbox", /^Drafts/] })       // either of them
 wf.create({ rejectTitles: (title) => title.length < 3 })
 #+end_src
 
-A function that throws matches nothing, and the error is written to the console. Lua patterns,
-which Hammerspoon 1 used, are not supported.
+A function that throws matches nothing, and the error is written to the console.
 
 ** Rules for particular applications
 
@@ -134,8 +121,8 @@ accepts a window:
 2. The rules for the window's application, when the filter has rules for that application.
 3. The /default/ rules, which are the ones given to =create()=.
 
-Only the first of these that applies is consulted. A window of an application with rules of its
-own is therefore not tested against the default rules.
+Only the first of these that applies is consulted. A window of an application that has
+application rules is therefore not tested against the default rules.
 
 #+begin_src js
 const f = wf.create({ visible: true })          // the default rules
@@ -158,7 +145,7 @@ A handler can be registered for nineteen events. =events= holds all their names,
 
 | Event                  | Emitted when                                                                     |
 |------------------------+----------------------------------------------------------------------------------|
-| =windowCreated=        | a window is created, or was already open when the Spoon started observing windows |
+| =windowCreated=        | a window is created, or was already open when this Spoon started observing windows |
 | =windowDestroyed=      | a window is destroyed                                                            |
 | =windowMoved=          | a window has stopped moving                                                      |
 | =windowResized=        | a window has stopped being resized                                               |
@@ -178,10 +165,10 @@ A handler can be registered for nineteen events. =events= holds all their names,
 | =windowAllowed=        | a window starts matching the filter's rules                                      |
 | =windowRejected=       | a window stops matching the filter's rules                                       |
 
-The Spoon starts observing windows when the first handler is registered on any filter, and at
+This Spoon starts observing windows when the first handler is registered on any filter, and at
 that point it emits =windowCreated= for every window already open. A filter whose first handler
-is registered later does not receive these events, so =windows()= is used instead to list the
-windows that filter matches.
+is registered later does not receive these events. Such a filter lists the windows it already
+matches with =windows()=.
 
 A window is /on screen/ when it is visible, is not minimized, and its application is not
 hidden. =windowVisible= and =windowNotVisible=, by contrast, follow only the window's own
@@ -213,18 +200,19 @@ f.on("windowDestroyed", (event, window, state) => {
 
 A handler that throws does not affect the other handlers. Its error is written to the console.
 
-** When events are reported
+** When events are emitted
 
-Some events are reported after a short delay, which the settings control:
+Some events are emitted after a short delay, which the settings control:
 
-1. Moves, resizes and title changes arrive from macOS in bursts; a drag produces one
-   notification per frame. The Spoon reports one event when a burst has been quiet for
-   =moveDebounce= or =titleDebounce= seconds.
-2. A window's properties do not all change at once when it is minimized, restored, hidden or
-   focused. The Spoon reads them =stateDebounce= seconds after the notification.
+1. macOS posts a notification for every step of a move, a resize or a title change, so a drag
+   posts one notification per frame. This Spoon emits one event once no further notification
+   has arrived for =moveDebounce= or =titleDebounce= seconds.
+2. A window's properties do not all change at the same moment when the window is minimized,
+   restored, hidden or focused. This Spoon reads them =stateDebounce= seconds after the
+   notification.
 
-An event is delivered to a filter that accepted the window before the change, and to a filter
-that accepts it after the change. A filter of ={visible: true}= therefore receives
+An event is emitted to a filter that accepted the window before the change, and to a filter that
+accepts it after the change. A filter of ={visible: true}= therefore receives
 =windowMinimized=, although a minimized window is no longer visible. Without this rule, a filter
 would receive the events that make a window match, but not the events that make it stop
 matching.
@@ -236,8 +224,9 @@ methods that change a filter return the filter, so calls to them can be chained.
 
 ** on(events, handler)
 
-=on()= adds a handler for one event, or for each event in an array. It can be called again to
-add further handlers. An event name that does not exist is written to the console and skipped.
+=on()= registers a handler for one event, or for each event in an array. It can be called again to
+register further handlers. An event name that does not exist is written to the console and
+skipped.
 
 #+begin_src js
 f.on("windowFocused", onFocus)
@@ -259,8 +248,8 @@ f.off()
 
 ** once(events, handler)
 
-=once()= adds a handler that is removed when the first of the given events arrives. The handler
-is called exactly once, even when it was given several events.
+=once()= registers a handler that is removed when the first of the given events is emitted. The
+handler is called exactly once, even when it was given several events.
 
 #+begin_src js
 f.once("windowCreated", (event, window, state) => console.log(`the first: ${state.title}`))
@@ -276,21 +265,21 @@ defined order.
 const titles = f.windows().map((w) => w.title)
 #+end_src
 
-While the Spoon is watching, the answer comes from its records and asks no application. While
-it is not watching, the windows are read with =hs.window.allWindows()=, which takes about 0.1
+While this Spoon is observing windows, =windows()= reads this Spoon's records and queries no
+application. Otherwise, it reads the windows with =hs.window.allWindows()=, which takes about 0.1
 seconds.
 
 ** records()
 
 =records()= returns the same windows as =windows()=, each as an object ={window, state}=.
-=state= is the record described under /The handler/. The other Spoons that use this one read
-windows this way, so that they can sort and select windows by their state without asking each
-application.
+=state= is the record described under /The handler/. Code that sorts or selects windows by their
+state uses =records()=, because the state is read from this Spoon's records rather than queried
+from each application.
 
 ** isWindowAllowed(window)
 
 =isWindowAllowed()= checks whether the filter accepts one window now, for code that obtained the
-window elsewhere, such as from a key press. It adds no handler.
+window elsewhere, such as from a key press. It registers no handler.
 
 ** isWatched()
 
@@ -302,19 +291,19 @@ These replace one of the filter's three kinds of rule set, which /Rules for part
 applications/ describes. =setApplicationFilter()= with =null= removes an application's rules,
 and =setOverrideFilter(null)= removes the override rules.
 
-* Functions of the Spoon
+* Functions of this Spoon
 
-These are called on the Spoon itself, =hs.spoons["hs_windowfilter-gt"]=.
+These are called on this Spoon itself, =hs.spoons["hs_windowfilter-gt"]=.
 
 | Function               | Does                                                                |
 |------------------------+---------------------------------------------------------------------|
 | =create([rules])=      | Returns a new filter with the given default rules, or with ={}=.    |
 | =destroy(filter)=      | Removes every handler of a filter and discards it. Returns whether the filter existed. |
-| =status()=             | Returns what is being watched. See below.                           |
+| =status()=             | Returns what is being observed. See below.                          |
 | =windowState(window)=  | Returns the record of a window that a handler receives as =state=, or null when the window can no longer be read. |
 | =matches(rule, value)= | Returns whether a value matches a rule, as described under /Matching/. |
 
-The Spoon also provides =default=, its default filter, and =events=, the names of all events.
+This Spoon also provides =default=, its default filter, and =events=, the names of all events.
 
 ** default
 
@@ -325,8 +314,8 @@ other Spoons.
 
 ** status()
 
-=status()= returns an object that shows what the Spoon is watching. It is useful when an
-expected event is not reported.
+=status()= returns an object that shows what this Spoon is observing. It is useful when an
+expected event is not emitted.
 
 #+begin_src js
 hs.spoons["hs_windowfilter-gt"].status()
@@ -335,16 +324,16 @@ hs.spoons["hs_windowfilter-gt"].status()
 
 | Field          | Meaning                                                |
 |----------------+--------------------------------------------------------|
-| =tracking=     | Whether the Spoon is watching windows                  |
-| =focusedId=    | The id of the focused window, as the Spoon last read it |
-| =applications= | The number of applications watched                     |
-| =windows=      | The number of windows watched                          |
+| =tracking=     | Whether this Spoon is observing windows                |
+| =focusedId=    | The id of the focused window, as this Spoon last read it |
+| =applications= | The number of applications observed                    |
+| =windows=      | The number of windows observed                         |
 | =filters=      | The number of filters that exist                       |
 | =watched=      | The number of filters with at least one handler        |
 
 * Settings
 
-The settings are in =config=, and are changed after the Spoon is loaded:
+The settings are in =config=, and are changed after this Spoon is loaded:
 
 #+begin_src js
 hs.spoons["hs_windowfilter-gt"].config.moveDebounce = 0.2
@@ -352,31 +341,29 @@ hs.spoons["hs_windowfilter-gt"].config.moveDebounce = 0.2
 
 | Setting                   | Default            | Meaning                                                          |
 |---------------------------+--------------------+------------------------------------------------------------------|
-| =moveDebounce=            | =0.1=              | Seconds without a move or resize before =windowMoved= or =windowResized= is reported |
-| =titleDebounce=           | =0.1=              | Seconds without a title change before =windowTitleChanged= is reported |
+| =moveDebounce=            | =0.1=              | Seconds without a move or resize before =windowMoved= or =windowResized= is emitted |
+| =titleDebounce=           | =0.1=              | Seconds without a title change before =windowTitleChanged= is emitted |
 | =stateDebounce=           | =0.08=             | Seconds after a minimize, restore, hide or focus change before the window is read |
 | =createdRescanDelay=      | =1.5=              | Seconds after a window appears before its application's windows are read again, to find a window that had no title at first |
-| =applicationRetryDelays=  | =[0.5, 1, 2, 4, 8]= | Seconds between attempts to watch an application that refused, as one that has just started can |
-| =skipApplications=        | a list             | Names of applications that are never watched                     |
+| =applicationRetryDelays=  | =[0.5, 1, 2, 4, 8]= | Seconds between attempts to observe an application that refused, as one that has just started can |
+| =skipApplications=        | a list             | Names of applications that are never observed                    |
 | =untitledNonStandardSkip= | =true=             | Whether to ignore every window that has no title and is not a standard window |
 | =skipInDefault=           | Hammerspoon's names | Names of applications that =default= does not accept            |
 | =logLevel=                | ="error"=          | What is written to the console: ="none"=, ="error"= or ="debug"= |
 
 * What this Spoon does not do
 
-The Spoon does not support Spaces, and it ignores two kinds of window.
+This Spoon does not support Spaces, and it ignores two kinds of window.
 
 1. *Spaces.* There is no =currentSpace= rule, and no =windowInCurrentSpace= or
-   =windowNotInCurrentSpace= event, because Hammerspoon 2 has no module for Spaces. Hammerspoon
-   1's module accepts the =currentSpace= rule but evaluates it as =visible=, which is a different
-   test under the same name.
+   =windowNotInCurrentSpace= event, because Hammerspoon 2 has no module for Spaces.
 2. *Windows of the applications in =config.skipApplications=.* These are background processes
    such as =universalaccessd= and Safari's web content processes, which have no windows to
    report.
 3. *Windows that have no title and are not standard windows,* while
    =config.untitledNonStandardSkip= is =true=. These are alerts, banners, menu bar popovers and
    the Finder's desktop, none of which is useful to select. Most of them are Hammerspoon 2's own
-   alerts. Watching each of them would register six accessibility observers for a window that
+   alerts. Observing each of them would register six accessibility observers for a window that
    closes a few seconds later.
 
 * Coming from Hammerspoon 1
@@ -389,9 +376,12 @@ differently:
 | =subscribe=, =unsubscribe=                     | =on=, =off=, =once=                        |
 | =hs.window.filter.new(rules)=                  | =create(rules)=                            |
 | =setFilters=, =setAppFilter=                   | =setApplicationFilter=                     |
-| Lua patterns in title rules                    | strings, regular expressions or functions  |
+| Lua patterns in title rules                    | strings, regular expressions or functions; Lua patterns are not supported |
 | =getWindows()=                                 | =windows()=                                |
 | =windowsVisible=, =windowsNotVisible= as names | a filter created with the rule =visible=   |
+
+Hammerspoon 1's =currentSpace= rule is not ported. Hammerspoon 1 evaluates it as the =visible=
+rule, so a filter that used =currentSpace= behaves the same with =visible=.
 
 =on=, =off= and =once= follow the rest of Hammerspoon 2, where =hs.application=, =hs.screen=
 and =hs.ax= use the same names. Unlike those modules, =on= and =off= here also accept an array
@@ -400,5 +390,5 @@ common.
 
 * Requirements
 
-The Spoon requires the Accessibility permission, without which macOS posts no window
+This Spoon requires the Accessibility permission, without which macOS posts no window
 notifications to Hammerspoon 2.
