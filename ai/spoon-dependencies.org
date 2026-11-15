@@ -18,6 +18,8 @@ These were found by reading every place a Spoon in =../Spoons= refers to another
 | Spoon                | Uses                 | Kind     | What it gets, and what happens without it                         | Where                          |
 |----------------------+----------------------+----------+-------------------------------------------------------------------+--------------------------------|
 | =hs_window-gt=       | =hs_windowfilter-gt= | Required | Events for the previous window, closed windows and isolation. Changed from optional on 2026-11-14 (ei6.9). | =start()= |
+| =hs_clipboard-gt=    | =hs_interactive-gt=  | Required | promptOpened() and promptClosed(), so that the history's chooser is reported as a prompt. Decided on 2026-11-15 (ei6.14). | =start()=, =historyShow()= |
+| =hs_clipboard-gt=    | =hs_menu-gt=         | Required | Its clipboard menu, whose options use =fn:=. Decided on 2026-11-15 (ei6.14). | =start()=, =menuShow()= |
 | =hs_appleMusic-gt=   | =hs_interactive-gt=  | Required | Its choice reader, for the album chooser. Decided on 2026-11-15 (ei6.44). | =start()=, =albumChoose()= |
 | =hs_window-gt=       | =hs_interactive-gt=  | Required | Its readers, for the choosers of /Swap with/, /Tile with/ and /To screen/, and =interactiveFunctionCreate()=, through which its exported functions read omitted arguments (ei6.45). Changed on 2026-11-15 (ei6.43), replacing the rule of 2026-11-14 that no published Spoon requires it. | =start()=, =readerRun()= |
 | =hs_window-gt=       | =hs_menu-gt=         | Required | Its window menu, whose buttons use =fn:=. Decided on 2026-11-14 (ei6.9). | not yet written |

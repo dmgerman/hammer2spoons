@@ -1,0 +1,90 @@
+#+TITLE: Review of hs_clipboard-gt
+#+DATE: 2026-11-15
+
+This is the review of =hs_clipboard-gt= for the bead =hammer2spoons-ei6.14=, made before it moves
+into this repository. The file read is =../Spoons/hs_clipboard-gt/init.js= (1,024 lines), read in
+full, together with its readme and the configuration's use of it in =init.js= and =menus.js=.
+
+* Bugs
+
+1. *A second image of the same size is not stored* (=pasteboardImageIsNew()=, lines 247-253).
+   After an image is pasted back from the history, the next image on the pasteboard is ignored
+   when its width and height equal the pasted one's. Two screenshots of the same window have the
+   same size, so the second one is lost. =hs.pasteboard.changeCount= identifies the change this
+   Spoon caused itself, and replaces the comparison by size.
+2. *Deleting entries leaves their image files behind* (=entryDelete()= and =historyClear()=, lines
+   481-522). Only =imageCapture()= calls =imagesSweep()=, so a deleted image entry, or every image
+   after =historyClear()=, stays on disk until the next image is copied.
+
+* Local details
+
+3. *A migration from an earlier location* (=config.historyFileWas=, lines 108-110 and 893-901)
+   moves =logs/clipboard.json= on the first start. Only this machine ever had that file, so the
+   code serves no other user. It can go.
+4. The other paths, =clipboardDir= and =historyFile=, are inside the Hammerspoon 2 configuration
+   directory and are general. Nothing else is local.
+
+* Dependencies and the rules of this repository
+
+5. *Its chooser is not reported as a prompt.* The history chooser is this Spoon's main interface,
+   as in hs_selectWindow-gt, so it stays its own =hs.chooser=. It should report itself with
+   hs_interactive-gt's =promptOpened()= and =promptClosed()=, so that hs_menu-gt releases its
+   letters while the chooser is open. That makes hs_interactive-gt a required Spoon.
+6. *No menu, and no =bindHotkeys()=.* The user's =menus.js= builds a clipboard menu of four
+   options (show the history, paste-on-select, drop the last entry, clear). By the rule in
+   CLAUDE.md, the Spoon would export that menu as =menu=, open it with =menuShow()=, and accept
+   =historyShow=, =historyToggle= and =menuShow= in =bindHotkeys()=, which makes hs_menu-gt a
+   required Spoon too.
+
+* Workarounds
+
+These remain because Hammerspoon 2 lacks something, and both are already in beads:
+
+7. The chooser's frame is found by searching Hammerspoon 2's own windows (=chooserGeometry()=),
+   =hammer2spoons-ei6.37=.
+8. The selected row is read every =previewPollSeconds= while the chooser is open, because
+   =hs.chooser= reports no change of selection, =hammer2spoons-ei6.38=.
+
+The right-click menu requires a Hammerspoon 2 build with upstream PR #377, merged on 2026-11-07,
+which is later than the date the top-level readme gives.
+
+* Names
+
+9. Names that put the action before its object, by the rule in CLAUDE.md:
+
+   | Now                     | Following the rule             |
+   |-------------------------+--------------------------------|
+   | =entryMoveToTop=        | =entryToTopMove=               |
+   | =entryMoveUp=           | =entryUpMove=                  |
+   | =entryMoveDown=         | =entryDownMove=                |
+   | =passwordRevealCurrent= | =currentPasswordRevealToggle=  |
+   | =pasteOnSelectEnabled=  | =pasteOnSelectIsEnabled=       |
+
+   =passwordRevealCurrent= toggles, so its name says so. None of these is used in the user's
+   configuration.
+
+* The readme
+
+10. It describes the Spoon from its history (a port of ClipboardTool, differences from v1), not
+    from what it does for the user, and it states that images are not stored, which is no longer
+    true. It is rewritten from the user's side, with a screenshot of the chooser.
+
+* What was done
+
+Decided by the user and done on 2026-11-15:
+
+- Items 1 and 2 are fixed. This Spoon recognises its own writes by =hs.pasteboard.changeCount=,
+  and deleting entries or clearing the history deletes their image files.
+- Item 3: the migration from =logs/clipboard.json= is removed.
+- Item 5: the chooser is reported with =promptOpened()= and =promptClosed()=, and
+  hs_interactive-gt is required.
+- Item 6: the Spoon exports =menu=, =menuShow()= and =bindHotkeys()=, and requires hs_menu-gt.
+  The user's =menus.js= takes the clipboard menu from the Spoon, and =init.js= loads the Spoon
+  after hs_menu-gt.
+- Item 9: the five functions are renamed.
+- Item 10: the readme is rewritten from the user's side, with a screenshot of the chooser and its
+  image preview, taken on neutral sample entries.
+- Added at the user's request: =config.passwordTest=, a function that replaces or extends the
+  password test.
+- The description in =spoon.json= and the header comment no longer say "offered back". The
+  version is 2.0.0.
