@@ -166,6 +166,20 @@ function startTrackingFocus() {
     if (current) noteFocused(current.state.id)
 }
 
+/**
+ * The records without the focused window's. A chooser leaves the focused window out, because
+ * choosing it would change nothing, so the window used before it is the first row, which the
+ * chooser selects when it opens.
+ *
+ * The focused window is the first of focusOrder, which follows hs_windowfilter-gt's
+ * windowFocused events. The tracker's per-window `focused` flag is not used: it can stay true
+ * on a window of another application after the focus has left it.
+ */
+function withoutFocused(records) {
+    const focusedId = focusOrder.length ? focusOrder[0] : null
+    return records.filter((record) => record.state.id !== focusedId)
+}
+
 /** Records in most-recently-used order. Those never focused come last. */
 function recordsByUse(records) {
     const rank = new Map()
@@ -515,7 +529,8 @@ function chooserGeometry(area) {
  * @param {Array} windows The windows to offer, in the order to offer them.
  * @param {string} placeholder Prompt text.
  */
-function chooseFrom(records, placeholder) {
+function chooseFrom(all, placeholder) {
+    const records = withoutFocused(all)
     if (!records.length) {
         hs.ui.alert("No windows to choose from").duration(2).show()
         return null
@@ -542,11 +557,14 @@ function chooseFrom(records, placeholder) {
 
     own.setChoices(choicesFor(records))
 
-    // Each callback acts only while its chooser is the current one, so that a chooser closed by
-    // a newer one does not end the newer one's session.
+    // onShow and onHide act only while their chooser is the current one, so that a chooser
+    // closed by a newer one does not end the newer one's session.
+    //
+    // onSelect is not checked in that way. hs.chooser calls onHide before onSelect, so by the
+    // time onSelect runs, onHide has already ended this chooser's session. onSelect runs only
+    // when the user chooses or dismisses in the visible chooser, never when code hides it.
     own.onSelect = (item) => {
-        if (chooser !== own) return
-        finishChoosing()
+        if (chooser === own) finishChoosing()
         if (!item || item.id === undefined) return
         focusWindowById(item.id)
     }
@@ -789,9 +807,9 @@ function applicationWindowPreviousSelect() {
     return focusWindowById(records[1].state.id)
 }
 
-/** The order the switcher will offer windows in, as titles. For looking at the ordering. */
+/** The windows windowSelect() offers, in its order, as titles. For looking at the ordering. */
 function order() {
-    return allRecords().map(({ state }) => `${state.application}: ${state.title}`)
+    return withoutFocused(allRecords()).map(({ state }) => `${state.application}: ${state.title}`)
 }
 
 let hotkeys = []

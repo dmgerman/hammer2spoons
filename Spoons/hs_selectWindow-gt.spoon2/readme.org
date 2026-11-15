@@ -5,8 +5,8 @@ It also switches between two applications with one key for each.
 
 Its main features are these:
 
-- *A chooser of windows, most recently used first.* The window used before the current one is
-  in the second row, so it is usually selected with one or two keys.
+- *A chooser of windows, most recently used first.* The focused window is not listed, so the
+  window used before it is the first row, selected when the chooser opens.
 - *A search of both the title and the application.* Typing =mail chrome= finds a Chrome window
   whose title contains "mail".
 - *Every window is listed,* including minimized windows and windows of hidden applications,
@@ -72,8 +72,9 @@ sw.applicationByBundleSelect("org.gnu.Emacs")   // switch to Emacs, or back from
 * The order of the windows
 
 Every chooser lists windows in the order in which they were last focused, the most recent
-first. The Spoon records each change of focus as hs_windowfilter-gt reports it, so a window
-keeps its place in the order after it is minimized.
+first. The focused window is left out, because choosing it would change nothing, so the first
+row is the window used before it. The Spoon records each change of focus as hs_windowfilter-gt
+reports it, so a window keeps its place in the order after it is minimized.
 
 The order begins when the Spoon starts. At that moment the focused window is placed first, and
 the other open windows follow in no particular order. Each later change of focus corrects the
@@ -122,7 +123,8 @@ chooser and focus the window chosen in it, or focus a window directly.
 
 ** windowSelect()
 
-=windowSelect()= opens a chooser of every window, most recently used first.
+=windowSelect()= opens a chooser of every window except the focused one, most recently used
+first.
 
 ** applicationWindowSelect([application])
 
@@ -140,12 +142,14 @@ The chooser's prompt shows the application's name.
 ** applicationSelect()
 
 =applicationSelect()= opens a chooser with one row per application. Each row shows that
-application's most recently used window, and choosing the row focuses that window.
+application's most recently used window, and choosing the row focuses that window. The
+application of the focused window is not listed, since its row would be the focused window.
 
 ** windowPreviousSelect()
 
 =windowPreviousSelect()= focuses the window used before the current one, without opening a
-chooser. That window is the second in the order described under /The order of the windows/.
+chooser. That window is the first row of =windowSelect()='s chooser, as described under /The
+order of the windows/.
 When there is no such window, an alert says so. The function returns whether it focused a
 window.
 
@@ -204,11 +208,11 @@ window =windowPreviousSelect()= will focus:
 
 #+begin_src js
 hs.spoons["hs_selectWindow-gt"].order().slice(0, 3)
-// [ "Emacs: init.js", "Google Chrome: Inbox", "kitty: notes" ]
+// [ "Google Chrome: Inbox", "kitty: notes", "Emacs: readme.org" ]
 #+end_src
 
-Each window is shown as =Application: title=. The first is the focused window, and the second is
-the one =windowPreviousSelect()= focuses.
+Each window is shown as =Application: title=. The focused window is not included, as in the
+chooser. The first is the window =windowPreviousSelect()= focuses.
 
 ** bindHotkeys(mapping)
 
