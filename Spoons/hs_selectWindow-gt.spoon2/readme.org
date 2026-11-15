@@ -1,24 +1,24 @@
 * hs_selectWindow-gt
 
-This Spoon switches to a window chosen by typing part of its title or of its application's name.
-It also switches between two applications with one key for each.
+hs_selectWindow-gt switches to any open window by typing part of its title. macOS switches
+between applications with ⌘-Tab, and between the windows of the application in front with ⌘-`,
+but it cannot switch to a window of another application by its title. With this Spoon, one key
+opens a chooser of the open windows, most recently used first, and typing narrows the list.
 
 Its main features are these:
 
 - *A chooser of windows, most recently used first.* The focused window is not listed, so the
-  window used before it is the first row, selected when the chooser opens.
-- *A search of both the title and the application.* Typing =mail chrome= finds a Chrome window
-  whose title contains "mail".
-- *Every window is listed,* including minimized windows and windows of hidden applications,
-  which are marked as such.
+  window used before it is the first row, and Return switches to it.
+- *Search by title or by application.* A row is listed when the window's title, or the
+  application's name beneath it, contains the text typed.
+- *Minimized and hidden windows.* A minimized window, or a window of a hidden application, is
+  listed too, and marked as such.
 - *A thumbnail of the selected window,* shown beside the chooser and turned on or off with
-  =Tab=.
-- *Choosers limited to one application,* or listing one row per application.
-- *A switch to the previously used window,* with no chooser.
-- *One key per application,* which switches to that application, and switches back when it is
-  already in front.
-
-This is a port of the Hammerspoon 1 Spoon =hs_select_window=.
+  =Tab=, for windows whose titles look alike.
+- *Switching within one application,* with a chooser of that application's windows only.
+- *Switching back to the previous window,* with no chooser.
+- *Switching to one application with one key,* and back to where the user was when the same key
+  is pressed again.
 
 The following screenshot shows the chooser limited to Chrome's windows, with the thumbnail of
 the selected window to its left:
@@ -28,12 +28,13 @@ the selected window to its left:
 
 * Installing
 
-The Spoon requires three other Spoons from this repository, which must be loaded before it:
+This Spoon requires three other Spoons from this repository, which must be loaded before it:
 
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]] is told when the chooser opens and closes, so that
-  other Spoons, such as hs_menu-gt, release the keys the chooser requires.
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]] is told when the chooser opens and closes. Other
+  Spoons that bind keys, such as hs_menu-gt, then release those keys while the chooser is open,
+  so that the text typed reaches the chooser.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] keeps a record of the open windows and reports which one receives the
-  focus. The Spoon takes its list of windows and their order from it.
+  focus. This Spoon takes its list of windows, and their order, from hs_windowfilter-gt.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]] focuses the chosen window and moves it between screens. It requires
   [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] in turn.
 
@@ -52,8 +53,7 @@ hs.spoons.use("hs_selectWindow-gt", {
 })
 #+end_src
 
-When either required Spoon is not loaded, =start()= throws an error that names the missing
-Spoon.
+When a required Spoon is not loaded, =start()= throws an error that names the missing Spoon.
 
 * Examples
 
@@ -73,12 +73,12 @@ sw.applicationByBundleSelect("org.gnu.Emacs")   // switch to Emacs, or back from
 
 Every chooser lists windows in the order in which they were last focused, the most recent
 first. The focused window is left out, because choosing it would change nothing, so the first
-row is the window used before it. The Spoon records each change of focus as hs_windowfilter-gt
-reports it, so a window keeps its place in the order after it is minimized.
+row is the window used before it. This Spoon records each change of focus as hs_windowfilter-gt
+reports it. A minimized window therefore keeps its place in the order.
 
-The order begins when the Spoon starts. At that moment the focused window is placed first, and
+The order begins when this Spoon starts. At that moment the focused window is placed first, and
 the other open windows follow in no particular order. Each later change of focus corrects the
-order. A window that has not been focused since the Spoon started is listed after every window
+order. A window that has not been focused since this Spoon started is listed after every window
 that has.
 
 =order()= shows this order in the Hammerspoon 2 console; see /Functions/.
@@ -89,15 +89,17 @@ The chooser lists one row per window. Each row shows the window's title. Beneath
 shows the application, the screen the window is on, and the words "minimized" or "hidden" when
 they apply.
 
-Typing filters the rows. Both the title and the line beneath it are searched, so a search can
-combine part of a title with the name of an application or of a screen. Return focuses the
+Typing narrows the rows. A row is listed when its title, or the line beneath it, contains the
+text typed. The text is matched as a whole, so =mail= finds a window whose title contains "mail",
+and =chrome= finds every Chrome window, but =mail chrome= finds neither. Return focuses the
 selected window and brings its application forward.
 
 Only standard windows are listed, so panels, sheets and other auxiliary windows are omitted.
 Windows of the applications in =config.skipApplications= are never listed.
 
 While the chooser is open, two keys control the thumbnail. =Tab= turns it on or off, and
-=Shift+Tab= takes it again. Both keys can be changed; see /Settings/.
+=Shift+Tab= takes a new snapshot of the selected window. Both keys can be changed; see
+/Settings/.
 
 ** The thumbnail
 
@@ -118,7 +120,7 @@ shows no thumbnails.
 
 * Functions
 
-The Spoon exports the following functions. Those whose name ends in =Select= either open a
+This Spoon exports the following functions. Those whose name ends in =Select= either open a
 chooser and focus the window chosen in it, or focus a window directly.
 
 ** windowSelect()
@@ -148,26 +150,27 @@ application of the focused window is not listed, since its row would be the focu
 ** windowPreviousSelect()
 
 =windowPreviousSelect()= focuses the window used before the current one, without opening a
-chooser. That window is the first row of =windowSelect()='s chooser, as described under /The
-order of the windows/.
-When there is no such window, an alert says so. The function returns whether it focused a
-window.
+chooser. That window is the first row of =windowSelect()='s chooser, as described under /The order
+of the windows/. When there is no such window, an alert says so. The function returns whether it
+focused a window.
 
-hs_window-gt's =windowPrevious()= does nearly the same. The two differ in the windows they
-count: this function follows this Spoon's order, which includes minimized windows and windows
-of hidden applications.
+hs_window-gt, which this Spoon requires, has a similar function, =windowPrevious()=. The two
+differ in the windows they consider. This function follows this Spoon's order, which includes
+minimized windows and windows of hidden applications, and =windowPrevious()= does not.
 
 ** applicationWindowPreviousSelect()
 
-=applicationWindowPreviousSelect()= focuses the focused application's window that was used
-before the current one, without opening a chooser. It switches between two windows of one
-application, such as two windows of an editor or of a browser. When the application has only
-one window, an alert says so. The function returns whether it focused a window.
+=applicationWindowPreviousSelect()= focuses the window of the application in front that was used
+before the current window, without opening a chooser. Pressed repeatedly, it switches between the
+two most recently used windows of one application, such as two windows of an editor. When the
+application has only one window, an alert says so. The function returns whether it focused a
+window.
 
 ** applicationByBundleSelect(bundleID, [titlePattern])
 
-=applicationByBundleSelect()= switches to an application, or back from it. Bound to one key for
-each application, it switches between two applications. It does one of three things:
+=applicationByBundleSelect()= switches to an application, or back from it. With a key bound to
+it for an application, the same key switches to that application and, pressed again, switches
+back. It does one of three things:
 
 1. When the application is not in front, it focuses the application's most recently used
    window.
@@ -216,7 +219,7 @@ chooser. The first is the window =windowPreviousSelect()= focuses.
 
 ** bindHotkeys(mapping)
 
-=bindHotkeys()= binds keys to the Spoon's functions. =hs.spoons.use()= calls it with its
+=bindHotkeys()= binds keys to this Spoon's functions. =hs.spoons.use()= calls it with its
 =hotkeys= option. Each property of =mapping= is the name of a function, and its value is
 =[modifiers, key]=. Five functions can be bound: =windowSelect=, =applicationWindowSelect=,
 =applicationSelect=, =windowPreviousSelect= and =applicationWindowPreviousSelect=.
@@ -226,9 +229,9 @@ bound. A second call releases the keys of the first. =stop()= releases them as w
 
 ** start() and stop()
 
-=start()= checks that hs_interactive-gt, hs_windowfilter-gt and hs_window-gt are loaded, and begins recording the
-order of the windows. =stop()= closes an open chooser, releases the keys bound by
-=bindHotkeys()=, and discards the recorded order and the kept snapshots.
+=start()= checks that hs_interactive-gt, hs_windowfilter-gt and hs_window-gt are loaded, and
+begins recording the order of the windows. =stop()= closes an open chooser, releases the keys
+bound by =bindHotkeys()=, and discards the recorded order and the kept snapshots.
 
 * Settings
 
@@ -238,7 +241,7 @@ The settings are the fields of =config=:
 hs.spoons["hs_selectWindow-gt"].config.showThumbnail = true
 #+end_src
 
-=skipApplications= is read when the Spoon starts, so it must be set before =start()=. The other
+=skipApplications= is read when this Spoon starts, so it must be set before =start()=. The other
 settings are read each time they are used.
 
 | Setting                    | Default | Meaning                                                  |
@@ -259,7 +262,7 @@ settings are read each time they are used.
 | =fullscreenScreenSkip=     |   false | Move the chosen window off a screen showing a fullscreen window |
 
 =selectionPollSeconds= exists because the chooser reports no change of selection. While the
-chooser is open, the Spoon reads the selected row at this interval. A smaller value makes the
+chooser is open, this Spoon reads the selected row at this interval. A smaller value makes the
 thumbnail follow the selection sooner.
 
 =persistentThumbnailCache= makes thumbnails appear sooner the next time the chooser opens. The
@@ -285,10 +288,8 @@ window stays where it is. The window is instead focused where it is in three cas
 
 * Limitations
 
-The Spoon does not work with Spaces. The Hammerspoon 1 Spoon could restrict a chooser to the
-current Space, move a window to it, and show each window's Space. Hammerspoon 2 has no spaces
-module, so the bindings =all_windows_ws=, =app_windows_ws=, =previous_window_ws=,
-=previous_app_window_ws= and =all_windows_move_to_current_workspace= are not ported.
+This Spoon cannot restrict a chooser to the current Space, or move a window to the current
+Space, because Hammerspoon 2 has no module for Spaces.
 
 * Coming from Hammerspoon 1
 
@@ -301,13 +302,13 @@ The following table gives the function that replaces each binding of the Hammers
 | =first_window_per_app=   | =applicationSelect()=                 |
 | =previous_window=        | =windowPreviousSelect()=              |
 | =previous_app_window=    | =applicationWindowPreviousSelect()=   |
-| the =_ws= bindings       | not ported; see /Limitations/         |
+| the bindings ending in =_ws=, and =all_windows_move_to_current_workspace= | not ported; see /Limitations/ |
 
 The setting =fontSize= is not ported, because the Hammerspoon 2 chooser has no font setting.
 
 * Requirements
 
-The Spoon requires the following:
+This Spoon requires the following:
 
 - hs_interactive-gt, hs_windowfilter-gt and hs_window-gt, loaded before this Spoon.
 - The Screen Recording permission, for the thumbnails only.
