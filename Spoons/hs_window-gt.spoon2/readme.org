@@ -45,24 +45,17 @@ hs.spoons.use("hs_window-gt", {
 When any of the three required Spoons is not loaded, =start()= throws an error that names the
 missing one.
 
-The =ref= option of =hs.spoons.use()= installs the Spoon from a particular tag or commit of the
-repository instead of its main branch. =hs.spoons.update("hs_window-gt")= downloads the Spoon
-again from the same source and ref, and reinstalls it when the version in its =spoon.json= has
-changed. A Spoon installed from a tag or a commit is therefore never changed by an update.
-
 ** Requirements
 
-The Spoon depends on the following:
+Besides the three Spoons above, the Spoon requires two permissions:
 
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]], [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] and [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], loaded before this Spoon.
 - The Accessibility permission, which Hammerspoon 2 requires to move any window.
 - The Screen Recording permission, for =screenshot()= only.
 
 * Binding keys
 
-The =hotkeys= option of =hs.spoons.use()= binds a key to a function of the Spoon. Each function
-is called without an argument, so it acts on the focused window. This example binds the window
-menu, two halves, the full screen and undo:
+The =hotkeys= option of =hs.spoons.use()= binds a key to a function of the Spoon. This example
+binds the window menu, two halves, the full screen and undo:
 
 #+begin_src js
 hs.spoons.use("hs_window-gt", {
@@ -121,6 +114,30 @@ The menu is also exported as =menu=, so another menu can include it as a submenu
 { label: "Windows", key: "w", children: hs.spoons["hs_window-gt"].menu }
 #+end_src
 
+** Customizing the menu
+
+The window menu can be customized in the configuration, without changing the Spoon. =menu= is an
+object in hs_menu-gt's format: =keepOpen= is the default for the whole menu, and =buttons= holds
+the options. A changed copy of it is displayed with hs_menu-gt's =onScreenShow()=. This example
+keeps the menu open after /Maximize/ and /Centre/, and binds ⌥W to the changed menu:
+
+#+begin_src js
+const win = hs.spoons["hs_window-gt"]
+const windowMenu = {
+    ...win.menu,
+    buttons: win.menu.buttons.map((option) =>
+        ["Maximize", "Centre"].includes(option.label) ? { ...option, keepOpen: true } : option)
+}
+hs.hotkey.bind(["alt"], "w", () => hs.spoons["hs_menu-gt"].onScreenShow(windowMenu, { name: "Windows" }), null)
+#+end_src
+
+For larger changes, such as other letters, other options or another order, the definition of
+the menu can be copied from the Spoon's =init.js=, under =The window menu=, into the
+configuration and edited there. In the copy, each option's =fn= calls the Spoon's exported
+function, such as =() => win.leftHalf()=, instead of the function within the Spoon. An option of
+the copy then reads an omitted window as the exported functions do, and shows a chooser of windows
+when no window is focused.
+
 [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] describes how menus are written.
 
 * Functions
@@ -150,10 +167,8 @@ the console. An argument given as =null= is passed on unchanged.
 | =digit= of =digitAttach=                 | a digit from 0 to 9, chosen in a chooser                    |
 | =digit= of =attachedFocus= and =keyDetach= | one of the digits attached to a window, chosen in a chooser that shows each window's title |
 
-=windowToScreenMove=, =tileWith= and =windowWithWindowSwap= already show their own chooser for an
-omitted screen or second window, and =keyToWindowAttach= waits for a digit to be pressed. A
-function that shows a chooser returns a promise of its result, which is null when the chooser is
-dismissed. A function that shows none returns its result directly.
+A function that shows a chooser returns a promise of its result, which is null when the chooser
+is dismissed. A function that shows none returns its result directly.
 
 Only the exported functions read omitted arguments. The window menu supplies every argument
 itself.
@@ -449,27 +464,18 @@ win.config.mouseHighlightColor = "#00FF00"
 This Spoon requires [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]] for its choosers. hs_interactive-gt can also give
 each function of the Spoon a command name, so that the function can be run from the command
 chooser and bound to a key by name.
-The following definitions name each command after the function it calls:
+
+A command needs no =interactive= entries for its arguments, because the exported functions read
+their own omitted arguments, as /Omitted arguments/ describes. Each command calls its function
+without arguments:
 
 #+begin_src js
 interactive.use("hs_window-gt", {
     commands: (interactive, win) => {
-        const onWindow = (name, doc, fn) => interactive.define({
-            name: name,
-            doc: doc,
-            interactive: [{ name: "window", reader: interactive.readers.window.auto }],
-            fn: fn
-        })
-
-        onWindow("window-maximize", "Fill the screen with a window.", (w) => win.maximize(w))
-        onWindow("window-left-half", "Move a window to the left half of its screen.", (w) => win.leftHalf(w))
-        onWindow("window-right-half", "Move a window to the right half of its screen.", (w) => win.rightHalf(w))
-        onWindow("window-to-screen-move-next", "Move a window to the next screen.", (w) => win.windowToScreenMove("next", w))
-        onWindow("window-with-previous-swap", "Swap a window with the window behind it.", (w) => win.windowWithPreviousSwap(w))
-        onWindow("key-to-window-attach", "Attach a window to a number key.", (w) => win.keyToWindowAttach(w))
-
+        interactive.define({ name: "window-maximize", doc: "Fill the screen with a window.", fn: () => win.maximize() })
+        interactive.define({ name: "window-left-half", doc: "Move a window to the left half of its screen.", fn: () => win.leftHalf() })
+        interactive.define({ name: "window-fraction-width", doc: "Set a window's width to a fraction of its screen.", fn: () => win.fractionWidth() })
         interactive.define({ name: "window-undo", doc: "Put a window back where it was.", fn: () => win.undo() })
-        interactive.define({ name: "window-previous", doc: "Focus the previous window.", fn: () => win.windowPrevious() })
         interactive.define({ name: "window-menu-show", doc: "Show the window menu.", fn: () => win.menuShow() })
     },
     keys: [
@@ -491,23 +497,14 @@ the Spoon's design.
   moved by hand or by other code. Before it next changes a window, it compares the window's
   position with the position it last gave the window. When the two differ, it adds both to the
   history.
-- *The overlays do not receive clicks.* The dimming panels and the circle around the pointer are
-  =hs.canvas= windows created with =ignoreMouseEvents(true)=, so a click reaches the window
-  underneath them. They are also created with =canJoinAllSpaces=, which displays them over a
-  fullscreen window's Space.
+- *The overlays do not receive clicks.* A click on the dimming panels or on the circle around the
+  pointer reaches the window underneath them. Both are also displayed over fullscreen windows.
 - *Fullscreen windows are refused.* macOS refuses to move a fullscreen window. A window moved to
   a screen that is showing a fullscreen window is placed in that window's Space, and then neither
   =hs.window.allWindows()= nor its own application lists it. The Spoon therefore refuses any
   operation involving a fullscreen window, or a screen showing one, and an alert says so.
-- *How a fullscreen screen is detected.* Hammerspoon 2 has no module for Spaces, and
-  =hs.window.allWindows()= includes windows on Spaces that are not displayed. The Spoon therefore
-  takes the window at the centre of each screen, and checks whether it is fullscreen.
 - *windowFocus() makes the window main twice.* After =focus()= returns, an application can make a
   different one of its windows its main window while it processes the activation, which brings
   that other window to the front. The Spoon therefore makes the window main and raises it again
   after =config.focusReassertDelay=. This remains until Hammerspoon 2's =focus()= does the same
   for every application. It already does so for Finder.
-- *windowToBackSend() focuses every other window.* Each of their applications is activated in
-  turn.
-- *There is no hs.window.highlight* in Hammerspoon 2. Hammerspoon 1's isolation used it, so this
-  Spoon draws the dimming with =hs.canvas=.
