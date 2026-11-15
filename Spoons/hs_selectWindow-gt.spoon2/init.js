@@ -766,28 +766,44 @@ function order() {
 
 let hotkeys = []
 
+// The functions a key can run, as hs_window-gt does it: the names are the functions' own.
+const HOTKEY_FUNCTIONS = [
+    "windowSelect", "applicationWindowSelect", "applicationSelect",
+    "windowPreviousSelect", "applicationWindowPreviousSelect"
+]
+
+function hotkeysRelease() {
+    for (const key of hotkeys) {
+        if (key) key.destroy()
+    }
+    hotkeys = []
+}
+
 /**
- * Bind hotkeys.
+ * Bind keys to the Spoon's functions. `hs.spoons.use()` calls this with its `hotkeys` option.
+ * A second call releases the keys of the first.
  *
- * @param {object} mapping Keyed by action name — `allWindows`, `applicationWindows`,
- *        `firstWindowPerApp`, `previousWindow`, `previousApplicationWindow` — each holding
- *        `[[modifiers], key]`.
+ * @param {object} mapping Keyed by function name, each holding `[[modifiers], key]`, such as
+ *        `{ windowSelect: [["alt"], "b"] }`.
+ * @throws For a name that is not in HOTKEY_FUNCTIONS, or a malformed binding. Nothing is bound
+ *         in that case.
  */
 function bindHotkeys(mapping) {
-    const actions = {
-        allWindows: () => windowSelect(),
-        applicationWindows: () => applicationWindowSelect(),
-        firstWindowPerApp: () => applicationSelect(),
-        previousWindow: () => windowPreviousSelect(),
-        previousApplicationWindow: () => applicationWindowPreviousSelect()
+    const entries = Object.entries(mapping || {})
+    for (const [name, binding] of entries) {
+        if (!HOTKEY_FUNCTIONS.includes(name)) {
+            throw new Error(`${SPOON_NAME}: bindHotkeys(): ${name} is not a function a key can run`)
+        }
+        if (!Array.isArray(binding) || !Array.isArray(binding[0]) || typeof binding[1] !== "string") {
+            throw new Error(`${SPOON_NAME}: bindHotkeys(): ${name} needs [modifiers, key], such as [["alt"], "b"]`)
+        }
     }
 
-    for (const [name, spec] of Object.entries(mapping || {})) {
-        if (!actions[name]) {
-            log(`unknown hotkey action: ${name}`)
-            continue
-        }
-        hotkeys.push(hs.hotkey.bind(spec[0], spec[1], actions[name], null))
+    hotkeysRelease()
+    for (const [name, [mods, key]] of entries) {
+        const hotkey = hs.hotkey.bind(mods, key, () => module.exports[name](), null)
+        if (hotkey) hotkeys.push(hotkey)
+        else console.error(`[${SPOON_NAME}] could not bind ${mods.join("-")} ${key} to ${name}`)
     }
     return module.exports
 }
@@ -814,10 +830,7 @@ function stop() {
     thumbnails = new Map()
     pendingSnapshots = new Set()
 
-    for (const key of hotkeys) {
-        if (key) key.destroy()
-    }
-    hotkeys = []
+    hotkeysRelease()
     return module.exports
 }
 

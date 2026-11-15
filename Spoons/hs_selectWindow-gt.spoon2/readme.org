@@ -46,7 +46,7 @@ hs.spoons.use("hs_window-gt", { source: "dmgerman/hammer2spoons", start: true })
 hs.spoons.use("hs_selectWindow-gt", {
     source: "dmgerman/hammer2spoons",
     start: true,
-    hotkeys: { allWindows: [["alt"], "b"], previousWindow: [["alt"], "`"] }
+    hotkeys: { windowSelect: [["alt"], "b"], windowPreviousSelect: [["alt"], "`"] }
 })
 #+end_src
 
@@ -210,20 +210,13 @@ the one =windowPreviousSelect()= focuses.
 
 ** bindHotkeys(mapping)
 
-=bindHotkeys()= binds keys to five of the functions. =hs.spoons.use()= calls it with its
-=hotkeys= option. Each property of =mapping= is one of the following names, and its value is
-=[modifiers, key]=:
+=bindHotkeys()= binds keys to the Spoon's functions. =hs.spoons.use()= calls it with its
+=hotkeys= option. Each property of =mapping= is the name of a function, and its value is
+=[modifiers, key]=. Five functions can be bound: =windowSelect=, =applicationWindowSelect=,
+=applicationSelect=, =windowPreviousSelect= and =applicationWindowPreviousSelect=.
 
-| Name                        | Calls                               |
-|-----------------------------+-------------------------------------|
-| =allWindows=                | =windowSelect()=                    |
-| =applicationWindows=        | =applicationWindowSelect()=         |
-| =firstWindowPerApp=         | =applicationSelect()=               |
-| =previousWindow=            | =windowPreviousSelect()=            |
-| =previousApplicationWindow= | =applicationWindowPreviousSelect()= |
-
-An unknown name is logged to the console and skipped. A second call adds its keys to those
-bound by the first, without releasing them. =stop()= releases every key bound this way.
+Any other name, or a binding that is not =[modifiers, key]=, is an error, and then no key is
+bound. A second call releases the keys of the first. =stop()= releases them as well.
 
 ** start() and stop()
 
