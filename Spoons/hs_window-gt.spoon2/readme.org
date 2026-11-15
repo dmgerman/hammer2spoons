@@ -3,27 +3,31 @@
 hs_window-gt places, resizes and moves windows from the keyboard, and records every change so
 that it can be undone.
 
-- *Placement in a grid:* halves, thirds, two thirds, quadrants and the full screen, or any cell
-  of a grid of any size.
-- *Resizing in place:* full height, full width, half height, half width, or a fraction of the
-  screen's width, keeping the window's position.
-- *Undo and redo for each window,* including positions the window was given by hand between two
-  commands.
-- *Moving between screens:* to the next or previous screen, or to a screen chosen from a list,
-  with the window keeping its place within the screen.
-- *Two windows at once:* exchanging the positions of two windows, or placing them side by side.
+- *Placement:* one key puts a window in a part of its screen, such as the left half or the top
+  right quarter.
+- *Resizing in place:* one key changes one dimension of a window, such as making it as tall as
+  its screen, without moving it.
+- *Undo and redo for each window,* including a position the window was moved to by hand between
+  two commands.
+- *Moving between screens:* one key moves a window to the next screen, where the window keeps
+  its relative position and size.
+- *Two windows at once:* one key exchanges the positions of two windows, or places them side by
+  side.
 - *Number keys:* a window can be attached to a digit, so that the digit with Option focuses it.
   The attachments are kept across a reload of Hammerspoon 2.
-- *Isolation:* every part of every screen is dimmed except the focused window.
-- *The pointer:* it can be moved to the middle of a window or of a screen.
+- *Isolation:* every part of every screen is dimmed except the focused window, so that the window
+  being worked in stands out.
+- *Finding the pointer:* the pointer is moved to the middle of a window or of a screen, and a
+  circle is drawn around it for a moment.
 - *A window menu,* opened with one key, in which a letter selects each option.
 
 * Installing
 
-The Spoon requires three other Spoons from this repository, which must be loaded before it:
+This Spoon requires three other Spoons from this repository, which must be loaded before it:
 
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]. Its choosers ask for the window or the screen that /Swap with/,
-  /Tile with/ and /To screen/ act on.
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]. It asks the user for an argument that a function
+  needs and was not given, such as the window to swap with, or the window to act on when no window
+  is focused.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]]. Its events report when the focus moves to another window and when a
   window closes.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]. It displays the window menu.
@@ -47,14 +51,14 @@ missing one.
 
 ** Requirements
 
-Besides the three Spoons above, the Spoon requires two permissions:
+Besides the three Spoons above, this Spoon requires two permissions:
 
 - The Accessibility permission, which Hammerspoon 2 requires to move any window.
 - The Screen Recording permission, for =screenshot()= only.
 
 * Binding keys
 
-The =hotkeys= option of =hs.spoons.use()= binds a key to a function of the Spoon. This example
+The =hotkeys= option of =hs.spoons.use()= binds a key to a function of this Spoon. This example
 binds the window menu, two halves, the full screen and undo:
 
 #+begin_src js
@@ -71,9 +75,9 @@ hs.spoons.use("hs_window-gt", {
 })
 #+end_src
 
-No key is bound by default. A function called by a key receives no arguments, and reads each
-one it needs as described under /Omitted arguments/: =fractionWidth=, for example, shows a
-chooser of fractions. Two kinds of function cannot be bound:
+No key is bound by default. A function called by a key receives no arguments, and asks the user
+for each argument it needs, as /Omitted arguments/ describes. =fractionWidth=, for example, asks
+the user to select a fraction in a chooser. Two kinds of function cannot be bound:
 
 1. Those whose arguments cannot be chosen from a list: =place=, =mouseMove= and =mouseHighlight=.
 2. Those that only return a value, which a key cannot display: =historyDepth=, =isMaximized=,
@@ -86,9 +90,9 @@ call to =bindHotkeys()= releases the keys of the first. =stop()= releases them a
 
 * The window menu
 
-The window menu holds every operation of the Spoon. =menuShow()= displays it on the screen of the
-focused window. Each option has a letter beneath it, and pressing that letter selects the option.
-The configuration under /Installing/ opens the menu with ⌥W.
+The window menu holds an option for most functions of this Spoon. =menuShow()= displays it on the
+screen of the focused window. Each option has a letter beneath it, and pressing that letter
+selects the option. The configuration under /Installing/ opens the menu with ⌥W.
 
 #+ATTR_HTML: :alt The window menu: thirty-four options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an icon and its letter
 [[./images/window-menu.png]]
@@ -100,9 +104,9 @@ The menu accepts keyboard input only. Selecting an option closes the menu, with 
 3. Swap with, Tile with and To screen close the menu, and then show a chooser of the other
    windows, or of the other screens.
 
-hs_menu-gt waits half a second before drawing the menu. The letters are accepted during that
-wait, so a letter pressed in time selects its option, and the menu is never drawn. The wait is
-set in hs_menu-gt; 0 draws the menu at once:
+hs_menu-gt waits half a second before drawing the menu, and accepts the letters during that wait.
+A letter pressed in time therefore selects its option, and the menu is never drawn. The wait is
+a setting of hs_menu-gt, and 0 draws the menu at once:
 
 #+begin_src js
 hs.spoons["hs_menu-gt"].config.screen.showDelay = 0
@@ -116,7 +120,7 @@ The menu is also exported as =menu=, so another menu can include it as a submenu
 
 ** Customizing the menu
 
-The window menu can be customized in the configuration, without changing the Spoon. =menu= is an
+The window menu can be customized in the configuration, without changing this Spoon. =menu= is an
 object in hs_menu-gt's format: =keepOpen= is the default for the whole menu, and =buttons= holds
 the options. A changed copy of it is displayed with hs_menu-gt's =onScreenShow()=. This example
 keeps the menu open after /Maximize/ and /Centre/, and binds ⌥W to the changed menu:
@@ -132,16 +136,16 @@ hs.hotkey.bind(["alt"], "w", () => hs.spoons["hs_menu-gt"].onScreenShow(windowMe
 #+end_src
 
 For larger changes, such as other letters, other options or another order, the definition of
-the menu can be copied from the Spoon's =init.js=, under =The window menu=, into the
-configuration and edited there. In the Spoon, each option's =fn= calls =module.exports=, such as
-=() => module.exports.leftHalf()=. In the copy, it calls the Spoon through =hs.spoons=, such as
+the menu can be copied from this Spoon's =init.js=, under =The window menu=, into the
+configuration and edited there. In this Spoon, each option's =fn= calls =module.exports=, such as
+=() => module.exports.leftHalf()=. In the copy, it calls this Spoon through =hs.spoons=, such as
 =() => win.leftHalf()= with =win= set to =hs.spoons["hs_window-gt"]=.
 
 [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] describes how menus are written.
 
 * Functions
 
-The functions are properties of the Spoon, =hs.spoons["hs_window-gt"]=. Every function that acts
+The functions are properties of this Spoon, =hs.spoons["hs_window-gt"]=. Every function that acts
 on a window takes the window as its last argument:
 
 #+begin_src js
@@ -153,18 +157,18 @@ win.leftHalf(someWindow)   // a particular window
 ** Omitted arguments
 
 In the signatures in this readme, an argument in brackets, such as =win= in =undo([win])=, may be
-omitted. An argument that is omitted, or given as =undefined=, is read through hs_interactive-gt,
-so every such function can be called without arguments from a key, a menu of the user's own, or
-the console. An argument given as =null= is passed on unchanged.
+omitted. When an argument is omitted, or given as =undefined=, this Spoon obtains it through
+hs_interactive-gt, as the table shows. Every such function can therefore be bound to a key. An
+argument given as =null= is passed on unchanged.
 
 | Argument                                 | Read as                                                     |
 |------------------------------------------+-------------------------------------------------------------|
-| the window                               | the focused window, or a window chosen in a chooser when no window is focused |
+| the window                               | the focused window; when no window is focused, the window the user selects in a chooser |
 | a screen                                 | the focused window's screen, or the main screen when no window is focused |
-| =denominator= of =fractionWidth=         | a fraction from 1/2 to 1/8, chosen in a chooser             |
-| =direction= of =moveByOwnSize=           | left, right, up or down, chosen in a chooser                |
-| =digit= of =digitAttach=                 | a digit from 0 to 9, chosen in a chooser                    |
-| =digit= of =attachedFocus= and =keyDetach= | one of the digits attached to a window, chosen in a chooser that shows each window's title |
+| =denominator= of =fractionWidth=         | the fraction from 1/2 to 1/8 that the user selects in a chooser |
+| =direction= of =moveByOwnSize=           | the direction that the user selects in a chooser            |
+| =digit= of =digitAttach=                 | the digit from 0 to 9 that the user selects in a chooser    |
+| =digit= of =attachedFocus= and =keyDetach= | the attached digit that the user selects in a chooser, which shows each digit's window |
 
 A function that shows a chooser returns a promise of its result, which is null when the chooser
 is dismissed. A function that shows none returns its result directly.
@@ -180,16 +184,16 @@ and =false= without a message when the window's screen cannot be determined. For
 refusal, such as a fullscreen window or a single screen, an alert gives the reason.
 
 =undo=, =redo=, =historyClear=, =isolationStart=, =isolationStop=, =isolationToggle=, =start= and
-=stop= return the Spoon. The other functions return the values described below.
+=stop= return this Spoon. The other functions return the values described below.
 
 ** Undo
 
-The Spoon keeps a history of positions for each window, and =undo= and =redo= move a window
-through it. The history works as Emacs's winner-mode does, with one difference: it is kept per
-window rather than per arrangement of windows.
+This Spoon keeps a history of positions for each window, and =undo= and =redo= move a window
+through it. The history is kept for each window separately, not for the arrangement of all the
+windows.
 
 The history of a window is a list of its earlier positions, oldest first, with at most
-=config.historySize= entries. A position is added each time the Spoon moves the window. A
+=config.historySize= entries. A position is added each time this Spoon moves the window. A
 position identical to the last one in the list is not added again. When the list is full, the
 oldest position is discarded.
 
@@ -242,7 +246,7 @@ focused window, but =grid= and =cell= must be given.
 *** maximize([win]), isMaximized([win])
 
 =maximize= makes a window fill its screen. When the window already fills its screen, =maximize=
-returns it to the size and position it had before the Spoon maximized it. A window that was made
+returns it to the size and position it had before this Spoon maximized it. A window that was made
 to fill the screen by other means has no earlier size recorded, so =maximize= leaves it as it is
 and an alert says so.
 
@@ -267,8 +271,8 @@ dimension and the position stay as they are, except as each entry says.
 | =moveByOwnSize([direction], [win])= | Moves the window by its own width or height, without resizing it. =direction= is ="left"=, ="right"=, ="up"= or ="down"=. |
 
 =moveByOwnSize= reports any other direction in an alert, and does not move the window.
-=isVerticallyMaximized([win])= and =isHorizontallyMaximized([win])= return whether a window is as tall
-or as wide as its screen.
+=isVerticallyMaximized([win])= and =isHorizontallyMaximized([win])= return whether a window is as
+tall or as wide as its screen.
 
 ** Screens
 
@@ -288,7 +292,7 @@ fullscreen window.
 
 The window keeps its relative position and size within the screen. A window that returns to a
 screen it was on before goes back to the position it had there. That position is not used when
-the window has been moved or resized by other means since the Spoon last moved it.
+the window has been moved or resized by other means since this Spoon last moved it.
 
 *** fullscreenScreenIds(), screenHasFullscreenWindow([screen])
 
@@ -323,7 +327,7 @@ directly behind the focused window is focused instead.
 *** windowToBackSend([win])
 
 =windowToBackSend= puts a window behind all the others. macOS has no operation that lowers a
-window, so the Spoon focuses every other window, in reverse order, which leaves this window
+window, so this Spoon focuses every other window, in reverse order, which leaves this window
 last.
 
 *** windowFocus([win])
@@ -394,8 +398,8 @@ behind it is dimmed:
 #+ATTR_HTML: :alt A Terminal window shown normally in front of a dimmed window of text
 [[./images/isolation.png]]
 
-While isolation is on, the area that is not dimmed follows the focused window, on any screen. It
-also changes when that window is moved or resized. The area is the window's frame, not the
+While isolation is on, the area that is not dimmed follows the focused window, on any screen. The
+area also changes when that window is moved or resized. The area is the window's frame, not the
 display it is on. A window that covers part of a screen leaves the rest of that screen dimmed. A
 fullscreen window covers the whole display, so that display is not dimmed at all, and every other
 display is.
@@ -424,8 +428,8 @@ Screen Recording permission.
 
 ** start() and stop()
 
-=start()= checks that hs_interactive-gt, hs_windowfilter-gt and hs_menu-gt are loaded, subscribes to
-hs_windowfilter-gt's events, and attaches the windows saved in =config.attachFile= again.
+=start()= checks that hs_interactive-gt, hs_windowfilter-gt and hs_menu-gt are loaded, subscribes
+to hs_windowfilter-gt's events, and attaches the windows saved in =config.attachFile= again.
 
 =stop()= releases the keys bound by =bindHotkeys()=, turns isolation off, removes the circle
 around the pointer, and unsubscribes from hs_windowfilter-gt. It also releases the number keys.
@@ -433,7 +437,7 @@ It does not remove them from =config.attachFile=, so the next =start()= attaches
 
 * Configuration
 
-The settings are properties of =config=, and can be changed after the Spoon is loaded:
+The settings are properties of =config=, and can be changed after this Spoon is loaded:
 
 #+begin_src js
 const win = hs.spoons["hs_window-gt"]
@@ -461,7 +465,7 @@ win.config.mouseHighlightColor = "#00FF00"
 * Commands for hs_interactive-gt
 
 This Spoon requires [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]] for its choosers. hs_interactive-gt can also give
-each function of the Spoon a command name, so that the function can be run from the command
+each function of this Spoon a command name, so that the function can be run from the command
 chooser and bound to a key by name.
 
 A command needs no =interactive= entries for its arguments, because the exported functions read
@@ -484,15 +488,12 @@ interactive.use("hs_window-gt", {
 })
 #+end_src
 
-A command's name is its function's name in hyphenated words. It begins with =window-= when the
-function's name does not already name what it acts on.
-
 * Notes
 
 These notes explain behaviour that follows from macOS or from Hammerspoon 2, rather than from
-the Spoon's design.
+this Spoon's design.
 
-- *What undo records.* The Spoon records every move it makes. It does not observe a window being
+- *What undo records.* This Spoon records every move it makes. It does not observe a window being
   moved by hand or by other code. Before it next changes a window, it compares the window's
   position with the position it last gave the window. When the two differ, it adds both to the
   history.
@@ -500,10 +501,10 @@ the Spoon's design.
   pointer reaches the window underneath them. Both are also displayed over fullscreen windows.
 - *Fullscreen windows are refused.* macOS refuses to move a fullscreen window. A window moved to
   a screen that is showing a fullscreen window is placed in that window's Space, and then neither
-  =hs.window.allWindows()= nor its own application lists it. The Spoon therefore refuses any
+  =hs.window.allWindows()= nor its own application lists it. This Spoon therefore refuses any
   operation involving a fullscreen window, or a screen showing one, and an alert says so.
-- *windowFocus() makes the window main twice.* After =focus()= returns, an application can make a
-  different one of its windows its main window while it processes the activation, which brings
-  that other window to the front. The Spoon therefore makes the window main and raises it again
-  after =config.focusReassertDelay=. This remains until Hammerspoon 2's =focus()= does the same
-  for every application. It already does so for Finder.
+- *windowFocus() raises the window a second time.* After =focus()= returns, an application can
+  make a different one of its windows its main window while it processes the activation, and
+  bring that other window to the front. Hammerspoon 2's =focus()= makes the window main again
+  after 0.3 seconds, but does not raise it. This Spoon makes the window main and also raises it
+  after =config.focusReassertDelay=.
