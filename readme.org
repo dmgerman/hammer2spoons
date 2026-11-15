@@ -1,14 +1,14 @@
 #+TITLE: hammer2spoons
 
-A collection of Spoons for [[https://github.com/cmsj/Hammerspoon2][Hammerspoon 2]], for managing windows, switching between them,
-controlling Apple Music, and operating all of these from the keyboard.
+hammer2spoons is a collection of Spoons for [[https://github.com/cmsj/Hammerspoon2][Hammerspoon 2]]. The Spoons let the user
+manage windows and applications from the keyboard.
 
-- Windows are placed, resized and moved between screens with single keys, and every change can
+- Windows are placed, resized and moved between screens with one key each, and every change can
   be undone.
-- A window is selected by typing part of its title or its application's name, with the most
-  recently used windows listed first.
-- Each Spoon that performs actions provides an on-screen menu of them, in which a letter selects
-  each option.
+- A window is switched to by typing part of its title, with the most recently used windows listed
+  first.
+- A Spoon that performs actions provides an on-screen menu of them, in which a letter selects each
+  option.
 - Apple Music is controlled from a menu, and albums are played from a list kept in a text file.
 - Every Spoon is installed and updated from this repository with =hs.spoons.use()=.
 
@@ -22,18 +22,17 @@ The window menu of [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/
 The table lists each Spoon, what it does, and the other Spoons it requires. A required Spoon
 must be loaded before the Spoon that requires it.
 
-| Spoon                | What it does                                                                         | Requires                       |
-|----------------------+--------------------------------------------------------------------------------------+--------------------------------|
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]       | Places, resizes and moves windows from the keyboard, with undo, either directly or from a menu in which a letter selects each option. Attaches windows to number keys, and dims every window except the focused one. | hs_interactive-gt, hs_windowfilter-gt, hs_menu-gt |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_selectWindow-gt.spoon2][hs_selectWindow-gt]] | Selects a window by part of its title, with the most recently used first, and switches between two applications with one key for each. | hs_interactive-gt, hs_windowfilter-gt, hs_window-gt |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_appleMusic-gt.spoon2][hs_appleMusic-gt]]   | Controls Apple Music from a menu in which a letter selects each option, and plays albums from a list in a text file, chosen by name or at random. | hs_interactive-gt, hs_menu-gt  |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]         | Displays menus of options on screen, operated from the keyboard only: a letter selects each option. The same menus can be displayed on a Stream Deck. |                    |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]  | Defines named commands, runs them from a chooser by name, and binds keys to them by name, in the manner of Emacs's =M-x=. Provides the readers through which other Spoons ask for a window, a screen or other input. |              |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] | Reports window events, filtered by rules, in the manner of Hammerspoon 1's =hs.window.filter=. |                                |
+| Spoon                                                                                                        | What it does                                                                                                           | Requires                                            |
+|--------------------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------|
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]             | Places, resizes and moves windows from the keyboard, and undoes each change.                                           | hs_interactive-gt, hs_windowfilter-gt, hs_menu-gt   |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_selectWindow-gt.spoon2][hs_selectWindow-gt]] | Switches to any open window by typing part of its title, and switches to an application and back with one key.         | hs_interactive-gt, hs_windowfilter-gt, hs_window-gt |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_appleMusic-gt.spoon2][hs_appleMusic-gt]]     | Controls Apple Music from a menu, and plays albums from a list of albums kept in a text file.                          | hs_interactive-gt, hs_menu-gt                       |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]                 | Creates menus of actions, each opened with one key, in which a letter selects each option.                             |                                                     |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]   | Runs a function that requires arguments by asking the user for them, and runs any function by its name from a chooser. |                                                     |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] | Invokes a handler for the window events of the windows that a set of rules selects.                                    |                                                     |
 
-A Spoon that asks for input, such as a window or a screen, requires hs_interactive-gt and uses
-its choosers. A function of any Spoon can also be made a named command of hs_interactive-gt in
-the configuration.
+hs_interactive-gt is required by every Spoon that asks the user for input, such as the window to
+act on.
 
 * Installing
 
@@ -57,7 +56,7 @@ repository instead of its main branch. =hs.spoons.update(name)= downloads a Spoo
 the same source and ref, and reinstalls it when the version in its =spoon.json= has changed. A
 Spoon installed from a tag or a commit is therefore never changed by an update.
 
-Each Spoon's readme gives the installation of that Spoon.
+The readme of each Spoon shows how to install that Spoon.
 
 * Requirements
 
