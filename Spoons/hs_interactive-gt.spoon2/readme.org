@@ -20,7 +20,9 @@ The main features are these:
 - *The same command called from code.* Called through =call()=, a command receives its
   arguments directly and shows no prompt.
 - *Input for other Spoons.* A Spoon that asks for a window, a screen or one item of a list
-  runs a reader through =readerRun()=, so every Spoon asks for input with the same chooser.
+  runs a reader through =readerRun()=, so every Spoon asks for input with the same chooser. A
+  Spoon can also export functions whose omitted arguments are read the same way, with
+  =interactiveFunctionCreate()=.
 - *Keys bound to command names.* Every binding can be listed, the command bound to a key can
   be looked up, and a command can be redefined without binding its key again.
 - *=use()=, which configures a Spoon in one call.* It loads the Spoon, applies its settings,
@@ -421,6 +423,33 @@ takes it at the moment it is called.
 
 The function returns a promise of the value read, or of null when the chooser or dialog was
 cancelled.
+
+** interactiveFunctionCreate(fn, parameters)
+
+=interactiveFunctionCreate()= lets a Spoon export functions whose arguments may be omitted. It
+returns a function that reads each omitted argument with a reader, in the way a command reads
+its arguments, and then calls =fn=. No command is defined. hs_window-gt exports its functions
+this way, so that =leftHalf()= called from a key acts on the focused window, and
+=fractionWidth()= shows a chooser of fractions:
+
+#+begin_src js
+const interactive = hs.spoons["hs_interactive-gt"]
+module.exports.fractionWidth = interactive.interactiveFunctionCreate(fractionWidth, [
+    { name: "denominator", reader: interactive.readers.choice.prompted,
+      choices: [2, 3, 4].map((n) => ({ text: `1/${n}`, value: n })) },
+    { name: "window", reader: interactive.readers.window.auto }
+])
+#+end_src
+
+=parameters= has one entry per argument of =fn=, in order, in the same form as a command's
+=interactive= entries. An argument that is omitted, or given as =undefined=, is read with its
+entry's reader. An argument given as anything else, =null= included, is passed on unchanged, and
+so is an argument whose entry has no reader. Every reader uses one snapshot, taken when the
+function is called.
+
+The created function returns what =fn= returns when no reader prompted, so that a call that asks
+nothing stays synchronous. When a reader shows a chooser or a dialog, it returns a promise of
+=fn='s result instead. When a reader is cancelled, =fn= is not called, and the result is null.
 
 ** callInteractively(name, options)
 

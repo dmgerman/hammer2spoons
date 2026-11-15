@@ -558,6 +558,64 @@ function readerRun(reader, parameter, snap) {
         value === CANCEL || value === SKIP || value === undefined ? null : value)
 }
 
+/**
+ * Create a function that reads its missing arguments from the user, for a Spoon that exports
+ * functions whose arguments may be omitted. No command is defined.
+ *
+ * Each argument given as undefined is read with its parameter's reader, in order, from one
+ * snapshot taken when the function is called. An argument given as anything else, null
+ * included, is passed through unchanged. The created function returns what `fn` returns, or
+ * a promise of it when a reader prompted, so that a call that prompts nobody stays
+ * synchronous. When a reader is cancelled, `fn` is not called and the result is null.
+ *
+ * @param {function} fn The function to call once the arguments are read.
+ * @param {object[]} parameters One entry per argument of `fn`, in order, in the form of a
+ *        command's `interactive` entries: `{name, reader, default, optional}` and the reader's
+ *        own options. An entry without a reader passes its argument through unchanged.
+ * @returns {function}
+ */
+function interactiveFunctionCreate(fn, parameters) {
+    if (typeof fn !== "function") {
+        throw new Error("hs_interactive-gt: interactiveFunctionCreate() needs a function")
+    }
+    const entries = (parameters || []).map((parameter) => {
+        const reader = readerFor(parameter)
+        return { parameter: parameter, reader: reader }
+    })
+
+    return function (...given) {
+        const values = given.slice()
+        let snap = null
+
+        // Reads from `index` on. Returns fn's result, or a promise of it once a reader has
+        // returned a promise, or CANCEL.
+        const readFrom = (index) => {
+            for (let i = index; i < entries.length; i++) {
+                const { parameter, reader } = entries[i]
+                if (values[i] !== undefined || !reader) continue
+                if (!snap) snap = snapshot()
+                const value = reader(null, parameter, snap)
+                if (value && typeof value.then === "function") {
+                    return value.then((read) => {
+                        if (read === CANCEL || read === undefined) return CANCEL
+                        values[i] = read === SKIP ? parameter.default : read
+                        return readFrom(i + 1)
+                    })
+                }
+                if (value === CANCEL || value === undefined) return CANCEL
+                values[i] = value === SKIP ? parameter.default : value
+            }
+            return fn(...values)
+        }
+
+        const result = readFrom(0)
+        if (result && typeof result.then === "function") {
+            return result.then((value) => (value === CANCEL ? null : value))
+        }
+        return result === CANCEL ? null : result
+    }
+}
+
 // MARK: - The registry
 
 /**
@@ -1205,6 +1263,7 @@ module.exports = {
     use,
     readers,
     readerRun,
+    interactiveFunctionCreate,
     describe,
     define,
     commands,

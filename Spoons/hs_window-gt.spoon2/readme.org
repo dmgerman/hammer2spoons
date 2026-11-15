@@ -78,23 +78,15 @@ hs.spoons.use("hs_window-gt", {
 })
 #+end_src
 
-No key is bound by default. Some functions cannot be bound, because they require an argument or
-only report a value: =place=, =fractionWidth=, =moveByOwnSize=, =mouseMove=, =mouseHighlight=,
-=digitAttach=, =attachedFocus=, =keyDetach=, =screenHasFullscreenWindow=, =historyDepth=,
-=isMaximized=, =isVerticallyMaximized=, =isHorizontallyMaximized=, =fullscreenScreenIds=,
-=attachedWindows=, =isolationOn=, =start=, =stop= and =bindHotkeys=.
+No key is bound by default. A function called by a key receives no arguments, and reads each
+one it needs as described under /Omitted arguments/: =fractionWidth=, for example, shows a
+chooser of fractions. Two kinds of function cannot be bound:
 
-This restriction applies only to =bindHotkeys()=, and there are two ways to reach these
-functions from the keyboard:
-
-1. The window menu supplies the argument itself. It calls several of these functions with a
-   fixed argument, such as =moveByOwnSize("left")= for /Move left/ and =fractionWidth(3)= for
-   /1/3 width/. Where the argument has to be chosen, as for /To screen/, /Swap with/ and /Tile
-   with/, the menu shows hs_interactive-gt's chooser.
-2. Through hs_interactive-gt, a function that takes a window can be defined as a command whose
-   window argument is read by =readers.window.auto=. That reader takes the focused window, and
-   shows a chooser of windows when no window is focused. A key can then be bound to the command.
-   /Commands for hs_interactive-gt/ gives examples.
+1. Those whose arguments cannot be chosen from a list: =place=, =mouseMove= and =mouseHighlight=.
+2. Those that only return a value, which a key cannot display: =historyDepth=, =isMaximized=,
+   =isVerticallyMaximized=, =isHorizontallyMaximized=, =screenHasFullscreenWindow=,
+   =fullscreenScreenIds=, =attachedWindows= and =isolationOn=. =start=, =stop= and
+   =bindHotkeys= cannot be bound either.
 
 A name that is not a function that can be bound is an error, and then no key is bound. A second
 call to =bindHotkeys()= releases the keys of the first. =stop()= releases them as well.
@@ -115,12 +107,12 @@ The menu accepts keyboard input only. Selecting an option closes the menu, with 
 3. Swap with, Tile with and To screen close the menu, and then show a chooser of the other
    windows, or of the other screens.
 
-hs_menu-gt draws the menu at once. It can be configured to wait before drawing it. The letters
-are accepted during that wait, so a letter pressed in time selects its option, and the menu is
-never drawn:
+hs_menu-gt waits half a second before drawing the menu. The letters are accepted during that
+wait, so a letter pressed in time selects its option, and the menu is never drawn. The wait is
+set in hs_menu-gt; 0 draws the menu at once:
 
 #+begin_src js
-hs.spoons["hs_menu-gt"].config.screen.showDelay = 0.5
+hs.spoons["hs_menu-gt"].config.screen.showDelay = 0
 #+end_src
 
 The menu is also exported as =menu=, so another menu can include it as a submenu:
@@ -134,8 +126,7 @@ The menu is also exported as =menu=, so another menu can include it as a submenu
 * Functions
 
 The functions are properties of the Spoon, =hs.spoons["hs_window-gt"]=. Every function that acts
-on a window takes the window as its last argument, and acts on the focused window when that
-argument is omitted:
+on a window takes the window as its last argument:
 
 #+begin_src js
 const win = hs.spoons["hs_window-gt"]
@@ -143,12 +134,36 @@ win.leftHalf()             // the focused window
 win.leftHalf(someWindow)   // a particular window
 #+end_src
 
+** Omitted arguments
+
+In the signatures in this readme, an argument in brackets, such as =win= in =undo([win])=, may be
+omitted. An argument that is omitted, or given as =undefined=, is read through hs_interactive-gt,
+so every such function can be called without arguments from a key, a menu of the user's own, or
+the console. An argument given as =null= is passed on unchanged.
+
+| Argument                                 | Read as                                                     |
+|------------------------------------------+-------------------------------------------------------------|
+| the window                               | the focused window, or a window chosen in a chooser when no window is focused |
+| a screen                                 | the focused window's screen, or the main screen when no window is focused |
+| =denominator= of =fractionWidth=         | a fraction from 1/2 to 1/8, chosen in a chooser             |
+| =direction= of =moveByOwnSize=           | left, right, up or down, chosen in a chooser                |
+| =digit= of =digitAttach=                 | a digit from 0 to 9, chosen in a chooser                    |
+| =digit= of =attachedFocus= and =keyDetach= | one of the digits attached to a window, chosen in a chooser that shows each window's title |
+
+=windowToScreenMove=, =tileWith= and =windowWithWindowSwap= already show their own chooser for an
+omitted screen or second window, and =keyToWindowAttach= waits for a digit to be pressed. A
+function that shows a chooser returns a promise of its result, which is null when the chooser is
+dismissed. A function that shows none returns its result directly.
+
+Only the exported functions read omitted arguments. The window menu supplies every argument
+itself.
+
 ** Return values
 
 The functions that move or resize a window return =true= when the window was moved, and =false=
-when it was not. A function returns =false= without a message when there is no window, or when
-the window's screen cannot be determined. For any other refusal, such as a fullscreen window or a
-single screen, an alert gives the reason.
+when it was not. A function returns =null= when a chooser for one of its arguments is dismissed,
+and =false= without a message when the window's screen cannot be determined. For any other
+refusal, such as a fullscreen window or a single screen, an alert gives the reason.
 
 =undo=, =redo=, =historyClear=, =isolationStart=, =isolationStop=, =isolationToggle=, =start= and
 =stop= return the Spoon. The other functions return the values described below.
@@ -167,7 +182,7 @@ oldest position is discarded.
 An operation that moves two windows, such as =windowWithWindowSwap=, adds a position to each
 window's history. Returning both windows takes one =undo= on each.
 
-*** undo(win)
+*** undo([win])
 
 =undo= returns a window to its previous position. A second =undo= returns it to the position
 before that, and so on: each call goes one position further back in the history. =undo= does not
@@ -176,12 +191,12 @@ remove positions from the history.
 A move made by hand since the last command is also recorded. The first =undo= returns the window
 to where it was left by hand, and the second to where the last command had put it.
 
-*** redo(win)
+*** redo([win])
 
 =redo= returns a window to the position it had before the first of a series of =undo= calls. It
 has an effect only immediately after =undo=. Any other move of the window ends the series.
 
-*** historyDepth(win), historyClear()
+*** historyDepth([win]), historyClear()
 
 =historyDepth= returns the number of positions in a window's history. =historyClear= deletes the
 history of every window. A window's history is also deleted when the window closes.
@@ -203,11 +218,14 @@ win.place(null, { cols: 3 }, { col: 1 })                                // the m
 win.place(null, { cols: 4, rows: 2 }, { col: 2, row: 1, colSpan: 2 })  // the bottom right quarter
 #+end_src
 
-The named placements call =place=: =leftHalf=, =rightHalf=, =topHalf=, =bottomHalf=,
-=leftThird=, =centerThird=, =rightThird=, =leftTwoThirds=, =rightTwoThirds=, =topLeft=,
-=topRight=, =bottomLeft= and =bottomRight=.
+The named placements call =place=, and each takes an optional window, as in =leftHalf([win])=:
+=leftHalf=, =rightHalf=, =topHalf=, =bottomHalf=, =leftThird=, =centerThird=, =rightThird=,
+=leftTwoThirds=, =rightTwoThirds=, =topLeft=, =topRight=, =bottomLeft= and =bottomRight=.
 
-*** maximize(win), isMaximized(win)
+=place= does not read omitted arguments. Its =win= may be =null=, as in the examples, for the
+focused window, but =grid= and =cell= must be given.
+
+*** maximize([win]), isMaximized([win])
 
 =maximize= makes a window fill its screen. When the window already fills its screen, =maximize=
 returns it to the size and position it had before the Spoon maximized it. A window that was made
@@ -216,7 +234,7 @@ and an alert says so.
 
 =isMaximized= returns whether a window fills its screen.
 
-*** center(win)
+*** center([win])
 
 =center= moves a window to the middle of its screen, without changing its size.
 
@@ -227,15 +245,15 @@ dimension and the position stay as they are, except as each entry says.
 
 | Function                      | Effect |
 |-------------------------------+--------|
-| =verticalMaximize(win)=       | Makes the window as tall as the screen, keeping its width and horizontal position. When it is already that tall, returns it to the height and vertical position it had before. |
-| =horizontalMaximize(win)=     | Makes the window as wide as the screen, keeping its height and vertical position. When it is already that wide, returns it to the width and horizontal position it had before. |
-| =halfHeight(win)=             | Halves the window's height. The top edge stays in place. |
-| =halfWidth(win)=              | Halves the window's width. The left edge stays in place. |
-| =fractionWidth(denom, win)=   | Sets the window's width to =1/denom= of the screen's width. =denom= is a number of at least 1. |
-| =moveByOwnSize(dir, win)=     | Moves the window by its own width or height, without resizing it. =dir= is ="left"=, ="right"=, ="up"= or ="down"=. |
+| =verticalMaximize([win])=     | Makes the window as tall as the screen, keeping its width and horizontal position. When it is already that tall, returns it to the height and vertical position it had before. |
+| =horizontalMaximize([win])=   | Makes the window as wide as the screen, keeping its height and vertical position. When it is already that wide, returns it to the width and horizontal position it had before. |
+| =halfHeight([win])=           | Halves the window's height. The top edge stays in place. |
+| =halfWidth([win])=            | Halves the window's width. The left edge stays in place. |
+| =fractionWidth([denominator], [win])= | Sets the window's width to =1/denominator= of the screen's width. =denominator= is a number of at least 1. |
+| =moveByOwnSize([direction], [win])= | Moves the window by its own width or height, without resizing it. =direction= is ="left"=, ="right"=, ="up"= or ="down"=. |
 
 =moveByOwnSize= reports any other direction in an alert, and does not move the window.
-=isVerticallyMaximized(win)= and =isHorizontallyMaximized(win)= return whether a window is as tall
+=isVerticallyMaximized([win])= and =isHorizontallyMaximized([win])= return whether a window is as tall
 or as wide as its screen.
 
 ** Screens
@@ -243,7 +261,7 @@ or as wide as its screen.
 These functions move a window to another screen, and report which screens are showing a
 fullscreen window.
 
-*** windowToScreenMove(target, win)
+*** windowToScreenMove([target], [win])
 
 =windowToScreenMove= moves a window to another screen. =target= is one of the following:
 
@@ -258,7 +276,7 @@ The window keeps its relative position and size within the screen. A window that
 screen it was on before goes back to the position it had there. That position is not used when
 the window has been moved or resized by other means since the Spoon last moved it.
 
-*** fullscreenScreenIds(), screenHasFullscreenWindow(screen)
+*** fullscreenScreenIds(), screenHasFullscreenWindow([screen])
 
 =fullscreenScreenIds= returns a =Set= of the ids of the screens that are showing a fullscreen
 window. =screenHasFullscreenWindow= returns whether one screen is among them.
@@ -267,13 +285,13 @@ window. =screenHasFullscreenWindow= returns whether one screen is among them.
 
 These functions act on two windows at once, or change which window has the focus.
 
-*** tileWith(other, win)
+*** tileWith([other], [win])
 
 =tileWith= places two windows side by side on the screen of =win=: =other= on the left half, and
 =win= on the right half. Both windows are brought to the front, and =win= keeps the focus. When
 =other= is omitted, a chooser lists the other windows, and the function returns a promise.
 
-*** windowWithWindowSwap(other, win), windowWithPreviousSwap(win)
+*** windowWithWindowSwap([other], [win]), windowWithPreviousSwap([win])
 
 =windowWithWindowSwap= exchanges the positions and sizes of two windows. The two windows can be
 on the same screen or on different screens. When =other= is omitted, a chooser lists the other
@@ -288,13 +306,13 @@ is the focused window, that is the window directly behind it.
 belong to the same application. When no previous window is known, or it has closed, the window
 directly behind the focused window is focused instead.
 
-*** windowToBackSend(win)
+*** windowToBackSend([win])
 
 =windowToBackSend= puts a window behind all the others. macOS has no operation that lowers a
 window, so the Spoon focuses every other window, in reverse order, which leaves this window
 last.
 
-*** windowFocus(win)
+*** windowFocus([win])
 
 =windowFocus= focuses a window, brings its application to the front, and returns whether the
 window accepted the focus. It is more reliable than =win.focus()= alone, for the reason given
@@ -309,10 +327,10 @@ before it, as =windowPrevious= does.
 
 | Function                        | Effect |
 |---------------------------------+--------|
-| =keyToWindowAttach(win, key)=   | Attaches a window to a digit. When =key= is omitted, the next key pressed is used. Escape, or no key within =config.attachKeyWait= seconds, cancels. A key that is not a digit is refused with an alert. |
-| =digitAttach(win, digit)=       | Attaches a window to a digit given as a string. A digit already in use is released first. Returns whether the window was attached. |
-| =attachedFocus(digit)=          | Focuses the window attached to a digit. This is what the digit's key calls. |
-| =keyDetach(digit)=              | Releases a digit. |
+| =keyToWindowAttach([win], [key])= | Attaches a window to a digit. When =key= is omitted, the next key pressed is used. Escape, or no key within =config.attachKeyWait= seconds, cancels. A key that is not a digit is refused with an alert. |
+| =digitAttach([win], [digit])=   | Attaches a window to a digit given as a string. A digit already in use is released first. Returns whether the window was attached. |
+| =attachedFocus([digit])=        | Focuses the window attached to a digit. This is what the digit's key calls. |
+| =keyDetach([digit])=            | Releases a digit. |
 | =keysAllDetach()=               | Releases every digit. |
 | =attachedWindows()=             | Lists the attachments, to check them in the console. It returns an object that maps each digit to its window's =title=, =id=, =bundleID=, whether it still exists (=alive=), and its current title (=nowTitled=) and application (=nowBundleID=). |
 
@@ -333,9 +351,9 @@ distance at once.
 
 | Function                      | Effect |
 |-------------------------------+--------|
-| =mouseWindowCenter(win)=      | Moves the pointer to the middle of a window. |
+| =mouseWindowCenter([win])=    | Moves the pointer to the middle of a window. |
 | =mouseWindowCenterNext()=     | Moves the pointer to the middle of the next window. Each call moves it to the window after the last one. |
-| =mouseScreenCenter(screen)=   | Moves the pointer to the middle of a screen. Without =screen=, the focused window's screen, or the primary screen when no window has the focus. |
+| =mouseScreenCenter([screen])= | Moves the pointer to the middle of a screen. |
 | =mouseScreenCenterNext()=     | Moves the pointer to the middle of the screen after the one it is on, in the order of =hs.screen.all()=. |
 | =mouseMove(x, y)=             | Moves the pointer to a point in screen coordinates. |
 | =mouseHighlight(x, y)=        | Draws the circle around a point, without moving the pointer. |
@@ -373,7 +391,7 @@ display is.
 Two functions read a window without changing it. =info()= displays the window's
 application, title, screen and frame, and =screenshot()= saves an image of the window.
 
-*** info(win)
+*** info([win])
 
 =info()= displays the facts about a window that a configuration refers to: its application's name
 and bundle identifier, its title, its screen, its position and size, and how many positions its
@@ -383,7 +401,7 @@ argument, it reports the focused window.
 
 The facts are shown in an alert for four seconds and written to the console.
 
-*** screenshot(win)
+*** screenshot([win])
 
 =screenshot= captures a window, copies the image to the pasteboard, and writes it as a PNG file
 to =config.screenshotDir=. The file is named after the time and the application. The function

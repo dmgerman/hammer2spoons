@@ -483,7 +483,7 @@ The settings in =config.screen= apply only to the on-screen menu:
 | =letterSize=  | 18             | Size of the letters beneath the options.                   |
 | =letterColor= | =#FFD479=      | Colour of the letters.                                     |
 | =level=       | ="floating"=   | The window level of the panel.                             |
-| =showDelay=   | 0              | Seconds before the menu is drawn.                          |
+| =showDelay=   | 0.5            | Seconds before the menu is drawn.                          |
 | =cancelKeys=  | =["escape"]=   | Keys that close the menu.                                  |
 | =backKeys=    | =["delete"]=   | Keys that return to the parent menu.                       |
 | =columnsFor=  | a function     | Given the number of options, returns the number of columns. |
@@ -491,8 +491,8 @@ The settings in =config.screen= apply only to the on-screen menu:
 The default =columnsFor= gives at least four columns, and more for a large menu, so that the
 grid is wider than it is tall.
 
-=showDelay= sets how long the menu waits, in seconds, before it is drawn. The default, 0, draws
-it at once. The letters are bound as soon as the menu is opened. With a delay, a letter pressed
+=showDelay= sets how long the menu waits, in seconds, before it is drawn. The default is 0.5,
+and 0 draws the menu at once. The letters are bound as soon as the menu is opened. With a delay, a letter pressed
 within it selects its option, and the menu is never drawn. A menu whose letters are known can
 therefore be used without being seen, while the menu is still drawn for a user who waits. A
 submenu opened before the menu is drawn waits the delay again, so opening a submenu quickly

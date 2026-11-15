@@ -1957,10 +1957,11 @@ let hotkeys = []
 // Functions a key cannot run, because they need an argument a key press cannot give, or
 // because they report something rather than act.
 const HOTKEY_EXCLUDED = new Set([
-    "place", "fractionWidth", "moveByOwnSize", "mouseMove", "mouseHighlight",
-    "digitAttach", "attachedFocus", "keyDetach", "screenHasFullscreenWindow",
+    // Their arguments are not read when omitted.
+    "place", "mouseMove", "mouseHighlight",
+    // They only return a value, which a key cannot show.
     "historyDepth", "isMaximized", "isVerticallyMaximized", "isHorizontallyMaximized",
-    "fullscreenScreenIds", "attachedWindows", "isolationOn",
+    "screenHasFullscreenWindow", "fullscreenScreenIds", "attachedWindows", "isolationOn",
     "start", "stop", "bindHotkeys"
 ])
 
@@ -2059,6 +2060,105 @@ function stop() {
     return module.exports
 }
 
+// MARK: - Reading omitted arguments
+//
+// An exported function called without one of its arguments has that argument read through
+// hs_interactive-gt: a window omitted is the focused window, or one chosen in a chooser when no
+// window is focused, and a direction or a digit omitted is chosen in a chooser. A key can
+// therefore be bound to any of these functions. Only the exported functions read arguments;
+// calls within this Spoon, the menu's among them, pass their arguments themselves.
+
+const DIRECTIONS = ["left", "right", "up", "down"]
+const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+
+// The parameters in the form of hs_interactive-gt's `interactive` entries, except that each
+// reader is named, such as "window.auto", because hs_interactive-gt's readers exist only once
+// it is loaded. A parameter without a reader is passed through, so that the function's own
+// handling of an omitted value, such as its own chooser, applies.
+const WINDOW_PARAMETER = { name: "window", reader: "window.auto" }
+const SCREEN_PARAMETER = { name: "screen", reader: "screen.auto" }
+const ATTACHED_DIGIT_PARAMETER = {
+    name: "digit",
+    reader: "choice.prompted",
+    placeholder: "Number key",
+    empty: "No number key is attached to a window",
+    choices: () => [...attachedKeys].map(([digit, entry]) => ({
+        text: digit,
+        subText: entry.title || "(untitled)",
+        value: digit
+    }))
+}
+const ON_WINDOW = [WINDOW_PARAMETER]
+
+const EXPORTED_PARAMETERS = {
+    undo: ON_WINDOW, redo: ON_WINDOW, historyDepth: ON_WINDOW,
+    isMaximized: ON_WINDOW, isVerticallyMaximized: ON_WINDOW, isHorizontallyMaximized: ON_WINDOW,
+    maximize: ON_WINDOW, center: ON_WINDOW,
+    leftHalf: ON_WINDOW, rightHalf: ON_WINDOW, topHalf: ON_WINDOW, bottomHalf: ON_WINDOW,
+    leftThird: ON_WINDOW, centerThird: ON_WINDOW, rightThird: ON_WINDOW,
+    leftTwoThirds: ON_WINDOW, rightTwoThirds: ON_WINDOW,
+    topLeft: ON_WINDOW, topRight: ON_WINDOW, bottomLeft: ON_WINDOW, bottomRight: ON_WINDOW,
+    verticalMaximize: ON_WINDOW, horizontalMaximize: ON_WINDOW,
+    halfHeight: ON_WINDOW, halfWidth: ON_WINDOW,
+    fractionWidth: [{
+        name: "denominator",
+        reader: "choice.prompted",
+        placeholder: "Fraction of the screen's width",
+        choices: [2, 3, 4, 5, 6, 7, 8].map((n) => ({ text: `1/${n}`, value: n }))
+    }, WINDOW_PARAMETER],
+    moveByOwnSize: [{
+        name: "direction",
+        reader: "choice.prompted",
+        placeholder: "Direction",
+        choices: DIRECTIONS.map((direction) => ({ text: direction, value: direction }))
+    }, WINDOW_PARAMETER],
+    windowToScreenMove: [{ name: "target" }, WINDOW_PARAMETER],
+    screenHasFullscreenWindow: [SCREEN_PARAMETER],
+    tileWith: [{ name: "other" }, WINDOW_PARAMETER],
+    windowWithWindowSwap: [{ name: "other" }, WINDOW_PARAMETER],
+    windowWithPreviousSwap: ON_WINDOW,
+    windowToBackSend: ON_WINDOW,
+    windowFocus: ON_WINDOW,
+    mouseWindowCenter: ON_WINDOW,
+    mouseScreenCenter: [SCREEN_PARAMETER],
+    keyToWindowAttach: [WINDOW_PARAMETER, { name: "key" }],
+    digitAttach: [WINDOW_PARAMETER, {
+        name: "digit",
+        reader: "choice.prompted",
+        placeholder: "Number key",
+        choices: DIGITS.map((digit) => ({ text: digit, value: digit }))
+    }, { name: "quiet" }],
+    attachedFocus: [ATTACHED_DIGIT_PARAMETER],
+    keyDetach: [ATTACHED_DIGIT_PARAMETER, { name: "destroyed" }],
+    info: ON_WINDOW,
+    screenshot: ON_WINDOW
+}
+
+/**
+ * The exported form of `fn`, which reads its omitted arguments through hs_interactive-gt.
+ * Created on the first call rather than when the Spoon loads, because hs_interactive-gt may be
+ * loaded after this Spoon's file is read.
+ *
+ * @param {function} fn The function within this Spoon.
+ * @param {object[]} parameters Its entry in `EXPORTED_PARAMETERS`.
+ * @returns {function}
+ */
+function interactiveExportCreate(fn, parameters) {
+    let created = null
+    return (...args) => {
+        if (!created) {
+            const interactive = spoonRequired("hs_interactive-gt")
+            const resolved = parameters.map((parameter) => {
+                if (!parameter.reader) return parameter
+                const [kind, variant] = parameter.reader.split(".")
+                return Object.assign({}, parameter, { reader: interactive.readers[kind][variant] })
+            })
+            created = interactive.interactiveFunctionCreate(fn, resolved)
+        }
+        return created(...args)
+    }
+}
+
 module.exports = {
     config,
     // History.
@@ -2133,4 +2233,10 @@ module.exports = {
     bindHotkeys,
     start,
     stop
+}
+
+// Each function listed in EXPORTED_PARAMETERS is exported in the form that reads its omitted
+// arguments. The function of the same name within this Spoon is unchanged.
+for (const [name, parameters] of Object.entries(EXPORTED_PARAMETERS)) {
+    module.exports[name] = interactiveExportCreate(module.exports[name], parameters)
 }

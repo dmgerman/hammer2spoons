@@ -80,7 +80,7 @@ const config = {
         // How long to wait before drawing the window. The letters are bound as soon as the
         // page is presented, so a letter pressed within this time acts, and the window is
         // never drawn: someone who knows the menu does not see it. Zero draws at once.
-        showDelay: 0,
+        showDelay: 0.5,
         // Dismisses the menu. Escape is always bound.
         cancelKeys: ["escape"],
         // Returns to the parent menu.
