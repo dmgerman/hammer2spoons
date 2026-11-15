@@ -19,6 +19,8 @@ The main features are these:
   number shows a dialog for it. The same applies to applications, screens and text.
 - *The same command called from code.* Called through =call()=, a command receives its
   arguments directly and shows no prompt.
+- *Input for other Spoons.* A Spoon that asks for a window, a screen or one item of a list
+  runs a reader through =readerRun()=, so every Spoon asks for input with the same chooser.
 - *Keys bound to command names.* Every binding can be listed, the command bound to a key can
   be looked up, and a command can be redefined without binding its key again.
 - *=use()=, which configures a Spoon in one call.* It loads the Spoon, applies its settings,
@@ -228,7 +230,7 @@ reader: interactive.readers.window.implicit  // the focused window, or the defau
 
 ** The built-in readers
 
-The Spoon provides five readers, as =interactive.readers.window= and so on:
+The Spoon provides six readers, as =interactive.readers.window= and so on:
 
 | Reader                | =implicit= and =auto= take  | =prompted= shows             |
 |-----------------------+-----------------------------+------------------------------|
@@ -237,9 +239,10 @@ The Spoon provides five readers, as =interactive.readers.window= and so on:
 | =readers.screen=      | the focused window's screen | a chooser of screens         |
 | =readers.number=      | —                           | a dialog, read as a number   |
 | =readers.string=      | —                           | a dialog                     |
+| =readers.choice=      | —                           | a chooser of the rows given in =choices= |
 
-=readers.number= and =readers.string= have no =implicit= or =auto= variant, since there is no
-current number or text to take.
+=readers.number=, =readers.string= and =readers.choice= have no =implicit= or =auto= variant,
+since there is no current number, text or item to take.
 
 Each row of the window chooser reads =Application — Title=, so typing either part of it finds
 the window. When =readers.window.auto= finds no focused window, but the frontmost application
@@ -251,13 +254,16 @@ cancelled.
 
 ** Narrowing what a reader offers
 
-=readers.window.prompted= and =readers.screen.prompted= read options from the argument's entry,
-which leave choices out of their chooser:
+The =prompted= readers read options from the argument's entry. Some leave choices out of the
+chooser, and =placeholder= sets the text shown in the chooser's empty search field:
 
-| Option              | Reader            | Default | Effect                                          |
-|---------------------+-------------------+---------+-------------------------------------------------|
-| =includeCurrent=    | window and screen | true    | false leaves out the window or screen the command started on. |
-| =includeFullscreen= | screen            | true    | false leaves out screens showing a fullscreen window. |
+| Option              | Reader                        | Default    | Effect                                          |
+|---------------------+-------------------------------+------------+-------------------------------------------------|
+| =includeCurrent=    | window and screen             | true       | false leaves out the window or screen the command started on. |
+| =includeFullscreen= | screen                        | true       | false leaves out screens showing a fullscreen window. |
+| =placeholder=       | window, application, screen and choice | the reader's name | The text in the chooser's empty search field, such as ="Window to swap with"=. |
+| =choices=           | choice                        | none       | The rows, as ={text, subText, value}=, or a function of the snapshot that returns them. The chosen row's =value= is the argument. |
+| =empty=             | choice                        | "Nothing to choose" | The alert shown when =choices= is empty. |
 
 A command that moves a window to another screen sets both to false:
 
@@ -394,6 +400,27 @@ to run a command from other code.
 #+begin_src js
 interactive.call("countdown-start-for", 25)
 #+end_src
+
+** readerRun(reader, [parameter], [snapshot])
+
+=readerRun()= lets a Spoon ask the user for one value with a reader, outside any command. A
+Spoon that requires hs_interactive-gt uses it instead of building its own chooser, so that its
+prompts look the same as every command's, and =promptIsOpen()= reports them:
+
+#+begin_src js
+const interactive = hs.spoons["hs_interactive-gt"]
+interactive.readerRun(interactive.readers.choice.prompted, {
+    placeholder: "Album",
+    choices: albums.map((a) => ({ text: a.name, subText: a.artist, value: a }))
+}).then((album) => { if (album) play(album) })
+#+end_src
+
+=parameter= holds the reader's options, as an argument's entry would. =snapshot= is what the
+reader treats as current, ={window, application, screen}=. When it is omitted, =readerRun()=
+takes it at the moment it is called.
+
+The function returns a promise of the value read, or of null when the chooser or dialog was
+cancelled.
 
 ** callInteractively(name, options)
 

@@ -643,51 +643,23 @@ function screenFrameOf(window) {
 // MARK: - Choosing a window or a screen
 //
 // For the operations that need a second window or a target screen and are not given one.
-// Each shows an hs.chooser and returns a promise of what was chosen, or of null when the
-// chooser was dismissed. The window the operation acts on is read before the chooser opens,
-// because the chooser takes the keyboard focus.
+// The chooser is hs_interactive-gt's, through its readers, so that every Spoon asks for a
+// window or a screen in the same way. Each function returns a promise of what was chosen, or
+// of null when the chooser was dismissed or offered nothing. The window the operation acts on
+// is read before the chooser opens, because the chooser takes the keyboard focus.
 
 /**
- * Show a chooser of rows `{text, subText, value}` and resolve to the chosen row's value.
+ * Choose a window other than `window`.
  *
- * @param {string} placeholder Shown in the empty search field.
- * @param {object[]} rows The choices.
- * @returns {Promise<*>} The chosen value, or null.
- */
-function choose(placeholder, rows) {
-    return new Promise((resolve) => {
-        const chooser = hs.chooser.create()
-        chooser.placeholder = placeholder
-        chooser.searchSubText = true
-        chooser.setChoices(rows)
-        chooser.onSelect = (row) => resolve(row ? row.value : null)
-        chooser.show()
-    })
-}
-
-/**
- * Choose a window other than `excluded`, from the windows hs_windowfilter-gt holds.
- *
- * @param {string} placeholder Shown in the empty search field.
- * @param {object} [excluded] A window to leave out of the choices.
+ * @param {object} window The window the operation acts on, left out of the choices.
+ * @param {string} placeholder Shown in the chooser's empty search field.
  * @returns {Promise<object>} The chosen HSWindow, or null.
  */
-function windowChoose(placeholder, excluded) {
-    const records = windowFilter ? windowFilter.records() : []
-    const rows = records
-        .filter((r) => r.state.standard && (!excluded || r.state.id !== excluded.id))
-        .map((r) => ({
-            // The application's name is in the text as well as below it: a window is often
-            // easier to find by its application than by its title.
-            text: `${r.state.application} — ${r.state.title || "(untitled)"}`,
-            subText: r.state.screenName ? `${r.state.application} · ${r.state.screenName}` : r.state.application,
-            value: r.window
-        }))
-    if (!rows.length) {
-        alert("No other window")
-        return Promise.resolve(null)
-    }
-    return choose(placeholder, rows)
+function windowChoose(window, placeholder) {
+    const interactive = spoonRequired("hs_interactive-gt")
+    return interactive.readerRun(interactive.readers.window.prompted,
+        { includeCurrent: false, placeholder: placeholder },
+        { window: window, application: window.application, screen: screenOfWindow(window) })
 }
 
 /**
@@ -698,20 +670,10 @@ function windowChoose(placeholder, excluded) {
  * @returns {Promise<object>} The chosen HSScreen, or null.
  */
 function screenChoose(window) {
-    const current = screenOfWindow(window)
-    const occupied = fullscreenScreenIds()
-    const rows = screenList()
-        .filter((screen) => (!current || screen.id !== current.id) && !occupied.has(screen.id))
-        .map((screen) => ({
-            text: screen.name,
-            subText: `${Math.round(screen.frame.w)}×${Math.round(screen.frame.h)}`,
-            value: screen
-        }))
-    if (!rows.length) {
-        alert("No other screen to move to")
-        return Promise.resolve(null)
-    }
-    return choose("Screen", rows)
+    const interactive = spoonRequired("hs_interactive-gt")
+    return interactive.readerRun(interactive.readers.screen.prompted,
+        { includeCurrent: false, includeFullscreen: false, placeholder: "Screen to move to" },
+        { window: window, application: window.application, screen: screenOfWindow(window) })
 }
 
 /**
@@ -863,7 +825,7 @@ function tileWith(other, win) {
     const window = win || focused()
     if (!window) return false
     if (!other) {
-        return windowChoose("Window to tile with", window).then((chosen) => chosen ? tileWith(chosen, window) : false)
+        return windowChoose(window, "Window to tile with").then((chosen) => chosen ? tileWith(chosen, window) : false)
     }
     if (other.id === window.id) {
         alert("A window cannot be tiled with itself")
@@ -898,7 +860,7 @@ function windowWithWindowSwap(other, win) {
     const window = win || focused()
     if (!window) return false
     if (!other) {
-        return windowChoose("Window to swap with", window).then((chosen) => chosen ? windowWithWindowSwap(chosen, window) : false)
+        return windowChoose(window, "Window to swap with").then((chosen) => chosen ? windowWithWindowSwap(chosen, window) : false)
     }
     if (other.id === window.id) {
         alert("A window cannot be swapped with itself")
@@ -1878,9 +1840,10 @@ function screenshotFailed(application, reason) {
 
 // MARK: - The window menu
 //
-// The menu hs_menu-gt displays for this Spoon. Every button calls a function here directly,
-// with `fn:`, so it needs no command names and no hs_interactive-gt. The menu's keys do not
-// take the keyboard focus, so the focused window is still the user's when a button runs.
+// The menu hs_menu-gt displays for this Spoon. Every option calls a function here directly,
+// with `fn:`, so it needs no command names. The options that ask for a window or a screen do
+// so through hs_interactive-gt's readers. The menu's keys do not take the keyboard focus, so
+// the focused window is still the user's when an option is selected.
 
 /** Run `action` on the focused window, if there is one. */
 function onFocused(action) {
@@ -2063,8 +2026,9 @@ const WINDOW_EVENTS = ["windowFocused", "windowMoved", "windowResized", "windowD
 function start() {
     if (windowFilter) return module.exports
 
-    // Both are required. Checked here, so that a missing one is reported when the Spoon
+    // All three are required. Checked here, so that a missing one is reported when the Spoon
     // starts rather than the first time it is needed.
+    spoonRequired("hs_interactive-gt")
     spoonRequired("hs_menu-gt")
     const windowfilter = spoonRequired("hs_windowfilter-gt")
     windowFilter = windowfilter.create({})

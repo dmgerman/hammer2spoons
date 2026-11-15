@@ -113,10 +113,13 @@ call the Spoon's functions with `fn:`, and its `bindHotkeys()` accepts `menuShow
 can open the menu through the `hotkeys` option of `hs.spoons.use()`. `hs_window-gt` and
 `hs_appleMusic-gt` were the first.
 
-No published Spoon requires `hs_interactive-gt`. Whether to use named commands is the user's
-choice, and any function can be made a command from outside the Spoon that defines it. A Spoon's
-readme may suggest command definitions for users of `hs_interactive-gt`, but the Spoon itself
-works without it.
+A Spoon that asks the user for input, such as a window, a screen, a number or a line of text,
+requires `hs_interactive-gt` and obtains the input through its readers, such as
+`readers.window.prompted`. It does not build its own `hs.chooser` or dialog. Input is then
+handled in one place, and every prompt is visible to `promptIsOpen()`, on which other Spoons
+such as `hs_menu-gt` rely. `hs_window-gt` was the first. Defining named commands for a Spoon's
+functions remains the user's choice: a Spoon does not define commands itself, and its readme may
+suggest command definitions.
 
 ### What users download
 

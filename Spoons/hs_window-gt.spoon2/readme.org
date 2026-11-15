@@ -20,16 +20,19 @@ that it can be undone.
 
 * Installing
 
-The Spoon requires two other Spoons from this repository, which must be loaded before it:
+The Spoon requires three other Spoons from this repository, which must be loaded before it:
 
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]. Its choosers ask for the window or the screen that /Swap with/,
+  /Tile with/ and /To screen/ act on.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]]. Its events report when the focus moves to another window and when a
   window closes.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]. It displays the window menu.
 
-The following configuration loads all three, and binds ⌥W to the window menu. The first time it
-runs, Hammerspoon 2 downloads the three Spoons:
+The following configuration loads all four, and binds ⌥W to the window menu. The first time it
+runs, Hammerspoon 2 downloads the four Spoons:
 
 #+begin_src js
+hs.spoons.use("hs_interactive-gt", { source: "dmgerman/hammer2spoons" })
 hs.spoons.use("hs_windowfilter-gt", { source: "dmgerman/hammer2spoons" })
 hs.spoons.use("hs_menu-gt", { source: "dmgerman/hammer2spoons" })
 hs.spoons.use("hs_window-gt", {
@@ -39,7 +42,7 @@ hs.spoons.use("hs_window-gt", {
 })
 #+end_src
 
-When either of the two required Spoons is not loaded, =start()= throws an error that names the
+When any of the three required Spoons is not loaded, =start()= throws an error that names the
 missing one.
 
 The =ref= option of =hs.spoons.use()= installs the Spoon from a particular tag or commit of the
@@ -51,7 +54,7 @@ changed. A Spoon installed from a tag or a commit is therefore never changed by 
 
 The Spoon depends on the following:
 
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] and [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], loaded before this Spoon.
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]], [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] and [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], loaded before this Spoon.
 - The Accessibility permission, which Hammerspoon 2 requires to move any window.
 - The Screen Recording permission, for =screenshot()= only.
 
@@ -87,8 +90,8 @@ functions from the keyboard:
 1. The window menu supplies the argument itself. It calls several of these functions with a
    fixed argument, such as =moveByOwnSize("left")= for /Move left/ and =fractionWidth(3)= for
    /1/3 width/. Where the argument has to be chosen, as for /To screen/, /Swap with/ and /Tile
-   with/, the menu shows a chooser.
-2. With hs_interactive-gt, a function that takes a window can be defined as a command whose
+   with/, the menu shows hs_interactive-gt's chooser.
+2. Through hs_interactive-gt, a function that takes a window can be defined as a command whose
    window argument is read by =readers.window.auto=. That reader takes the focused window, and
    shows a chooser of windows when no window is focused. A key can then be bound to the command.
    /Commands for hs_interactive-gt/ gives examples.
@@ -389,7 +392,7 @@ Screen Recording permission.
 
 ** start() and stop()
 
-=start()= checks that hs_windowfilter-gt and hs_menu-gt are loaded, subscribes to
+=start()= checks that hs_interactive-gt, hs_windowfilter-gt and hs_menu-gt are loaded, subscribes to
 hs_windowfilter-gt's events, and attaches the windows saved in =config.attachFile= again.
 
 =stop()= releases the keys bound by =bindHotkeys()=, turns isolation off, removes the circle
@@ -425,8 +428,9 @@ win.config.mouseHighlightColor = "#00FF00"
 
 * Commands for hs_interactive-gt
 
-This Spoon does not require [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]. With hs_interactive-gt, each function can be
-given a command name, so that it can be run from the command chooser and bound to a key by name.
+This Spoon requires [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]] for its choosers. hs_interactive-gt can also give
+each function of the Spoon a command name, so that the function can be run from the command
+chooser and bound to a key by name.
 The following definitions name each command after the function it calls:
 
 #+begin_src js

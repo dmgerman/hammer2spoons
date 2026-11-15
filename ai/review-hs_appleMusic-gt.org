@@ -131,3 +131,7 @@ Decided by the user and done on 2026-11-15:
   to it. =hammer2spoons-ei6.40= documents that pattern in =hs_menu-gt=.
 - Item 9: the readme is rewritten from the user's side, with a screenshot of the music menu.
 - The version is 2.0.0, since names changed.
+
+Done later on 2026-11-15, in =hammer2spoons-ei6.44=: =albumChoose()= no longer builds its own
+=hs.chooser=. It asks for the album through hs_interactive-gt's new =readers.choice.prompted=,
+run with =readerRun()=, and the Spoon therefore requires hs_interactive-gt. The version is 2.1.0.

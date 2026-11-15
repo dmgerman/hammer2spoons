@@ -342,7 +342,7 @@ const readers = {
             }
 
             return pick({
-                placeholder: "Window",
+                placeholder: parameter.placeholder || "Window",
                 context: context,
                 optional: parameter.optional,
                 // The application name is in `text` as well as `subText`: a window is often
@@ -364,7 +364,7 @@ const readers = {
         implicit: (context, parameter, snap) => snap.application,
         auto: (context, parameter, snap) => snap.application || readers.application.prompted(context, parameter, snap),
         prompted: (context, parameter) => pick({
-            placeholder: "Application",
+            placeholder: parameter.placeholder || "Application",
             context: context,
             optional: parameter.optional,
             choices: hs.application.runningApplications().map((a) => ({
@@ -420,7 +420,7 @@ const readers = {
             }
 
             return pick({
-                placeholder: "Screen",
+                placeholder: parameter.placeholder || "Screen",
                 context: context,
                 optional: parameter.optional,
                 choices: screens.map((s) => ({
@@ -509,11 +509,54 @@ const readers = {
             if (answer.action === "skip") return SKIP
             return answer.text
         }
+    },
+
+    choice: {
+        /**
+         * Choose one of a list. The parameter supplies the list:
+         *
+         *   choices      the rows, `{text, subText, value}`, or a function of the snapshot
+         *                that returns them
+         *   placeholder  shown in the empty search field; "Choose" without it
+         *   empty        the alert shown when there is nothing to choose
+         */
+        prompted: (context, parameter, snap) => {
+            const choices = typeof parameter.choices === "function"
+                ? parameter.choices(snap)
+                : (parameter.choices || [])
+            if (!choices.length) {
+                hs.ui.alert(parameter.empty || "Nothing to choose").duration(2).show()
+                return CANCEL
+            }
+            return pick({
+                placeholder: parameter.placeholder || "Choose",
+                context: context,
+                optional: parameter.optional,
+                choices: choices
+            })
+        }
     }
 }
 
 // A number with no bounds is a range with none, offering the parameter's own default.
 readers.number.prompted = readers.number.ranged({})
+
+/**
+ * Run a reader outside a command, for a Spoon that asks the user for one value.
+ *
+ * @param {function} reader A reader variant, such as `readers.window.prompted`.
+ * @param {object} [parameter] The reader's options, such as `{placeholder, includeCurrent}`.
+ * @param {object} [snap] What the reader treats as current, `{window, application, screen}`.
+ *        Taken now when omitted.
+ * @returns {Promise<*>} The value read, or null when the reader was cancelled or skipped.
+ */
+function readerRun(reader, parameter, snap) {
+    if (typeof reader !== "function") {
+        throw new Error("hs_interactive-gt: readerRun() needs a reader variant, e.g. readers.window.prompted")
+    }
+    return Promise.resolve(reader(null, parameter || {}, snap || snapshot())).then((value) =>
+        value === CANCEL || value === SKIP || value === undefined ? null : value)
+}
 
 // MARK: - The registry
 
@@ -1161,6 +1204,7 @@ module.exports = {
     SKIP,
     use,
     readers,
+    readerRun,
     describe,
     define,
     commands,

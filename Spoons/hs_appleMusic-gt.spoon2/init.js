@@ -559,19 +559,18 @@ function albumChoose(path) {
     const sortKey = (e) => (e.kind === "url" ? e.label : `${e.band} ${e.album}`).toLowerCase()
     const sorted = albums.slice().sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
 
-    const chooser = hs.chooser.create()
-    chooser.placeholder = "Album"
-    chooser.searchSubText = true
-    chooser.setChoices(sorted.map((entry) => ({
-        text: entry.kind === "url" ? entry.label : entry.album,
-        subText: entry.kind === "url" ? "link" : entry.band,
-        entry: entry
-    })))
-    chooser.onSelect = (item) => {
-        if (!item) return
-        entryPlay(item.entry)
-    }
-    chooser.show()
+    // The chooser is hs_interactive-gt's, so that every Spoon asks for input in the same way.
+    const interactive = spoonRequired("hs_interactive-gt")
+    interactive.readerRun(interactive.readers.choice.prompted, {
+        placeholder: "Album",
+        choices: sorted.map((entry) => ({
+            text: entry.kind === "url" ? entry.label : entry.album,
+            subText: entry.kind === "url" ? "link" : entry.band,
+            value: entry
+        }))
+    }).then((entry) => {
+        if (entry) entryPlay(entry)
+    })
     return module.exports
 }
 
@@ -1068,8 +1067,9 @@ function focus() {
 }
 
 function start() {
-    // Checked here, so that a missing hs_menu-gt is reported when the Spoon starts rather than
-    // the first time the menu is opened.
+    // Both are required. Checked here, so that a missing one is reported when the Spoon starts
+    // rather than the first time the menu or the album chooser is opened.
+    spoonRequired("hs_interactive-gt")
     spoonRequired("hs_menu-gt")
     return module.exports
 }
