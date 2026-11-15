@@ -1,18 +1,22 @@
 * hs_appleMusic-gt
 
-Control Apple Music from the keyboard, and play albums from a list of your own.
+hs_appleMusic-gt controls Apple Music from the keyboard, through a menu in which a letter selects
+each option. It also plays albums from a list kept in a text file, including albums that are not
+in the Music library.
 
-- Play and pause, skip a track or a whole album, and change the volume, from a menu opened with
-  one key.
-- See what is playing, with a link to the album on Apple Music, copied so you can paste it.
-- Keep a list of the albums you want to listen to, and play one you choose, or one at random.
-  The list can hold albums you do not have in your library: they are played from the Apple Music
-  catalogue.
-- Turn on auto-play, and when an album ends, another one from your list starts.
+Its most important features are:
+
+- A menu, opened with one key, for playback, the volume and the album list.
+- Skipping a whole album forward or back, as well as a single track.
+- An alert that names the track playing and gives the Apple Music address of its album. The same
+  text is copied to the clipboard.
+- An album list, from which an album is played by choosing it in a chooser, or at random.
+- Adding the album that is playing to the album list, as its Apple Music address.
+- Auto-play, which starts another album from the list when Music stops.
 
 * Installing
 
-The Spoon requires [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], which displays its menu. Load it first:
+The Spoon requires [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], which displays its menu, so hs_menu-gt is loaded first:
 
 #+begin_src js
 hs.spoons.use("hs_menu-gt", { source: "dmgerman/hammer2spoons" })
@@ -23,44 +27,50 @@ hs.spoons.use("hs_appleMusic-gt", {
 })
 #+end_src
 
-⌃⌥⌘M then opens the music menu. Without hs_menu-gt, =start()= stops with a message that names it.
+With this configuration, ⌃⌥⌘M opens the music menu. When hs_menu-gt is not loaded, =start()=
+throws an error that names it.
 
-The first time you play an album, the example list of albums is copied to your configuration
-directory; see /The album list/.
+When no album list exists, the example list included with the Spoon is copied to the Hammerspoon 2
+configuration directory the first time the list is used. /The example list/ describes it.
 
 * The music menu
+
+The music menu holds an option for each thing the Spoon does:
 
 #+ATTR_HTML: :alt The music menu: sixteen options for playback, volume and albums, each with an icon and the letter that selects it
 [[./images/music-menu.png]]
 
-Each option has a letter beneath it. Press the letter to select the option. The menu accepts
-keyboard input only; it does not respond to the mouse.
+Each option has a letter beneath it, and pressing that letter selects the option. The menu
+accepts keyboard input only; it does not respond to the mouse. The options are:
 
-| Letter | Option       | Does                                                        |
-|--------+--------------+-------------------------------------------------------------|
-| p      | Play/Pause   | Play or pause                                               |
-| b / n  | Prev / Next track | Go back or forward a track                             |
-| B / N  | Prev / Next album | Go back or forward to the start of an album            |
-| i      | Now playing  | Show the track playing, and copy it with the album's link   |
-| v      | Volume       | Show Music's volume                                         |
-| u / d  | Vol +20 / −20 | Raise or lower Music's volume by 20                        |
-| U / D  | Vol +5 / −5  | Raise or lower Music's volume by 5                          |
-| r      | Random album | Play an album from your list, chosen at random              |
-| a      | Add current  | Add the album playing to your list                          |
-| t      | Auto-play    | Turn auto-play on or off                                    |
-| c      | Choose album | Choose an album from your list and play it                  |
-| m      | Music app    | Bring Music forward, starting it if needed                  |
+| Letter | Option                  | Action                                                                    |
+|--------+-------------------------+---------------------------------------------------------------------------|
+| p      | Play/Pause              | Pause Music when it is playing, and start playing otherwise.             |
+| b / n  | Prev track / Next track | Go to the previous or the next track.                                     |
+| B / N  | Prev album / Next album | Go to the first track of the previous or the next album.                  |
+| i      | Now playing             | Display the track playing and its album's address, and copy them.         |
+| v      | Volume                  | Display Music's volume.                                                   |
+| u / d  | Vol +20 / Vol −20       | Raise or lower Music's volume by 20.                                      |
+| U / D  | Vol +5 / Vol −5         | Raise or lower Music's volume by 5.                                       |
+| r      | Random album            | Play an album chosen at random from the album list.                       |
+| a      | Add current             | Add the album playing to the album list.                                  |
+| t      | Auto-play               | Turn auto-play on or off.                                                 |
+| c      | Choose album            | Open a chooser of the albums in the list, and play the one chosen.        |
+| m      | Music app               | Make Music the frontmost application, launching it when it is not running. |
 
-The menu stays open after the track and volume options, so you can select them several times in
-a row. The others close it.
+The menu closes after Play/Pause, Now playing, Random album, Auto-play and Choose album. It
+remains open after every other option, so that an option such as Vol +5 can be selected several
+times in a row.
 
-The menu is also =menu=, so a menu of your own can include it, or add your own options to it.
-See [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] for how menus work.
+The menu is exported as =menu=. A menu defined in the configuration can include it as a submenu,
+with =children: hs.spoons["hs_appleMusic-gt"].menu=, or combine its options with others in a new
+menu. The readme of [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] describes how menus are defined.
 
 * The album list
 
-Your list of albums is a text file, =albums.txt= in your Hammerspoon 2 configuration directory,
-unless =config.albumListPath= names another. It has one album per line, in either of two forms:
+The album list is a text file that holds the albums the Spoon plays. It is =albums.txt= in the
+Hammerspoon 2 configuration directory, unless =config.albumListPath= names another file. Each
+line holds one album, in one of two forms:
 
 #+begin_src text
 # An Apple Music address. The comment after it is the name shown in the chooser.
@@ -70,156 +80,230 @@ https://music.apple.com/ca/album/kid-a/1097862870 # Radiohead — Kid A
 Radiohead|Kid A
 #+end_src
 
-Everything from a =#= to the end of a line is a comment. Blank lines, and lines that are neither
-an address nor contain a =|=, are skipped.
+A line that begins with =http://=, =https://= or =music://= is an address. A line that contains a
+=|= is a band and an album name. Everything from a =#= to the end of a line is a comment. On an
+address line, the comment is the name shown in the chooser. An address without a comment is named
+after the album name that the address itself contains. Blank lines and lines of any other form are
+ignored.
 
-** Use addresses
+** Addresses and searches
 
-An address names one album exactly, and plays it without a search. A =Band|Album= line is
-searched for in the Apple Music catalogue each time, and the search is not always right:
+The two forms differ in how the album is found. An address identifies one album exactly, and that
+album is played without a search. A =Band|Album= line is searched for in the Apple Music
+catalogue each time it is played, and the search does not always find the right album:
 
-- It may not find the album at all. A search for "Radiohead Pablo Honey" finds no Radiohead
-  album.
-- It may find no album whose name matches exactly, and then the first result is played, with an
-  alert naming it.
-- It may find several albums of the same name, such as three releases of Miles Davis's /Kind of
-  Blue/, and play the first.
+- The search may find no album. A search for "Radiohead Pablo Honey" returns no Radiohead album.
+- The search may find no album whose name and artist match exactly. The first result is then
+  played, and an alert names it.
+- The search may find several albums with the same name, such as three releases of Miles Davis's
+  /Kind of Blue/. The first is then played, and an alert says how many matched.
 
-So write each album as an address. There are two ways to get one:
+Addresses are therefore the recommended form. An address can be obtained in two ways:
 
-1. *Add the album that is playing,* with the menu's /Add current/ option or =currentAlbumAdd()=.
-   It adds the album's address, with its name as a comment. It finds the album by the playing
-   track's name, artist and length, so a remaster is not confused with the original.
-2. *Copy the album's link.* In Music, open the album's page, click =⋯= and choose /Share/ →
-   /Copy Link/, then paste the link into the list as a line of its own. A link copied from the
-   album's page on =music.apple.com= in a browser works as well. Add a comment with the album's
-   name, for the chooser.
+1. *Add current,* in the menu, or =currentAlbumAdd()=, adds the album that is playing. The Spoon
+   finds the album in the catalogue by the track's name, artist and length, so that a remaster is
+   not mistaken for the original release. It appends the album's address, with the album's name
+   as a comment. When the album cannot be identified, it appends a =Band|Album= line instead. An
+   album that is already in the list is not added again.
+2. *Share → Copy Link,* in Music, copies the address of an album. The command is in the =⋯= menu
+   on the album's page. The address is pasted into the list as a line of its own, followed by a
+   comment with the album's name. An address copied from the album's page on =music.apple.com= in
+   a browser works the same way.
 
-** When you have no list
+** The example list
 
-The Spoon includes an example list, [[file:albums.txt][albums.txt]], with every Radiohead studio
-album and albums by Miles Davis and Pink Floyd. When there is no =albums.txt= in your
-configuration directory, the example is copied there the first time an album is chosen, and an
-alert says so. From then on it is your list: edit it, or add to it.
+The Spoon includes an example list, [[file:albums.txt][albums.txt]]. It holds every Radiohead studio album and
+several albums by Miles Davis and Pink Floyd, all as addresses.
+
+When the file named by =config.albumListPath= does not exist, the example is copied to it the
+first time the list is read. The list is read when an album is played at random or chosen, when
+an album is added, and when auto-play starts an album. An alert reports the copy. From then on the
+copy is the album list, and it is edited like any other. When the copy cannot be made, the Spoon
+reads the example where it is, and an alert says so.
 
 * Auto-play
 
-With auto-play on, the Spoon checks every five minutes whether Music has stopped, and if it has,
-plays an album from your list chosen at random. A paused Music is left alone. Turn it on with the
-menu's /Auto-play/ option, or =autoPlayToggle()=.
+Auto-play starts an album from the list when Music has stopped. While auto-play is on, the Spoon
+reads Music's state every =config.autoPlayInterval= seconds, five minutes by default, and once
+more at the moment auto-play is turned on:
 
-Hammerspoon 2 receives no notification when an album ends, so the Spoon reads Music's state on a
-timer, and there can be up to =config.autoPlayInterval= seconds of silence between albums. A
-smaller value shortens the silence, and reads Music's state more often.
+- When Music is stopped or not running, the Spoon plays an album chosen at random from the list.
+- When Music is playing or paused, the Spoon does nothing.
+- When the list is empty, auto-play turns itself off.
+
+Auto-play is turned on and off with the Auto-play option or =autoPlayToggle()=. It is off when
+the Spoon is loaded.
+
+Music announces every change of its state as a distributed notification, but Hammerspoon 2 has no
+module that receives one. The Spoon therefore reads the state on a timer. As a result, up to
+=config.autoPlayInterval= seconds can pass between the end of one album and the start of the
+next. A smaller value shortens that time, and reads Music's state more often.
 
 * Functions
 
-Every option of the menu calls one of these, and you can call them from your own configuration.
+The Spoon exports its functions, and every option of the menu calls one of them. They can also be
+called from the configuration, or bound to keys of their own. A function that performs an action
+returns the Spoon, unless its description names another value.
 
 ** Playback
 
-| Function              | Does                                                        |
-|-----------------------+-------------------------------------------------------------|
-| =playPauseToggle()=   | Play or pause.                                              |
-| =play()=              | Start or resume playing.                                    |
-| =playbackStop()=      | Stop. Playing after a stop restarts the album.              |
-| =trackNext()=, =trackPrevious()= | Skip a track forward or back.                    |
-| =albumNext()=, =albumPrevious()= | Skip to the next album, or back to the start of the previous one. |
-| =playerState()=       | ="playing"=, ="paused"=, ="stopped"= or ="not running"=.    |
-| =isPlaying()=, =isRunning()= | Whether Music is playing, and whether it is running. |
-| =focus()=             | Bring Music forward, starting it if needed.                 |
+These functions control playback in Music. When Music is not running, =playPauseToggle()=,
+=play()=, =playbackStop()=, =trackNext()=, =trackPrevious()=, =albumNext()= and =albumPrevious()=
+display the alert "Music is not running" and do nothing else.
 
-Music has no command for skipping an album, so =albumNext()= and =albumPrevious()= skip one track
-at a time until the album changes, up to =config.maxAlbumSkipAttempts= tracks.
+| Function                         | Description                                                                 |
+|----------------------------------+-----------------------------------------------------------------------------|
+| =playPauseToggle()=              | Pauses Music when it is playing, and starts playing otherwise.             |
+| =play()=                         | Starts playing, or resumes after a pause.                                   |
+| =playbackStop()=                 | Stops playing. Playing again restarts the album rather than resuming it.   |
+| =trackNext()=, =trackPrevious()= | Goes to the next or the previous track.                                     |
+| =albumNext()=                    | Goes forward to the first track of the next album, and displays its name.   |
+| =albumPrevious()=                | Goes back to the first track of the previous album, and displays its name.  |
+| =playerState()=                  | Returns ="playing"=, ="paused"=, ="stopped"= or ="not running"=. Returns ="unknown"= when Music does not answer. |
+| =isPlaying()=                    | Returns true when Music is playing.                                         |
+| =isRunning()=                    | Returns true when Music is running. It does not launch Music.               |
+| =focus()=                        | Makes Music the frontmost application, launching it when it is not running. Only Music's main window is raised, so the MiniPlayer and Music's other windows stay where they are. |
 
-** What is playing
+Music has no command that skips an album. =albumNext()= and =albumPrevious()= therefore skip one
+track every =config.albumSkipInterval= seconds until the album's name changes. They stop after
+=config.maxAlbumSkipAttempts= tracks, and display an alert when no other album was reached.
 
-| Function              | Does                                                        |
-|-----------------------+-------------------------------------------------------------|
-| =currentTrack()=      | ={name, artist, album, duration}= of the track playing, or null. =duration= is in seconds. |
-| =currentArtist()=, =currentAlbum()= | One of those fields.                           |
-| =currentTrackShow()=  | Show the track and its album's link, and copy them.         |
-| =currentTrackText()=  | A promise of the same text.                                 |
-| =currentAlbumURL()=   | A promise of the Apple Music address of the album playing, or of null. |
+** The track playing
 
-Music's scripting does not report an album's Apple Music address, so the Spoon finds it in the
-catalogue by the playing track's name, artist and length. When those do not identify one album, it returns nothing
-rather than a guess.
+These functions describe the track that Music is playing.
+
+| Function                 | Description                                                                         |
+|--------------------------+-------------------------------------------------------------------------------------|
+| =currentTrack()=         | Returns ={name, artist, album, duration}= for the track playing, with =duration= in seconds. Returns null when Music is not running or nothing is playing. |
+| =currentArtist()=        | Returns the artist of the track playing, or null.                                   |
+| =currentAlbum()=         | Returns the album of the track playing, or null.                                    |
+| =currentTrackShow()=     | Displays a description of the track, with the address of its album when the address is found, and copies the same text to the clipboard. |
+| =currentTrackText()=     | Returns a promise of the text that =currentTrackShow()= displays, or of null when nothing is playing. |
+| =currentAlbumURL()=      | Returns a promise of the Apple Music address of the album playing. The promise gives null when nothing is playing or the album cannot be identified. |
+| =albumURLResolve(track)= | Returns a promise of the address of the album of =track=, which is an object of the form =currentTrack()= returns. |
+
+The description of a track is formatted by =config.trackFormat=, or by =config.trackURLFormat=
+when the album's address was found.
+
+Music's scripting interface does not report an album's Apple Music address. The Spoon therefore
+searches the catalogue for the track. It identifies the track's album by the track's name and
+artist, by its length to within =config.durationTolerance= seconds, and by the album's name. When
+these do not identify a single album, the address is null. A wrong address would be written to the
+album list by Add current, and played from then on.
 
 ** Volume
 
-Music has a volume of its own, separate from the volume of the output device. Both run from 0
-to 100.
+Music has a volume of its own, separate from the volume of the output device. These functions
+read and set both, on a scale from 0 to 100. A level outside that scale is set to the nearest end
+of it.
 
-| Function                    | Does                                                  |
-|-----------------------------+-------------------------------------------------------|
-| =volumeGet()=               | Music's volume, or null when Music is not running.    |
-| =volumeShow()=              | Show Music's volume.                                  |
-| =volumeSet(level)=          | Set Music's volume.                                   |
-| =volumeAdjust(delta)=       | Change Music's volume by =delta=, which may be negative, and show it. |
-| =systemVolume()=            | The output device's volume, or null when it has none. |
-| =systemVolumeSet(percent)=  | Set the output device's volume, and show the result.  |
+| Function                   | Description                                                                     |
+|----------------------------+---------------------------------------------------------------------------------|
+| =volumeGet()=              | Returns Music's volume, or null when Music is not running.                      |
+| =volumeShow()=             | Displays Music's volume, and returns it.                                        |
+| =volumeSet(level)=         | Sets Music's volume to =level=. Returns the volume set, or null when Music is not running. |
+| =volumeAdjust(delta)=      | Changes Music's volume by =delta=, which may be negative. Displays the new volume and returns it. |
+| =systemVolume()=           | Returns the output device's volume. Returns null when there is no output device, or when its volume cannot be set. |
+| =systemVolumeSet(percent)= | Sets the output device's volume, displays the volume the device then has, and returns it. Returns null, with an alert, when the volume cannot be set. |
 
-Some output devices, HDMI among them, have no volume that can be set. =systemVolumeSet()= then
-says so.
+Some output devices, HDMI among them, have no volume that can be set. =systemVolumeSet()= reads
+the volume back after setting it, so that it reports such a device instead of a volume that was
+never set.
 
 ** Albums
 
-| Function                     | Does                                                  |
-|------------------------------+-------------------------------------------------------|
-| =albumRandomPlay()=          | Play an album from your list, chosen at random.       |
-| =albumChoose()=              | Choose an album from your list, and play it.          |
-| =currentAlbumAdd()=          | Add the album playing to your list.                   |
-| =albumPlay(band, album)=     | Search for an album and play it. See /Use addresses/. |
-| =albumsRead()=               | Your list, as entries ={kind: "url", url, label}= or ={kind: "name", band, album}=. |
-| =albumRandomPick()=          | One entry of your list, chosen at random, without playing it. |
-| =entryPlay(entry)=           | Play one entry of the list.                           |
-| =albumResolve(band, album)=  | A promise of ={name, artist, url}= for an album found by searching, or of null. |
-| =albumURLResolve(track)=     | A promise of the address of a track's album, as =currentAlbumURL()= finds it. |
+These functions read the album list and play albums. The functions with an optional =path= read
+the list at =path= instead of =config.albumListPath=. The example list is never copied to a path
+given this way.
 
-=albumRandomPlay()=, =albumChoose()=, =currentAlbumAdd()=, =albumsRead()= and =albumRandomPick()= take the path of another list as an optional argument.
+| Function                    | Description                                                                      |
+|-----------------------------+----------------------------------------------------------------------------------|
+| =albumRandomPlay([path])=   | Plays an album chosen at random from the list, and displays its name.            |
+| =albumChoose([path])=       | Opens a chooser of the albums in the list, and plays the one chosen. An address is shown by its name, with "link" beneath it. A line with a band and an album is shown by the album, with the band beneath it. |
+| =currentAlbumAdd([path])=   | Adds the album playing to the list, as /Addresses and searches/ describes.       |
+| =albumsRead([path])=        | Returns the entries of the list in the order of the file. Each entry is ={kind: "url", url, label}= or ={kind: "name", band, album}=. |
+| =albumRandomPick([path])=   | Returns one entry chosen at random, without playing it, or null when the list is empty. |
+| =entryPlay(entry)=          | Plays one entry, as =albumsRead()= returns it.                                   |
+| =albumPlay(band, album)=    | Searches the catalogue for an album by name, and plays the album found.          |
+| =albumResolve(band, album)= | Returns a promise of ={name, artist, url}= for the album that =albumPlay()= would play. The promise gives null when the search finds no album. |
+
+These functions return before the album starts playing. The Spoon opens the album's page in
+Music, waits until the page displays its Play button, and then presses it.
 
 ** Auto-play
 
-=autoPlayStart()=, =autoPlayStop()=, =autoPlayToggle()= and =autoPlayIsEnabled()=.
+These functions control auto-play, which /Auto-play/ describes.
 
-** The menu and keys
+| Function              | Description                                                                         |
+|-----------------------+-------------------------------------------------------------------------------------|
+| =autoPlayStart()=     | Turns auto-play on, and reads Music's state at once. Returns false when auto-play was already on. |
+| =autoPlayStop()=      | Turns auto-play off. Returns false when auto-play was already off.                   |
+| =autoPlayToggle()=    | Turns auto-play on or off, and displays which. Returns true when auto-play is now on. |
+| =autoPlayIsEnabled()= | Returns true when auto-play is on.                                                   |
 
-=menuShow()= opens the music menu, and =menu= is its options. =bindHotkeys({ menuShow: [mods,
-key] })= binds a key to it; =hs.spoons.use()= calls it with its =hotkeys= option.
+** The menu and its key
+
+These functions and values display the music menu and bind a key to it.
+
+| Name                   | Description                                                                        |
+|------------------------+------------------------------------------------------------------------------------|
+| =menuShow()=           | Displays the music menu, with hs_menu-gt.                                          |
+| =menu=                 | The options of the music menu, as an array in hs_menu-gt's format.                 |
+| =bindHotkeys(mapping)= | Binds the key given as ={ menuShow: [modifiers, key] }= to =menuShow()=. A second call replaces the binding of the first. Any name other than =menuShow= throws an error. |
+
+=hs.spoons.use()= calls =bindHotkeys()= with its =hotkeys= option, as /Installing/ shows.
+
+** Starting and stopping
+
+These functions are called when the Spoon is started and stopped.
+
+| Function  | Description                                                                                  |
+|-----------+----------------------------------------------------------------------------------------------|
+| =start()= | Checks that hs_menu-gt is loaded. Throws an error that names hs_menu-gt when it is not.      |
+| =stop()=  | Releases the key, turns auto-play off, and stops any album skip or wait for a Play button in progress. |
 
 * Configuration
 
-| Setting                  | Default                     | Meaning                                        |
-|--------------------------+-----------------------------+------------------------------------------------|
-| =albumListPath=          | =albums.txt= in your configuration directory | Your album list.               |
-| =storefront=             | your region                 | The Apple Music store searched, as a country code such as ="us"=. |
-| =trackFormat=            | ="{name} - {artist} [{album}]"= | How a track is shown. ={name}=, ={artist}=, ={album}= and ={url}= are replaced. |
-| =trackURLFormat=         | =trackFormat=, then the link | Used instead of =trackFormat= when the album's link was found. |
-| =alertDuration=          | =3=                         | Seconds a message stays on screen.             |
-| =autoPlayInterval=       | =300=                       | Seconds between auto-play's checks.            |
-| =maxAlbumSkipAttempts=   | =20=                        | Tracks skipped before giving up on reaching another album. |
-| =albumSkipInterval=      | =0.3=                       | Seconds between those skips.                   |
-| =durationTolerance=      | =2=                         | Seconds two tracks' lengths may differ and still be the same recording. |
-| =playButtonTitle=        | ="Play"=                    | The title of the Play button on an album's page in Music. |
-| =playButtonPollInterval= | =0.4=                       | Seconds between looks for that button.         |
-| =playButtonTimeout=      | =10=                        | Seconds before giving up on it.                |
-| =searchLimit=            | =25=                        | Search results considered.                     |
+The settings are the fields of the Spoon's =config= object, and take effect when they are
+assigned, such as =hs.spoons["hs_appleMusic-gt"].config.alertDuration = 5=. The one exception is
+=autoPlayInterval=, which takes effect the next time auto-play is turned on.
 
-The store is the country of your system's region, such as =ca= for English (Canada). Set
-=storefront= when your Apple Music account belongs to another country.
+| Setting                  | Default                                | Meaning                                                  |
+|--------------------------+----------------------------------------+----------------------------------------------------------|
+| =albumListPath=          | =albums.txt= in the configuration directory | The album list.                                     |
+| =storefront=             | =null=                                 | The country of the Apple Music store searched, as a two-letter code such as ="us"=. |
+| =trackFormat=            | ="{name} - {artist} [{album}]"=        | The description of a track. ={name}=, ={artist}=, ={album}= and ={url}= are replaced by the track's values. |
+| =trackURLFormat=         | ="{name} - {artist} [{album}]\n{url}"= | Used instead of =trackFormat= when the album's address was found. |
+| =alertDuration=          | =3=                                    | Seconds an alert is displayed.                           |
+| =autoPlayInterval=       | =300=                                  | Seconds between auto-play's readings of Music's state.   |
+| =maxAlbumSkipAttempts=   | =20=                                   | Tracks =albumNext()= and =albumPrevious()= skip before they stop. |
+| =albumSkipInterval=      | =0.3=                                  | Seconds between those skips.                             |
+| =durationTolerance=      | =2=                                    | The largest difference, in seconds, between two lengths of a track that are taken as the same recording. |
+| =playButtonTitle=        | ="Play"=                               | The title of the Play button on an album's page in Music. |
+| =playButtonPollInterval= | =0.4=                                  | Seconds between searches for that button while the page loads. |
+| =playButtonTimeout=      | =10=                                   | Seconds after which the search for the button stops, with an alert. |
+| =searchLimit=            | =25=                                   | The number of catalogue search results compared.         |
+
+When =storefront= is null, the Spoon uses the country of the system's region, such as =ca= for
+English (Canada), and =us= when the region names no country. The store must be the country of
+the Apple Music account. When the two differ, =storefront= is set to the account's country.
 
 * Notes
 
-- *Albums are played from the Apple Music catalogue,* even ones in your library. Music's
-  scripting can play only what is in the library, so the Spoon opens the album's page in Music
-  and presses its Play button. If a future version of Music renames that button, set =playButtonTitle=.
+These notes describe two consequences of how the Spoon plays albums.
+
+- *Albums are played from the Apple Music catalogue, including albums in the library.* Music's
+  scripting interface can play only what is in the library. The Spoon therefore opens the album's
+  page in Music and presses its Play button through the Accessibility API. If a later version of
+  Music gives that button another title, =config.playButtonTitle= is set to the new title.
 - *The addresses in the example list are for the Canadian store* (=/ca/=). An address identifies
-  the album by its number, and Music should open the same album in your own store, but this has
-  only been tried with a Canadian account.
+  an album by its number, so Music is expected to open the same album for an account in another
+  country. This has been tested only with a Canadian account.
 
 * Requirements
 
-- Apple Music, with a subscription to play albums that are not in your library.
+The Spoon requires the following:
+
+- Apple Music. A subscription is required to play albums that are not in the library.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], loaded before this Spoon.
-- The Accessibility permission, which pressing Play on an album's page requires.
+- The Accessibility permission, which pressing the Play button on an album's page requires.

@@ -1,34 +1,33 @@
 * hs_window-gt
 
-Move and resize windows from the keyboard, and undo it.
+hs_window-gt places, resizes and moves windows from the keyboard, and records every change so
+that it can be undone.
 
-Put a window in a half, a third or a quarter of its screen, fill the screen with it, resize
-it in place, move it to another screen, exchange it with another window, or go back to the
-window you were using before. Every one of these can be undone: each undo returns a window
-to the position it had before, one position at a time, including a position you moved it to
-by hand.
-
-It also attaches windows to number keys, so that a key brings that window forward; dims
-everything except the window you are working in; moves the pointer to the middle of a window
-or a screen; and captures a window as an image.
-
-All of these are in one menu, which one key opens and in which you select each by pressing its
-letter. See /The window menu/ below.
-
-The undo history works like Emacs's winner-mode. It is a ring of past positions, with
-consecutive identical ones stored once. Each =undo= goes one position further back through
-the ring without removing anything from it, and =redo= returns the window to where it was
-before the first of those undos. It is per window rather than per layout, so an operation that moves two
-windows records an entry for each and takes two undos.
+- *Placement in a grid:* halves, thirds, two thirds, quadrants and the full screen, or any cell
+  of a grid of any size.
+- *Resizing in place:* full height, full width, half height, half width, or a fraction of the
+  screen's width, keeping the window's position.
+- *Undo and redo for each window,* including positions the window was given by hand between two
+  commands.
+- *Moving between screens:* to the next or previous screen, or to a screen chosen from a list,
+  with the window keeping its place within the screen.
+- *Two windows at once:* exchanging the positions of two windows, or placing them side by side.
+- *Number keys:* a window can be attached to a digit, so that the digit with Option focuses it.
+  The attachments are kept across a reload of Hammerspoon 2.
+- *Isolation:* every part of every screen is dimmed except the focused window.
+- *The pointer:* it can be moved to the middle of a window or of a screen.
+- *A window menu,* opened with one key, in which a letter selects each option.
 
 * Installing
 
-The Spoon requires two others from this repository, loaded before it:
+The Spoon requires two other Spoons from this repository, which must be loaded before it:
 
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]], whose events report when the focus moves and when a window closes.
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], which displays the window menu.
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]]. Its events report when the focus moves to another window and when a
+  window closes.
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]. It displays the window menu.
 
-The first time this runs, Hammerspoon 2 downloads all three:
+The following configuration loads all three, and binds ⌥W to the window menu. The first time it
+runs, Hammerspoon 2 downloads the three Spoons:
 
 #+begin_src js
 hs.spoons.use("hs_windowfilter-gt", { source: "dmgerman/hammer2spoons" })
@@ -40,12 +39,27 @@ hs.spoons.use("hs_window-gt", {
 })
 #+end_src
 
-Without either of the two, =start()= stops with a message that names the one missing.
+When either of the two required Spoons is not loaded, =start()= throws an error that names the
+missing one.
 
-To keep a particular version, add =ref= with a tag or a commit. To get a newer version, call
-=hs.spoons.update("hs_window-gt")=.
+The =ref= option of =hs.spoons.use()= installs the Spoon from a particular tag or commit of the
+repository instead of its main branch. =hs.spoons.update("hs_window-gt")= downloads the Spoon
+again from the same source and ref, and reinstalls it when the version in its =spoon.json= has
+changed. A Spoon installed from a tag or a commit is therefore never changed by an update.
 
-* Simple usage
+** Requirements
+
+The Spoon depends on the following:
+
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] and [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], loaded before this Spoon.
+- The Accessibility permission, which Hammerspoon 2 requires to move any window.
+- The Screen Recording permission, for =screenshot()= only.
+
+* Binding keys
+
+The =hotkeys= option of =hs.spoons.use()= binds a key to a function of the Spoon. Each function
+is called without an argument, so it acts on the focused window. This example binds the window
+menu, two halves, the full screen and undo:
 
 #+begin_src js
 hs.spoons.use("hs_window-gt", {
@@ -61,252 +75,359 @@ hs.spoons.use("hs_window-gt", {
 })
 #+end_src
 
-From your own code, every method that takes a window takes it as its last argument, and uses
-the focused window when it is omitted: =hs.spoons["hs_window-gt"].leftHalf()=.
+No key is bound by default. Some functions cannot be bound, because they require an argument or
+only report a value: =place=, =fractionWidth=, =moveByOwnSize=, =mouseMove=, =mouseHighlight=,
+=digitAttach=, =attachedFocus=, =keyDetach=, =screenHasFullscreenWindow=, =historyDepth=,
+=isMaximized=, =isVerticallyMaximized=, =isHorizontallyMaximized=, =fullscreenScreenIds=,
+=attachedWindows=, =isolationOn=, =start=, =stop= and =bindHotkeys=.
 
-* Hotkeys
+This restriction applies only to =bindHotkeys()=, and there are two ways to reach these
+functions from the keyboard:
 
-=hotkeys= binds a key to any function of the Spoon that takes no argument. The function runs on
-the focused window:
+1. The window menu supplies the argument itself. It calls several of these functions with a
+   fixed argument, such as =moveByOwnSize("left")= for /Move left/ and =fractionWidth(3)= for
+   /1/3 width/. Where the argument has to be chosen, as for /To screen/, /Swap with/ and /Tile
+   with/, the menu shows a chooser.
+2. With hs_interactive-gt, a function that takes a window can be defined as a command whose
+   window argument is read by =readers.window.auto=. That reader takes the focused window, and
+   shows a chooser of windows when no window is focused. A key can then be bound to the command.
+   /Commands for hs_interactive-gt/ gives examples.
 
-#+begin_src js
-hotkeys: {
-    menuShow: [["alt"], "w"],
-    undo:     [["cmd", "ctrl", "alt"], "z"],
-    leftHalf: [["cmd", "ctrl", "alt"], "left"]
-}
-#+end_src
-
-Nothing is bound by default. A name that is not such a function is an error, and then nothing is
-bound. =stop()= releases the keys.
+A name that is not a function that can be bound is an error, and then no key is bound. A second
+call to =bindHotkeys()= releases the keys of the first. =stop()= releases them as well.
 
 * The window menu
 
-=menuShow()= opens a menu of everything this Spoon does, on the screen you are working on.
-Each option has a letter beneath it: press the letter to select the option. The example under
-/Installing/ opens it with ⌥W.
+The window menu holds every operation of the Spoon. =menuShow()= displays it on the screen of the
+focused window. Each option has a letter beneath it, and pressing that letter selects the option.
+The configuration under /Installing/ opens the menu with ⌥W.
 
-The menu is drawn by hs_menu-gt, and appears at once. You can set a delay before it is drawn.
-The letters work during the delay, so a letter pressed in time selects its option and the menu is
+#+ATTR_HTML: :alt The window menu: thirty-four options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an icon and its letter
+[[./images/window-menu.png]]
+
+The menu accepts keyboard input only. Selecting an option closes the menu, with three exceptions:
+
+1. Undo and Redo keep the menu open, so that they can be selected several times in a row.
+2. Thirds, Quadrants and Widths open submenus, which stay open after an option is selected.
+3. Swap with, Tile with and To screen close the menu, and then show a chooser of the other
+   windows, or of the other screens.
+
+hs_menu-gt draws the menu at once. It can be configured to wait before drawing it. The letters
+are accepted during that wait, so a letter pressed in time selects its option, and the menu is
 never drawn:
 
 #+begin_src js
 hs.spoons["hs_menu-gt"].config.screen.showDelay = 0.5
 #+end_src
 
-#+ATTR_HTML: :alt The window menu: thirty-four options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an icon and its letter
-[[./images/window-menu.png]]
-
-A press closes the menu, except Undo and Redo, which you can press several times in a row.
-Thirds, Quadrants and Widths open submenus, which stay open. Swap with, Tile with and To screen
-close the menu and then show a chooser of the other windows, or of the other screens.
-
-The menu is also =win.menu=, so a menu of your own can include it as a submenu:
+The menu is also exported as =menu=, so another menu can include it as a submenu:
 
 #+begin_src js
 { label: "Windows", key: "w", children: hs.spoons["hs_window-gt"].menu }
 #+end_src
 
-See [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] for how menus work.
+[[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] describes how menus are written.
 
-* Methods
+* Functions
 
-Methods that move or resize a window return =true= when they did so, and =false= when they
-could not: no window, one screen, a fullscreen window, or a window whose screen cannot be
-told. The reason is shown in an alert. =undo=, =redo=, =historyClear=, the isolation methods,
-=start= and =stop= return the Spoon.
+The functions are properties of the Spoon, =hs.spoons["hs_window-gt"]=. Every function that acts
+on a window takes the window as its last argument, and acts on the focused window when that
+argument is omitted:
+
+#+begin_src js
+const win = hs.spoons["hs_window-gt"]
+win.leftHalf()             // the focused window
+win.leftHalf(someWindow)   // a particular window
+#+end_src
+
+** Return values
+
+The functions that move or resize a window return =true= when the window was moved, and =false=
+when it was not. A function returns =false= without a message when there is no window, or when
+the window's screen cannot be determined. For any other refusal, such as a fullscreen window or a
+single screen, an alert gives the reason.
+
+=undo=, =redo=, =historyClear=, =isolationStart=, =isolationStop=, =isolationToggle=, =start= and
+=stop= return the Spoon. The other functions return the values described below.
 
 ** Undo
 
+The Spoon keeps a history of positions for each window, and =undo= and =redo= move a window
+through it. The history works as Emacs's winner-mode does, with one difference: it is kept per
+window rather than per arrangement of windows.
+
+The history of a window is a list of its earlier positions, oldest first, with at most
+=config.historySize= entries. A position is added each time the Spoon moves the window. A
+position identical to the last one in the list is not added again. When the list is full, the
+oldest position is discarded.
+
+An operation that moves two windows, such as =windowWithWindowSwap=, adds a position to each
+window's history. Returning both windows takes one =undo= on each.
+
 *** undo(win)
 
-Return a window to its previous position. Each further call goes one position further back,
-rather than undoing the call before it.
+=undo= returns a window to its previous position. A second =undo= returns it to the position
+before that, and so on: each call goes one position further back in the history. =undo= does not
+remove positions from the history.
 
-A move made by hand since the last command is itself a position: undo returns to where you
-left the window, and undo again to where the last command had put it.
+A move made by hand since the last command is also recorded. The first =undo= returns the window
+to where it was left by hand, and the second to where the last command had put it.
 
 *** redo(win)
 
-Return the window to where it was before the first of a series of =undo= calls. It does
-something only straight after undoing.
+=redo= returns a window to the position it had before the first of a series of =undo= calls. It
+has an effect only immediately after =undo=. Any other move of the window ends the series.
 
 *** historyDepth(win), historyClear()
 
-=historyDepth= is how many positions are remembered for a window. =historyClear= forgets
-every window's history. A window's history is forgotten when the window closes.
+=historyDepth= returns the number of positions in a window's history. =historyClear= deletes the
+history of every window. A window's history is also deleted when the window closes.
 
 ** Placing a window in a grid
 
+These functions divide the screen into a grid and put the window in one or more of its cells.
+They use the area of the screen that the menu bar and the Dock leave free.
+
 *** place(win, grid, cell)
 
-Divide the screen into =grid.cols= by =grid.rows= cells and put the window in the cell at
-=cell.col=, =cell.row=, spanning =cell.colSpan= by =cell.rowSpan= cells. All six default to
-1 for the counts and 0 for the indices, which are zero-based.
+=place= divides the screen into =grid.cols= columns and =grid.rows= rows. It puts the window in
+the cell at column =cell.col= and row =cell.row=, spanning =cell.colSpan= columns and
+=cell.rowSpan= rows. The indices start at 0. A count that is omitted is 1, and an index that is
+omitted is 0.
 
 #+begin_src js
-win.place(null, { cols: 3 }, { col: 1 })                 // middle third
-win.place(null, { cols: 4, rows: 2 }, { col: 2, row: 1, colSpan: 2 })
+win.place(null, { cols: 3 }, { col: 1 })                                // the middle third
+win.place(null, { cols: 4, rows: 2 }, { col: 2, row: 1, colSpan: 2 })  // the bottom right quarter
 #+end_src
 
-The named placements are calls to =place=: =leftHalf=, =rightHalf=, =topHalf=,
-=bottomHalf=, =leftThird=, =centerThird=, =rightThird=, =leftTwoThirds=, =rightTwoThirds=,
-=topLeft=, =topRight=, =bottomLeft=, =bottomRight=.
+The named placements call =place=: =leftHalf=, =rightHalf=, =topHalf=, =bottomHalf=,
+=leftThird=, =centerThird=, =rightThird=, =leftTwoThirds=, =rightTwoThirds=, =topLeft=,
+=topRight=, =bottomLeft= and =bottomRight=.
 
-*** maximize(win)
+*** maximize(win), isMaximized(win)
 
-Fill the screen with the window, or put it back if it already fills it. The size to go back
-to is the one it had when it was maximized here. A window maximized by other means, such as
-dragged to fill the screen or maximized before the Spoon started, has no recorded size, and
-an alert says that there is no earlier size to go back to. =isMaximized(win)= reports whether a window fills its screen.
+=maximize= makes a window fill its screen. When the window already fills its screen, =maximize=
+returns it to the size and position it had before the Spoon maximized it. A window that was made
+to fill the screen by other means has no earlier size recorded, so =maximize= leaves it as it is
+and an alert says so.
+
+=isMaximized= returns whether a window fills its screen.
 
 *** center(win)
 
-Centre a window on its screen, keeping its size.
+=center= moves a window to the middle of its screen, without changing its size.
 
 ** Resizing in place
 
-| Method                        | Effect |
-|-------------------------------+--------|
-| =verticalMaximize(win)=       | Fill the screen's height, keeping width and horizontal position, or put the height back |
-| =horizontalMaximize(win)=     | Fill the screen's width, keeping height and vertical position, or put the width back |
-| =halfHeight(win)=             | Halve the height, keeping the top edge |
-| =halfWidth(win)=              | Halve the width, keeping the left edge |
-| =fractionWidth(denom, win)=   | Set the width to =1/denom= of the screen, keeping height and position |
-| =moveByOwnSize(dir, win)=     | Move by the window's own width or height, without resizing it |
+These functions change one dimension of a window, or move it by its own size. The other
+dimension and the position stay as they are, except as each entry says.
 
-=moveByOwnSize= takes ="left"=, ="right"=, ="up"= or ="down"=. Any other direction is
-reported and nothing moves. =isVerticallyMaximized(win)= and =isHorizontallyMaximized(win)=
-report whether a window fills its screen's height or width.
+| Function                      | Effect |
+|-------------------------------+--------|
+| =verticalMaximize(win)=       | Makes the window as tall as the screen, keeping its width and horizontal position. When it is already that tall, returns it to the height and vertical position it had before. |
+| =horizontalMaximize(win)=     | Makes the window as wide as the screen, keeping its height and vertical position. When it is already that wide, returns it to the width and horizontal position it had before. |
+| =halfHeight(win)=             | Halves the window's height. The top edge stays in place. |
+| =halfWidth(win)=              | Halves the window's width. The left edge stays in place. |
+| =fractionWidth(denom, win)=   | Sets the window's width to =1/denom= of the screen's width. =denom= is a number of at least 1. |
+| =moveByOwnSize(dir, win)=     | Moves the window by its own width or height, without resizing it. =dir= is ="left"=, ="right"=, ="up"= or ="down"=. |
+
+=moveByOwnSize= reports any other direction in an alert, and does not move the window.
+=isVerticallyMaximized(win)= and =isHorizontallyMaximized(win)= return whether a window is as tall
+or as wide as its screen.
 
 ** Screens
 
+These functions move a window to another screen, and report which screens are showing a
+fullscreen window.
+
 *** windowToScreenMove(target, win)
 
-Move a window to another screen, keeping its place within the screen. =target= is ="next"=,
-="previous"=, a screen, or nothing, which shows a chooser of the other screens and returns a
-promise.
-A window that comes back to a screen it has been on returns to where it was there, unless it
-has been resized since. Screens showing a fullscreen window are stepped over, since a window
-sent there would be behind the fullscreen one and never visible.
+=windowToScreenMove= moves a window to another screen. =target= is one of the following:
+
+- ="next"= or ="previous"=, the screen after or before the window's screen, in the order of
+  =hs.screen.all()=. Screens showing a fullscreen window are skipped, because a window moved
+  there would be hidden behind the fullscreen window.
+- A screen object. The move is refused when that screen is showing a fullscreen window.
+- Nothing. A chooser lists the other screens, and the function returns a promise of whether the
+  window was moved.
+
+The window keeps its relative position and size within the screen. A window that returns to a
+screen it was on before goes back to the position it had there. That position is not used when
+the window has been moved or resized by other means since the Spoon last moved it.
 
 *** fullscreenScreenIds(), screenHasFullscreenWindow(screen)
 
-The ids of the screens showing a fullscreen window, as a =Set=, and whether one particular
-screen is among them.
+=fullscreenScreenIds= returns a =Set= of the ids of the screens that are showing a fullscreen
+window. =screenHasFullscreenWindow= returns whether one screen is among them.
 
-** Windows among themselves
+** Two windows, and the focus
+
+These functions act on two windows at once, or change which window has the focus.
 
 *** tileWith(other, win)
 
-Put two windows side by side on this window's screen: /other/ on the left half, this window
-on the right. Both windows are brought forward, and focus is returned to this window. Without
-/other/, a chooser of the other windows is shown, and the result is a promise.
+=tileWith= places two windows side by side on the screen of =win=: =other= on the left half, and
+=win= on the right half. Both windows are brought to the front, and =win= keeps the focus. When
+=other= is omitted, a chooser lists the other windows, and the function returns a promise.
 
 *** windowWithWindowSwap(other, win), windowWithPreviousSwap(win)
 
-Exchange two windows' positions and sizes, across screens as well as within one. Without
-/other/, a chooser of the other windows is shown, and the result is a promise.
-=windowWithPreviousSwap= uses the window behind this one.
+=windowWithWindowSwap= exchanges the positions and sizes of two windows. The two windows can be
+on the same screen or on different screens. When =other= is omitted, a chooser lists the other
+windows, and the function returns a promise.
+
+=windowWithPreviousSwap= exchanges a window with the frontmost of the other windows. When =win=
+is the focused window, that is the window directly behind it.
 
 *** windowPrevious()
 
-Focus the window that had focus before this one, including when both belong to the same
-application. When none is known yet, or it has closed, the window behind the focused one is
-focused instead.
+=windowPrevious= focuses the window that had the focus before the focused window. That window may
+belong to the same application. When no previous window is known, or it has closed, the window
+directly behind the focused window is focused instead.
 
 *** windowToBackSend(win)
 
-Send a window behind the others, by focusing every other window in reverse order. See
-/Notes/.
+=windowToBackSend= puts a window behind all the others. macOS has no operation that lowers a
+window, so the Spoon focuses every other window, in reverse order, which leaves this window
+last.
 
 *** windowFocus(win)
 
-Focus a window and bring its application forward, more reliably than =win.focus()= alone.
-See /Notes/.
+=windowFocus= focuses a window, brings its application to the front, and returns whether the
+window accepted the focus. It is more reliable than =win.focus()= alone, for the reason given
+under /Notes/.
 
 ** Windows attached to number keys
 
-A window can be attached to a digit, so that the digit with =config.attachModifiers=
-(Option, by default) brings that window forward from anywhere. Pressing the key while already
-in that window goes back to the window you came from.
+A window can be attached to a digit. From then on, the digit pressed with
+=config.attachModifiers=, which is Option by default, focuses that window from any application.
+When that window already has the focus, the same key focuses the window that had the focus
+before it, as =windowPrevious= does.
 
-| Method                          | Effect |
+| Function                        | Effect |
 |---------------------------------+--------|
-| =keyToWindowAttach(win, key)=   | Attach a window to a digit. Without =key=, the next key pressed is taken, and Escape cancels |
-| =digitAttach(win, digit)=       | Attach a window to a digit given as a string |
-| =attachedFocus(digit)=          | Bring forward the window attached to a digit |
-| =keyDetach(digit)=              | Release a digit |
-| =keysAllDetach()=               | Release every digit |
-| =attachedWindows()=             | What is attached to what |
+| =keyToWindowAttach(win, key)=   | Attaches a window to a digit. When =key= is omitted, the next key pressed is used. Escape, or no key within =config.attachKeyWait= seconds, cancels. A key that is not a digit is refused with an alert. |
+| =digitAttach(win, digit)=       | Attaches a window to a digit given as a string. A digit already in use is released first. Returns whether the window was attached. |
+| =attachedFocus(digit)=          | Focuses the window attached to a digit. This is what the digit's key calls. |
+| =keyDetach(digit)=              | Releases a digit. |
+| =keysAllDetach()=               | Releases every digit. |
+| =attachedWindows()=             | Lists the attachments, to check them in the console. It returns an object that maps each digit to its window's =title=, =id=, =bundleID=, whether it still exists (=alive=), and its current title (=nowTitled=) and application (=nowBundleID=). |
 
-A digit is released when its window closes. The attachments are saved in =config.attachFile=,
-so that =start()= attaches the same windows again after Hammerspoon 2 is reloaded. After an
-application has been quit and opened again, or after a restart, a digit goes to a window of
-the same application with the same title, if there is one.
+A digit is released when its window closes. When an application quits without closing its
+windows, the digit is released the next time its key is pressed.
 
-** The mouse
+The attachments are saved in =config.attachFile=. =start()= reads that file, and attaches the
+same windows again after Hammerspoon 2 is reloaded. Window ids change when an application is
+quit and opened again, and when the computer restarts. In that case a digit is attached to a
+window of the same application with the same title, if there is one. An alert lists the digits
+that were attached again, and the digits whose window was not found.
 
-| Method                        | Effect |
+** The pointer
+
+These functions move the mouse pointer. Each draws a circle around the pointer's new position
+for =config.mouseHighlightSeconds=, so that the pointer can be found after it has moved a long
+distance at once.
+
+| Function                      | Effect |
 |-------------------------------+--------|
-| =mouseWindowCenter(win)=      | Put the pointer in the middle of a window |
-| =mouseWindowCenterNext()=     | Put the pointer in the middle of the next window, advancing on each call |
-| =mouseScreenCenter(screen)=   | Put the pointer in the middle of a screen |
-| =mouseScreenCenterNext()=     | Put the pointer in the middle of the next screen |
-| =mouseMove(x, y)=             | Put the pointer at a point in screen coordinates |
-| =mouseHighlight(x, y)=        | Draw the ring around a point, without moving the pointer |
-
-Each of these draws a ring around the pointer's new position for
-=config.mouseHighlightSeconds=, so that the pointer can be found after it has moved a long
-distance at once:
+| =mouseWindowCenter(win)=      | Moves the pointer to the middle of a window. |
+| =mouseWindowCenterNext()=     | Moves the pointer to the middle of the next window. Each call moves it to the window after the last one. |
+| =mouseScreenCenter(screen)=   | Moves the pointer to the middle of a screen. Without =screen=, the focused window's screen, or the primary screen when no window has the focus. |
+| =mouseScreenCenterNext()=     | Moves the pointer to the middle of the screen after the one it is on, in the order of =hs.screen.all()=. |
+| =mouseMove(x, y)=             | Moves the pointer to a point in screen coordinates. |
+| =mouseHighlight(x, y)=        | Draws the circle around a point, without moving the pointer. |
 
 #+ATTR_HTML: :alt The mouse pointer inside a red ring
 [[./images/pointer-ring.png]]
 
-=mouseScreenCenter= defaults to the focused window's screen, and to the primary screen when
-nothing is focused. It uses the whole display rather than the area left over by the menu
-bar and the Dock.
+=mouseWindowCenterNext= takes the standard windows that are on screen, in the order in which
+hs_windowfilter-gt first saw them. The first call starts at the window after the focused one.
+When a window opens or closes, the next call starts again from the window after the focused one.
+
+The middle of a screen is the middle of the whole display, including the area of the menu bar
+and the Dock.
 
 ** Isolation
 
-=isolationStart()= dims everything except the focused window, =isolationStop()= removes the
-dimming, =isolationToggle()= switches between them, and =isolationOn()= reports which state
-it is in.
+Isolation dims everything except the focused window. =isolationStart()= turns it on,
+=isolationStop()= turns it off, =isolationToggle()= changes from one to the other, and
+=isolationOn()= returns whether it is on.
 
-With isolation on, the Terminal window in front is left clear and the window behind it is
-dimmed:
+In this example, the Terminal window in front has the focus and is not dimmed, and the window
+behind it is dimmed:
 
 #+ATTR_HTML: :alt A Terminal window shown normally in front of a dimmed window of text
 [[./images/isolation.png]]
 
-While isolation is on, the undimmed area moves to whichever window is focused, on whichever
-screen, and changes shape when that window is moved or resized. The undimmed area is the
-window's frame, not the display it is on. Part of a screen stays dimmed when the window
-only covers part of it, and a fullscreen window, whose frame is the whole display, leaves
-that display clear and every other one dimmed.
+While isolation is on, the area that is not dimmed follows the focused window, on any screen. It
+also changes when that window is moved or resized. The area is the window's frame, not the
+display it is on. A window that covers part of a screen leaves the rest of that screen dimmed. A
+fullscreen window covers the whole display, so that display is not dimmed at all, and every other
+display is.
 
-** info(win)
+** Information about a window
 
-Show a window's application, bundle id, title, screen, frame and history depth in an alert,
-also logging them to the console. Returns the text.
+Two functions read a window without changing it. =info()= displays the window's
+application, title, screen and frame, and =screenshot()= saves an image of the window.
 
-** screenshot(win)
+*** info(win)
 
-Capture a window to the pasteboard and to a PNG file in =config.screenshotDir=, named after
-the time and the application. Returns a promise of the file's path, or of =null= when nothing
-was captured. Requires the Screen Recording permission.
+=info()= displays the facts about a window that a configuration refers to: its application's name
+and bundle identifier, its title, its screen, its position and size, and how many positions its
+undo history holds. It is used, for example, to find the bundle identifier to give
+=hs.application.matchingBundleID()=, or to check the frame a placement produced. Without an
+argument, it reports the focused window.
+
+The facts are shown in an alert for four seconds and written to the console.
+
+*** screenshot(win)
+
+=screenshot= captures a window, copies the image to the pasteboard, and writes it as a PNG file
+to =config.screenshotDir=. The file is named after the time and the application. The function
+returns a promise of the file's path, or of =null= when nothing was captured. It requires the
+Screen Recording permission.
 
 ** start() and stop()
 
 =start()= checks that hs_windowfilter-gt and hs_menu-gt are loaded, subscribes to
-hs_windowfilter-gt, and attaches the windows saved in =config.attachFile= again. =stop()= ends isolation, removes any pointer ring, releases the
-number keys without forgetting them, and unsubscribes.
+hs_windowfilter-gt's events, and attaches the windows saved in =config.attachFile= again.
 
-* With hs_interactive-gt
+=stop()= releases the keys bound by =bindHotkeys()=, turns isolation off, removes the circle
+around the pointer, and unsubscribes from hs_windowfilter-gt. It also releases the number keys.
+It does not remove them from =config.attachFile=, so the next =start()= attaches them again.
 
-This Spoon does not require [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]. If you use it, you can give each function a
-command name, so that it can be run from the command chooser and bound to a key by name. These
-are the names that follow the functions they call:
+* Configuration
+
+The settings are properties of =config=, and can be changed after the Spoon is loaded:
+
+#+begin_src js
+const win = hs.spoons["hs_window-gt"]
+win.config.isolationOpacity = 0.7
+win.config.mouseHighlightColor = "#00FF00"
+#+end_src
+
+| Setting                  | Default     | Meaning |
+|--------------------------+-------------+---------|
+| =historySize=            | =200=       | The number of positions kept in each window's history. The oldest is discarded first. |
+| =isolationColor=         | ="#000000"= | The colour of the panels that dim the screens during isolation. |
+| =isolationOpacity=       | =0.85=      | The opacity of those panels, from 0.0 to 1.0. |
+| =mouseHighlightColor=    | ="#FF0000"= | The colour of the circle drawn around the pointer. |
+| =mouseHighlightSize=     | =60=        | The diameter of the circle, in pixels. |
+| =mouseHighlightWidth=    | =4=         | The width of the circle's line, in pixels. |
+| =mouseHighlightSeconds=  | =0.5=       | The number of seconds the circle is displayed. |
+| =screenshotDir=          | ="/tmp"=    | The directory =screenshot()= writes to. |
+| =screenshotAlertSeconds= | =3=         | The number of seconds the path of a capture is displayed. |
+| =attachModifiers=        | =["alt"]=   | The modifiers pressed with a digit to focus its window. |
+| =attachKeys=             | ="123456789"= | The digits a window can be attached to. |
+| =attachKeyWait=          | =5=         | The number of seconds =keyToWindowAttach()= waits for a digit when none is given. |
+| =attachFile=             | =logs/window-keys.json= in the configuration directory | The file the attachments are saved in. |
+| =focusReassertDelay=     | =0.3=       | The number of seconds after which =windowFocus()= makes the window its application's main window again. 0 turns this off. See /Notes/. |
+
+* Commands for hs_interactive-gt
+
+This Spoon does not require [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]. With hs_interactive-gt, each function can be
+given a command name, so that it can be run from the command chooser and bound to a key by name.
+The following definitions name each command after the function it calls:
 
 #+begin_src js
 interactive.use("hs_window-gt", {
@@ -336,66 +457,35 @@ interactive.use("hs_window-gt", {
 })
 #+end_src
 
-A command named after its function is the function's name in hyphenated words, beginning with
-=window-= when the name does not already say what it acts on.
-
-* Configuration
-
-Settings are properties of =config=.
-
-| Setting                  | Default     | Meaning |
-|--------------------------+-------------+---------|
-| =historySize=            | =200=       | Positions remembered per window, oldest discarded |
-| =isolationColor=         | ="#000000"= | Colour of the isolation panels |
-| =isolationOpacity=       | =0.85=      | Opacity of the isolation panels, 0.0 to 1.0 |
-| =mouseHighlightColor=    | ="#FF0000"= | Colour of the ring drawn around the pointer |
-| =mouseHighlightSize=     | =60=        | Diameter of the ring, in pixels |
-| =mouseHighlightWidth=    | =4=         | Thickness of the ring's line |
-| =mouseHighlightSeconds=  | =0.5=       | How long the ring stays on screen. See /Notes/ |
-| =screenshotDir=          | ="/tmp"=    | Where =screenshot()= writes |
-| =screenshotAlertSeconds= | =3=         | How long the path of a capture stays on screen |
-| =attachModifiers=        | =["alt"]=   | The modifiers held with a digit to bring its window forward |
-| =attachKeys=             | ="123456789"= | The digits windows can be attached to |
-| =attachKeyWait=          | =5=         | Seconds to wait for the digit after =keyToWindowAttach()= is called without one |
-| =attachFile=             | =logs/window-keys.json= in the configuration directory | Where the attachments are saved |
-| =focusReassertDelay=     | =0.3=       | Seconds before =windowFocus()= asserts the window again. See /Notes/ |
-
-#+begin_src js
-const win = hs.spoons["hs_window-gt"]
-win.config.isolationOpacity = 0.7
-win.config.mouseHighlightColor = "#00FF00"
-#+end_src
-
-* Requirements
-
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] and [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], loaded before this Spoon.
-- The Accessibility permission, which Hammerspoon 2 requires in any case to move windows.
-- The Screen Recording permission, for =screenshot()= only.
+A command's name is its function's name in hyphenated words. It begins with =window-= when the
+function's name does not already name what it acts on.
 
 * Notes
 
-- *What undo records.* Every move this Spoon makes is recorded. A window moved by hand, or by
-  other code, is not seen as it moves. It is recovered on the next command: before changing a
-  window, where it is is compared with where the Spoon last put it, and if they differ both
-  positions go on the ring.
-- *Clicks pass through the overlays.* The dimming panels and the pointer ring are
-  =hs.canvas= windows with =ignoreMouseEvents(true)=, so a click goes to the window underneath
-  them.
-  They are also =canJoinAllSpaces=, which is what puts them over a fullscreen window's space.
-- *Fullscreen windows are refused.* macOS does not treat a fullscreen window as a window
-  with a frame: it refuses to move one, and a window sent to a screen a fullscreen window
-  occupies is taken into that window's space, after which neither =hs.window.allWindows()=
-  nor its own application lists it. Operations involving either are refused with a message.
-- *Which screens show a fullscreen window* is found by asking the window at the centre of each
-  screen whether it is fullscreen. Hammerspoon 2 has no spaces module, and
-  =hs.window.allWindows()= includes windows on Spaces that are not showing.
-- *windowFocus() makes the window main twice.* After =focus()= returns, an application can
-  make a different one of its windows its main window while it processes the activation, which
-  brings that other window forward. So the window is made main and raised again after
-  =config.focusReassertDelay=. This stays until Hammerspoon 2's =focus()= does it for every
-  application; it already does for Finder.
-- *windowToBackSend() focuses every other window.* There is no way to lower a window directly,
-  so each other window is focused in reverse order, leaving this one last. Each of their
-  applications is activated in turn.
-- *There is no hs.window.highlight* in Hammerspoon 2, which Hammerspoon 1's isolation used, so
-  the dimming is drawn with =hs.canvas=.
+These notes explain behaviour that follows from macOS or from Hammerspoon 2, rather than from
+the Spoon's design.
+
+- *What undo records.* The Spoon records every move it makes. It does not observe a window being
+  moved by hand or by other code. Before it next changes a window, it compares the window's
+  position with the position it last gave the window. When the two differ, it adds both to the
+  history.
+- *The overlays do not receive clicks.* The dimming panels and the circle around the pointer are
+  =hs.canvas= windows created with =ignoreMouseEvents(true)=, so a click reaches the window
+  underneath them. They are also created with =canJoinAllSpaces=, which displays them over a
+  fullscreen window's Space.
+- *Fullscreen windows are refused.* macOS refuses to move a fullscreen window. A window moved to
+  a screen that is showing a fullscreen window is placed in that window's Space, and then neither
+  =hs.window.allWindows()= nor its own application lists it. The Spoon therefore refuses any
+  operation involving a fullscreen window, or a screen showing one, and an alert says so.
+- *How a fullscreen screen is detected.* Hammerspoon 2 has no module for Spaces, and
+  =hs.window.allWindows()= includes windows on Spaces that are not displayed. The Spoon therefore
+  takes the window at the centre of each screen, and checks whether it is fullscreen.
+- *windowFocus() makes the window main twice.* After =focus()= returns, an application can make a
+  different one of its windows its main window while it processes the activation, which brings
+  that other window to the front. The Spoon therefore makes the window main and raises it again
+  after =config.focusReassertDelay=. This remains until Hammerspoon 2's =focus()= does the same
+  for every application. It already does so for Finder.
+- *windowToBackSend() focuses every other window.* Each of their applications is activated in
+  turn.
+- *There is no hs.window.highlight* in Hammerspoon 2. Hammerspoon 1's isolation used it, so this
+  Spoon draws the dimming with =hs.canvas=.

@@ -1,56 +1,70 @@
 * hs_windowfilter-gt
 
-Receive notifications when windows appear, move, change title, are focused, minimized or
-closed, restricted to the windows that match rules you specify.
+hs_windowfilter-gt invokes handlers for window events, such as =windowCreated=, =windowDestroyed=,
+=windowMoved=, =windowFocused=, =windowMinimized= and =windowTitleChanged=. A handler is
+registered on a filter, which is a set of rules that matches windows by attributes such as title
+and application, and the handler is invoked only for events of windows that match those rules.
 
-macOS reports a small number of window events through accessibility, and only for windows
-that have been registered individually. This Spoon registers them, derives the remaining
-events by comparing each window's state before and after a change, and delivers only the
-events that match a filter's rules.
+- *Nineteen window events,* with the names and semantics of Hammerspoon 1's =hs.window.filter=.
+- *Rules* that match windows by title, application, screen, region and role, and by whether a
+  window is visible, focused or fullscreen.
+- *Per-application rules,* and override rules that take precedence over all other rules.
+- *Debounced events,* so that dragging a window emits a single =windowMoved= when the drag ends,
+  rather than one event for each intermediate position.
+- *A snapshot of the window's state with every event,* so that a handler can still read the
+  title of a window that has already been destroyed.
+- *The list of windows a filter matches,* read from the Spoon's cache of window state rather than
+  queried from each application through the Accessibility API.
+- *No overhead while no handler is registered,* because the Spoon starts observing windows only
+  when the first handler is registered on a filter.
 
-This is a port of the intent of Hammerspoon 1's =hs.window.filter=. The rules and events
-have the same names and meanings; how you subscribe does not (see /Coming from
-Hammerspoon 1/).
+The Accessibility API of macOS posts window creation and focus changes to an observer registered
+on the application, but posts the other window notifications, such as moves, resizes and
+destruction, only to an observer registered on the window itself. The Spoon therefore registers
+an observer on every application and on every window, and derives the remaining events, such as
+=windowVisible= and =windowAllowed=, by comparing a window's state before and after each
+notification. It then invokes the handlers of every filter whose rules match the window.
 
 * Installing
 
-Add this to your =init.js=. The first time it runs, Hammerspoon 2 downloads the Spoon from this
-repository; after that it loads the installed copy:
+The Spoon is installed and loaded with =hs.spoons.use()=:
 
 #+begin_src js
 hs.spoons.use("hs_windowfilter-gt", { source: "dmgerman/hammer2spoons" })
 #+end_src
 
-To keep a particular version, add =ref= with a tag or a commit. To get a newer version, call
-=hs.spoons.update("hs_windowfilter-gt")=.
+The =ref= option of =hs.spoons.use()= installs the Spoon from a particular tag or commit of the
+repository instead of its main branch. =hs.spoons.update("hs_windowfilter-gt")= downloads the Spoon
+again from the same source and ref, and reinstalls it when the version in its =spoon.json= has
+changed. A Spoon installed from a tag or a commit is therefore never changed by an update.
 
 * Spoons that use it
 
-Several Spoons in this repository work better when this one is loaded. They use it only if it
-is loaded, so load it before them:
+Three Spoons in this repository use hs_windowfilter-gt. Each of them has to be loaded after it.
 
-| Spoon                | What it gets from this one                                   |
-|----------------------+--------------------------------------------------------------|
-| =hs_window-gt=       | the list of windows, without asking every application again  |
-| =hs_selectWindow-gt= | windows in the order they were last used                      |
-| =hs_interactive-gt=  | a faster list of windows to choose from                       |
-| =hs_emacs-gt=        | a faster way to find the window to paste into                 |
+| Spoon                | Kind     | What it takes from hs_windowfilter-gt                       |
+|----------------------+----------+-------------------------------------------------------------|
+| =hs_window-gt=       | Required | The list of windows, and the events it uses to find the previous window, forget closed windows and redraw isolation |
+| =hs_selectWindow-gt= | Required | The windows, in the order in which they were last focused   |
+| =hs_interactive-gt=  | Optional | The list of windows to choose from, which it otherwise reads more slowly |
 
-* Simple usage
+* Usage
 
-#+begin_src js   :exports both
-const wf = hs.spoons.load("hs_windowfilter-gt")
+The Spoon provides a default filter, =default=, which accepts the visible windows of every
+application except Hammerspoon. A handler is added to a filter with =on()=:
 
-// Every visible window, whatever the application.
-wf.default.on("windowCreated", (event, window) => {
-    console.log("appeared: " + window.title)
+#+begin_src js
+const wf = hs.spoons["hs_windowfilter-gt"]
+
+wf.default.on("windowCreated", (event, window, state) => {
+    console.log(`appeared: ${state.title}`)
 })
 #+end_src
 
-A /filter/ is a set of rules together with the handlers subscribed to it. Create one when
-the default is too broad:
+A filter is a set of rules together with the handlers added to it. =create()= makes a filter
+with rules of its own, for when the default filter accepts too many windows:
 
-#+begin_src js   :exports both
+#+begin_src js
 const editors = wf.create({ allowApplications: ["Emacs", "Visual Studio Code"] })
 
 editors.on(["windowFocused", "windowTitleChanged"], (event, window, state) => {
@@ -58,228 +72,333 @@ editors.on(["windowFocused", "windowTitleChanged"], (event, window, state) => {
 })
 #+end_src
 
-Nothing is watched until something subscribes. Loading this Spoon and never calling
-=on= costs nothing at all.
+The Spoon watches no window until the first handler is added to any filter, and it stops
+watching when the last handler is removed. Loading the Spoon without adding a handler costs
+nothing.
 
 * Rules
 
-A rule set is an object. Every key is optional, and a key you leave out does not constrain
-anything.
+A filter decides which windows it accepts with a rule set. A rule set is an object, every key
+of which is optional. A key that is absent does not restrict anything, so the empty rule set
+={}= accepts every window.
 
-| Key                  | Matches                                                        |
-|----------------------+----------------------------------------------------------------|
-| =visible=            | =true= or =false=                                              |
-| =fullscreen=         | =true= or =false=                                              |
-| =focused=            | =true= or =false=                                              |
-| =hasTitlebar=        | =true= for ordinary windows, =false= for panels and the like   |
-| =activeApplication=  | =true= to accept only windows of the frontmost application     |
-| =allowTitles=        | the title must match                                           |
-| =rejectTitles=       | a match rejects the window                                     |
-| =allowApplications=  | the application's name must match                              |
-| =rejectApplications= | a match rejects the window                                     |
-| =allowRoles=         | accessibility roles to accept, or ="*"= for any                |
-| =allowScreens=       | screen names or ids to accept                                  |
-| =allowRegions=       | rectangles; a window whose centre is inside one is accepted    |
+| Key                  | A window is accepted when                                          |
+|----------------------+--------------------------------------------------------------------|
+| =visible=            | its visibility equals the value, =true= or =false=                 |
+| =fullscreen=         | whether it is fullscreen equals the value                          |
+| =focused=            | whether it has the focus equals the value                          |
+| =hasTitlebar=        | whether it is a standard window, with a title bar, equals the value |
+| =activeApplication=  | when =true=: its application is the frontmost one                  |
+| =allowTitles=        | its title matches                                                  |
+| =rejectTitles=       | its title does not match                                           |
+| =allowApplications=  | its application's name matches                                    |
+| =rejectApplications= | its application's name does not match                              |
+| =allowRoles=         | its role matches, or the value is ="*"=                            |
+| =allowScreens=       | the name or the id of its screen matches                           |
+| =allowRegions=       | the centre of its frame is inside one of the rectangles given      |
 
-Anywhere a rule /matches/, you may write a string, a regular expression, an array of
-either, or a function:
+A window is accepted only when it satisfies every key that is present.
 
-#+begin_src js   :exports both
+=allowRoles= distinguishes two roles: ="AXStandardWindow"= for a standard window, and
+="AXWindow"= for any other. =allowRegions= takes one rectangle ={x, y, w, h}=, in screen
+coordinates, or an array of them.
+
+** Matching
+
+The value of a key that /matches/ may be a string, a regular expression, a function, or an
+array of any of these:
+
+| Value               | Matches                                                |
+|---------------------+--------------------------------------------------------|
+| a string            | exactly that text                                      |
+| a regular expression | any text the expression finds a match in             |
+| a function          | any text for which the function returns a true value  |
+| an array            | any text that one of its elements matches              |
+
+#+begin_src js
 wf.create({ allowTitles: "Inbox" })                    // exactly that title
-wf.create({ allowTitles: /^Inbox/ })                   // titles beginning with it
-wf.create({ allowTitles: ["Inbox", /^Drafts/] })       // any of them
+wf.create({ allowTitles: /^Inbox/ })                   // titles that begin with it
+wf.create({ allowTitles: ["Inbox", /^Drafts/] })       // either of them
 wf.create({ rejectTitles: (title) => title.length < 3 })
 #+end_src
 
-Lua patterns from the Hammerspoon 1 module do not work here; use regular expressions.
+A function that throws matches nothing, and the error is written to the console. Lua patterns,
+which Hammerspoon 1 used, are not supported.
 
 ** Rules for particular applications
 
-Three rule sets are consulted in this order to decide whether a window is allowed:
+A filter holds three kinds of rule set, and consults them in this order to decide whether it
+accepts a window:
 
-1. the /override/ rules, which determine the result by themselves when set
-2. the filter for that window's application, if one is set
-3. the /default/ filter
+1. The /override/ rules. When they are set, they alone decide.
+2. The rules for the window's application, when the filter has rules for that application.
+3. The /default/ rules, which are the ones given to =create()=.
 
-#+begin_src js   :exports both
+Only the first of these that applies is consulted. A window of an application with rules of its
+own is therefore not tested against the default rules.
+
+#+begin_src js
 const f = wf.create({ visible: true })          // the default rules
 
-f.setApplicationFilter("Emacs", { allowTitles: /\.org$/ })   // only org files in Emacs
+f.setApplicationFilter("Emacs", { allowTitles: /\.org$/ })   // only Org files in Emacs
 f.setApplicationFilter("Finder", true)                       // every Finder window
-f.setApplicationFilter("Mail", false)                        // no Mail windows at all
+f.setApplicationFilter("Mail", false)                        // no Mail window
 
 f.setOverrideFilter({ focused: true })          // while set, only the focused window
-f.setOverrideFilter(null)                       // back to the two layers below
+f.setOverrideFilter(null)                       // remove the override rules
 #+end_src
 
-An application entry of =true= accepts everything from it, =false= rejects everything, and
-an object is a rule set of its own.
+The rules for an application are one of three values. =true= accepts every window of the
+application, =false= rejects every one, and an object is a rule set. An application is named as
+=HSApplication.name= reports it.
 
 * Events
 
-| Event                                     | When                                          |
-|-------------------------------------------+-----------------------------------------------|
-| =windowCreated=                           | a window appeared, or was already open when you subscribed |
-| =windowDestroyed=                         | it closed                                     |
-| =windowMoved=, =windowResized=            | after the drag finishes, not during           |
-| =windowTitleChanged=                      | the title changed                             |
-| =windowFocused=, =windowUnfocused=        | keyboard focus arrived or left                |
-| =windowMinimized=, =windowUnminimized=    | minimized to the Dock, or restored            |
-| =windowVisible=, =windowNotVisible=       | the window itself became visible or not       |
-| =windowOnScreen=, =windowNotOnScreen=     | visible, not minimized, application not hidden |
-| =windowFullscreened=, =windowUnfullscreened= | entered or left fullscreen                 |
-| =windowHidden=, =windowUnhidden=          | its /application/ was hidden or unhidden      |
-| =windowAllowed=, =windowRejected=         | it started or stopped matching /this filter/  |
+A handler can be registered for nineteen events. =events= holds all their names, as an array.
 
-=windowAllowed= and =windowRejected= describe the filter's result rather than the window.
-A window can stop matching without changing at all, if the rules are changed; and a window
-that does change can stop matching, which is what =windowRejected= reports.
+| Event                  | Emitted when                                                                     |
+|------------------------+----------------------------------------------------------------------------------|
+| =windowCreated=        | a window is created, or was already open when the Spoon started observing windows |
+| =windowDestroyed=      | a window is destroyed                                                            |
+| =windowMoved=          | a window has stopped moving                                                      |
+| =windowResized=        | a window has stopped being resized                                               |
+| =windowTitleChanged=   | a window's title changes                                                         |
+| =windowFocused=        | a window becomes the focused window                                              |
+| =windowUnfocused=      | a window stops being the focused window                                          |
+| =windowMinimized=      | a window is minimized to the Dock                                                |
+| =windowUnminimized=    | a minimized window is restored from the Dock                                     |
+| =windowVisible=        | a window becomes visible                                                         |
+| =windowNotVisible=     | a window stops being visible                                                     |
+| =windowOnScreen=       | a window becomes on screen, as defined below                                     |
+| =windowNotOnScreen=    | a window stops being on screen                                                   |
+| =windowFullscreened=   | a window enters fullscreen                                                       |
+| =windowUnfullscreened= | a window leaves fullscreen                                                       |
+| =windowHidden=         | a window's application is hidden                                                 |
+| =windowUnhidden=       | a window's application is unhidden                                               |
+| =windowAllowed=        | a window starts matching the filter's rules                                      |
+| =windowRejected=       | a window stops matching the filter's rules                                       |
 
-A handler is called with =(event, window, state)=: the event name, the =HSWindow=, and a
-snapshot of what the window looked like when the event was worked out. Use =state= rather
-than reading the window again: a window that has closed can no longer be read.
+The Spoon starts observing windows when the first handler is registered on any filter, and at
+that point it emits =windowCreated= for every window already open. A filter whose first handler
+is registered later does not receive these events, so =windows()= is used instead to list the
+windows that filter matches.
 
-#+begin_src js   :exports both
+A window is /on screen/ when it is visible, is not minimized, and its application is not
+hidden. =windowVisible= and =windowNotVisible=, by contrast, follow only the window's own
+visibility.
+
+=windowAllowed= and =windowRejected= signal a change in whether the filter's rules match the
+window, not a change in the window itself. They are emitted before the other events caused by
+the same change.
+
+** The handler
+
+A handler is called with three arguments: =(event, window, state)=.
+
+1. =event= is the name of the event.
+2. =window= is the =HSWindow=.
+3. =state= is a record of the window, read when the event was determined.
+
+=state= holds the window's =id=, =title=, =application=, =bundleID=, =pid=, =role=, =standard=,
+=visible=, =minimized=, =fullscreen=, =hidden=, =focused=, =onScreen=, =screenName=, =screenID=
+and =frame=. A handler should read these fields rather than the window, because a window that
+has closed can no longer be read:
+
+#+begin_src js
 f.on("windowDestroyed", (event, window, state) => {
-    // window.title would throw here; state.title still holds the title it had.
-    console.log("closed: " + state.title)
+    // window.title throws here; state.title holds the title the window had.
+    console.log(`closed: ${state.title}`)
 })
 #+end_src
 
-Events that arrive in bursts are held until the burst ends, so dragging a window produces
-one =windowMoved= rather than one per frame.
+A handler that throws does not affect the other handlers. Its error is written to the console.
 
-*** Events are delivered when a window stops matching
+** When events are reported
 
-An event reaches a filter if the window matched it /before/ the change or matches it
-/after/. So a filter of ={visible: true}= watching =windowMinimized= receives the event when a
-window is minimized, even though a minimized window is no longer visible. Without this, a
-filter would receive events when windows start matching but not when they stop.
+Some events are reported after a short delay, which the settings control:
 
-* Methods
+1. Moves, resizes and title changes arrive from macOS in bursts; a drag produces one
+   notification per frame. The Spoon reports one event when a burst has been quiet for
+   =moveDebounce= or =titleDebounce= seconds.
+2. A window's properties do not all change at once when it is minimized, restored, hidden or
+   focused. The Spoon reads them =stateDebounce= seconds after the notification.
+
+An event is delivered to a filter that accepted the window before the change, and to a filter
+that accepts it after the change. A filter of ={visible: true}= therefore receives
+=windowMinimized=, although a minimized window is no longer visible. Without this rule, a filter
+would receive the events that make a window match, but not the events that make it stop
+matching.
+
+* Functions of a filter
+
+These are the methods of a filter, such as =wf.default= or one returned by =create()=. The
+methods that change a filter return the filter, so calls to them can be chained.
 
 ** on(events, handler)
 
-Watch one event or an array of them. Call it again to add more handlers.
+=on()= adds a handler for one event, or for each event in an array. It can be called again to
+add further handlers. An event name that does not exist is written to the console and skipped.
 
-#+begin_src js   :exports both
+#+begin_src js
 f.on("windowFocused", onFocus)
 f.on(["windowCreated", "windowDestroyed"], onChange)
-f.on(wf.events, logEverything)          // wf.events is every event name
+f.on(wf.events, logEverything)          // every event
 #+end_src
 
 ** off([events], [handler])
 
-Stop watching. With no arguments it removes every handler on the filter.
+=off()= removes handlers. With an event and a handler, it removes that handler from that event.
+With only an event, it removes every handler of that event. With no argument, it removes every
+handler of the filter.
 
-#+begin_src js   :exports both
-f.off("windowFocused", onFocus)       // that handler, that event
-f.off("windowFocused")                // every handler for that event
-f.off()                               // everything
+#+begin_src js
+f.off("windowFocused", onFocus)
+f.off("windowFocused")
+f.off()
 #+end_src
 
 ** once(events, handler)
 
-Watch until the first of those events arrives, then unsubscribe. With an array, the whole
-subscription goes on the first event to arrive — the handler runs exactly once, not once
-per event named.
+=once()= adds a handler that is removed when the first of the given events arrives. The handler
+is called exactly once, even when it was given several events.
 
-#+begin_src js   :exports both
-f.once("windowCreated", (event, window, state) => console.log("the first one: " + state.title))
+#+begin_src js
+f.once("windowCreated", (event, window, state) => console.log(`the first: ${state.title}`))
 #+end_src
 
 ** windows()
 
-The windows this filter accepts right now, front to back — so the first is the most
-recently focused.
+=windows()= lists the windows the filter accepts now, for code that acts on all of them, such as
+code that arranges every window of an application. It returns an array of =HSWindow=, in no
+defined order.
 
-#+begin_src js   :exports both
+#+begin_src js
 const titles = f.windows().map((w) => w.title)
 #+end_src
 
+While the Spoon is watching, the answer comes from its records and asks no application. While
+it is not watching, the windows are read with =hs.window.allWindows()=, which takes about 0.1
+seconds.
+
+** records()
+
+=records()= returns the same windows as =windows()=, each as an object ={window, state}=.
+=state= is the record described under /The handler/. The other Spoons that use this one read
+windows this way, so that they can sort and select windows by their state without asking each
+application.
+
 ** isWindowAllowed(window)
 
-Whether one window matches, without subscribing to anything.
+=isWindowAllowed()= checks whether the filter accepts one window now, for code that obtained the
+window elsewhere, such as from a key press. It adds no handler.
 
-** setDefaultFilter(rules) / setApplicationFilter(application, rules) / setOverrideFilter(rules)
+** isWatched()
 
-See /Rules for particular applications/. Each returns the filter, so they chain.
+=isWatched()= returns whether the filter has at least one handler.
 
-** wf.create([rules]) / wf.destroy(filter)
+** setDefaultFilter(rules), setApplicationFilter(application, rules), setOverrideFilter(rules)
 
-Make a filter, or discard one. =destroy= removes its handlers; when the last watched filter
-goes, the Spoon stops watching windows entirely.
+These replace one of the filter's three kinds of rule set, which /Rules for particular
+applications/ describes. =setApplicationFilter()= with =null= removes an application's rules,
+and =setOverrideFilter(null)= removes the override rules.
 
-** wf.default
+* Functions of the Spoon
 
-A filter over visible windows, with Hammerspoon's own windows left out. Useful when no narrowing is
-needed. It can be given different rules with =setDefaultFilter=, but every other caller of
-=wf.default= is affected by that change.
+These are called on the Spoon itself, =hs.spoons["hs_windowfilter-gt"]=.
 
-** wf.status()
+| Function               | Does                                                                |
+|------------------------+---------------------------------------------------------------------|
+| =create([rules])=      | Returns a new filter with the given default rules, or with ={}=.    |
+| =destroy(filter)=      | Removes every handler of a filter and discards it. Returns whether the filter existed. |
+| =status()=             | Returns what is being watched. See below.                           |
+| =windowState(window)=  | Returns the record of a window that a handler receives as =state=, or null when the window can no longer be read. |
+| =matches(rule, value)= | Returns whether a value matches a rule, as described under /Matching/. |
 
-What is currently being watched. Useful when an expected event is not arriving.
+The Spoon also provides =default=, its default filter, and =events=, the names of all events.
 
-#+begin_src js   :exports both
+** default
+
+=default= is a filter that accepts visible windows of every application except those in
+=config.skipInDefault=, which are Hammerspoon's own. Its rules can be replaced with
+=setDefaultFilter()=, but that changes them for every other user of =default= too, including
+other Spoons.
+
+** status()
+
+=status()= returns an object that shows what the Spoon is watching. It is useful when an
+expected event is not reported.
+
+#+begin_src js
 hs.spoons["hs_windowfilter-gt"].status()
-// {tracking: true, applications: 17, windows: 21, filters: 3, watched: 2}
+// {tracking: true, focusedId: 1234, applications: 17, windows: 21, filters: 3, watched: 2}
 #+end_src
+
+| Field          | Meaning                                                |
+|----------------+--------------------------------------------------------|
+| =tracking=     | Whether the Spoon is watching windows                  |
+| =focusedId=    | The id of the focused window, as the Spoon last read it |
+| =applications= | The number of applications watched                     |
+| =windows=      | The number of windows watched                          |
+| =filters=      | The number of filters that exist                       |
+| =watched=      | The number of filters with at least one handler        |
 
 * Settings
 
-#+begin_src js   :exports both
-const wf = hs.spoons.load("hs_windowfilter-gt")
-wf.config.moveDebounce = 0.2
+The settings are in =config=, and are changed after the Spoon is loaded:
+
+#+begin_src js
+hs.spoons["hs_windowfilter-gt"].config.moveDebounce = 0.2
 #+end_src
 
-| Setting              | Default | Meaning                                                  |
-|----------------------+---------+----------------------------------------------------------|
-| =moveDebounce=       |     0.1 | Seconds a move or resize burst must be quiet before reporting |
-| =titleDebounce=      |     0.1 | The same, for title changes                              |
-| =stateDebounce=      |    0.08 | How long to let a window's properties settle before reading them |
-| =skipApplications=   |  a list | Applications never watched at all                        |
-| =untitledNonStandardSkip= | true | Never watch a window with no title that is not a standard window |
-| =skipInDefault=      |  a list | Applications the default filter leaves out               |
-| =logLevel=           | "error" | ="none"=, ="error"= or ="debug"=                         |
+| Setting                   | Default            | Meaning                                                          |
+|---------------------------+--------------------+------------------------------------------------------------------|
+| =moveDebounce=            | =0.1=              | Seconds without a move or resize before =windowMoved= or =windowResized= is reported |
+| =titleDebounce=           | =0.1=              | Seconds without a title change before =windowTitleChanged= is reported |
+| =stateDebounce=           | =0.08=             | Seconds after a minimize, restore, hide or focus change before the window is read |
+| =createdRescanDelay=      | =1.5=              | Seconds after a window appears before its application's windows are read again, to find a window that had no title at first |
+| =applicationRetryDelays=  | =[0.5, 1, 2, 4, 8]= | Seconds between attempts to watch an application that refused, as one that has just started can |
+| =skipApplications=        | a list             | Names of applications that are never watched                     |
+| =untitledNonStandardSkip= | =true=             | Whether to ignore every window that has no title and is not a standard window |
+| =skipInDefault=           | Hammerspoon's names | Names of applications that =default= does not accept            |
+| =logLevel=                | ="error"=          | What is written to the console: ="none"=, ="error"= or ="debug"= |
 
 * What this Spoon does not do
 
-- *Spaces.* There is no =currentSpace= rule and no =windowInCurrentSpace= /
-  =windowNotInCurrentSpace= events, because Hammerspoon 2 has no spaces module. The
-  Hammerspoon 1 module keeps the rule and evaluates it as "visible", which answers a
-  different question under the same name. This will be added
-  if a spaces module appears.
+The Spoon does not support Spaces, and it ignores two kinds of window.
 
-- *Windows of applications listed in =config.skipApplications=.*
-
-- *Windows with no title that are not standard windows*, while
-  =config.untitledNonStandardSkip= is true. These are alerts, banners, menu bar popovers
-  and the Finder's desktop, none of which can be selected. Hammerspoon 2's own alerts and
-  banners are the main reason: each one that opens and closes would otherwise register six
-  accessibility watchers for a window that is gone a few seconds later.
+1. *Spaces.* There is no =currentSpace= rule, and no =windowInCurrentSpace= or
+   =windowNotInCurrentSpace= event, because Hammerspoon 2 has no module for Spaces. Hammerspoon
+   1's module accepts the =currentSpace= rule but evaluates it as =visible=, which is a different
+   test under the same name.
+2. *Windows of the applications in =config.skipApplications=.* These are background processes
+   such as =universalaccessd= and Safari's web content processes, which have no windows to
+   report.
+3. *Windows that have no title and are not standard windows,* while
+   =config.untitledNonStandardSkip= is =true=. These are alerts, banners, menu bar popovers and
+   the Finder's desktop, none of which is useful to select. Most of them are Hammerspoon 2's own
+   alerts. Watching each of them would register six accessibility observers for a window that
+   closes a few seconds later.
 
 * Coming from Hammerspoon 1
 
-| Hammerspoon 1                   | Here                                        |
-|---------------------------------+---------------------------------------------|
-| =subscribe= / =unsubscribe=     | =on= / =off= / =once=                       |
-| =hs.window.filter.new(rules)=   | =wf.create(rules)=                          |
-| =setFilters=, =setAppFilter=    | =setApplicationFilter=                      |
-| Lua patterns in title rules     | regular expressions, strings or predicates  |
-| =getWindows()=                  | =windows()=                                 |
-| =windowsVisible=, =windowsNotVisible= as filter names | rules on a filter you create |
+The rules and the events keep the names they have in Hammerspoon 1. The functions are named
+differently:
 
-The subscription names follow the rest of Hammerspoon 2 — =hs.application=, =hs.screen= and
-=hs.ax= all use =on= / =off= / =once= — rather than the Hammerspoon 1 spelling. Unlike those
-modules, =on= and =off= here also accept an array of event names, because a filter emits
-nineteen events and subscribing one handler to several at once is the common case.
+| Hammerspoon 1                                  | hs_windowfilter-gt                         |
+|------------------------------------------------+--------------------------------------------|
+| =subscribe=, =unsubscribe=                     | =on=, =off=, =once=                        |
+| =hs.window.filter.new(rules)=                  | =create(rules)=                            |
+| =setFilters=, =setAppFilter=                   | =setApplicationFilter=                     |
+| Lua patterns in title rules                    | strings, regular expressions or functions  |
+| =getWindows()=                                 | =windows()=                                |
+| =windowsVisible=, =windowsNotVisible= as names | a filter created with the rule =visible=   |
+
+=on=, =off= and =once= follow the rest of Hammerspoon 2, where =hs.application=, =hs.screen=
+and =hs.ax= use the same names. Unlike those modules, =on= and =off= here also accept an array
+of event names, because registering one handler for several of the nineteen events is
+common.
 
 * Requirements
 
-Accessibility permission, which Hammerspoon requires in any case to see windows at all.
-
-Application-level events — a window being created, and focus moving between windows of one
-application — need a Hammerspoon 2 that includes the fix for
-[[https://github.com/cmsj/Hammerspoon2/issues/217][issue 217]], which was closed on
-2026-09-11. Every release since then includes it. On an earlier build the Spoon still loads and
-reports everything about windows it already knows, but never notices new ones.
+The Spoon requires the Accessibility permission, without which macOS posts no window
+notifications to Hammerspoon 2.
