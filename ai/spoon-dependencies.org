@@ -18,6 +18,8 @@ These were found by reading every place a Spoon in =../Spoons= refers to another
 | Spoon                | Uses                 | Kind     | What it gets, and what happens without it                         | Where                          |
 |----------------------+----------------------+----------+-------------------------------------------------------------------+--------------------------------|
 | =hs_window-gt=       | =hs_windowfilter-gt= | Required | Events for the previous window, closed windows and isolation. Changed from optional on 2026-11-14 (ei6.9). | =start()= |
+| =hs_countdown-gt=    | =hs_interactive-gt=  | Required | readers.string.prompted, for the length asked by startAsk(). Decided on 2026-11-15 (ei6.15). | =start()=, =startAsk()= |
+| =hs_countdown-gt=    | =hs_menu-gt=         | Required | Its countdown menu, whose options use =fn:=. Decided on 2026-11-15 (ei6.15). | =start()=, =menuShow()= |
 | =hs_clipboard-gt=    | =hs_interactive-gt=  | Required | promptOpened() and promptClosed(), so that the history's chooser is reported as a prompt. Decided on 2026-11-15 (ei6.14). | =start()=, =historyShow()= |
 | =hs_clipboard-gt=    | =hs_menu-gt=         | Required | Its clipboard menu, whose options use =fn:=. Decided on 2026-11-15 (ei6.14). | =start()=, =menuShow()= |
 | =hs_appleMusic-gt=   | =hs_interactive-gt=  | Required | Its choice reader, for the album chooser. Decided on 2026-11-15 (ei6.44). | =start()=, =albumChoose()= |

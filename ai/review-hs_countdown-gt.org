@@ -1,0 +1,77 @@
+#+TITLE: Review of hs_countdown-gt
+#+DATE: 2026-11-15
+
+This is the review of =hs_countdown-gt= for the bead =hammer2spoons-ei6.15=, made before it moves
+into this repository. The file read is =../Spoons/hs_countdown-gt/init.js= (726 lines), read in
+full, together with its readme and the configuration's use of it.
+
+* Bugs
+
+1. *Moving the progress of a paused countdown loses the move on resume* (=setProgress()=, lines
+   639-649). =setProgress()= sets a new end time, but keeps the moment the countdown was paused.
+   Resuming then adds the whole pause to the new end time, so the countdown ends later than the
+   progress it was moved to. =setProgress()= has to restart the pause at the moment of the move.
+2. *=setProgress()= accepts any number.* A progress below 0 or above 1 sets an end time before
+   now or longer than the countdown, with no message. It should be refused, as =startFor()=
+   refuses a negative length.
+
+* Local details
+
+None. The sound, the colours and the menu bar symbols are settings, and the authors in
+=spoon.json= are the authors of the Hammerspoon 1 Spoon and of the port.
+
+* The rules of this repository
+
+3. *It asks for input with its own prompt* (=startForInteractive()=, lines 552-593). It shows an
+   =hs.ui.textPrompt= in a loop until the answer is a number of minutes or a time of day, and
+   brings Hammerspoon 2 forward itself first, through =OWN_BUNDLE_ID=. By the rule from
+   =hammer2spoons-ei6.43=, it asks through hs_interactive-gt's =readers.string.prompted=, which
+   already brings Hammerspoon 2 forward. That makes hs_interactive-gt a required Spoon, and
+   =OWN_BUNDLE_ID= goes.
+4. *No menu.* This Spoon performs actions, so by the rule in CLAUDE.md it provides a menu of
+   them, opened with =menuShow()=, and requires hs_menu-gt. The user's =menus.js= has one option
+   for it, which starts a countdown of the default length.
+5. *=bindHotkeys()= differs from the other Spoons'.* It takes its own action names
+   (=startInteractive=), binds four keys from =config.defaultKeyBindings= when it is called
+   without a mapping, does not release the keys of an earlier call, and only logs an unknown name.
+   It should take the functions' names, bind nothing by default, release earlier keys, and throw
+   on an unknown name.
+
+* Names
+
+6. Names that put the action before its object, by the rule in CLAUDE.md. The Spoon's name
+   supplies the subject, /countdown/, as /history/ is supplied in hs_clipboard-gt:
+
+   | Now                   | Following the rule |
+   |-----------------------+--------------------|
+   | =setProgress=         | =progressSet=      |
+   | =pauseOrResume=       | =pauseToggle=      |
+   | =startForInteractive= | =startAsk=         |
+
+   =startFor=, =startUntil=, =cancel=, =isRunning= and =timeLeft= already follow it. The user's
+   commands call =pauseOrResume= and =setProgress=, and would be updated with them.
+
+* The readme
+
+7. It opens with the Spoon's history (a port of /hs_countdown_timer/) rather than with what it
+   does for the user, and its sections are /Simple usage/ and /Methods/. It is rewritten from the
+   user's side, with a screenshot of the progress bar and the menu bar item.
+
+* What was done
+
+Decided by the user and done on 2026-11-15:
+
+- Items 1 and 2 are fixed. =progressSet()= restarts the pause at the moment of the move, and
+  refuses a progress outside 0.0 to 1.0.
+- Item 3: =startAsk()= asks through hs_interactive-gt's =readers.string.prompted=, which is
+  required. =OWN_BUNDLE_ID= is removed. Testing it found that Escape does not close
+  =hs.ui.textPrompt=, which is upstream, =hammer2spoons-ei6.52=.
+- Item 4: the Spoon exports =menu= and =menuShow()=, and requires hs_menu-gt. The user's
+  configuration binds ⌃⌥⌘T to a new command, =countdown-menu-show=.
+- Item 5: =bindHotkeys()= accepts only =menuShow=, as in hs_appleMusic-gt, and
+  =config.defaultKeyBindings= is removed.
+- Item 6: the three functions are renamed, and the user's commands call the new names. The callback
+  event keeps its name, ="setProgress"=.
+- Item 7: the readme is rewritten from the user's side, with two screenshots: the menu bar item
+  with its menu, captured by the user, and the progress bar on the iPad.
+- The version is 3.0.0.
