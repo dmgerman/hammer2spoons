@@ -602,7 +602,6 @@ reads from it what to display:
 | =isClosed()=               | Whether the menu has been closed.                               |
 | =buttons()=                | The options displayed, in order.                                |
 | =letters()=                | The letter of each option displayed, in order, or null where there is none. |
-| =indexOfLetter(letter)=    | The position of the option a letter selects, or -1. The letter is compared in lower case, so an option with a capital letter is not found. |
 | =title()=                  | The title of the menu displayed: the root's name, or the label of the option that opened the submenu. |
 
 A presenter reports presses with =down= and =up=, rather than running an option's action

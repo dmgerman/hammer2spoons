@@ -774,9 +774,6 @@ function sessionOpen(menu, presenter, options) {
     /** The title of the menu currently displayed. */
     session.title = () => stack[stack.length - 1].name
 
-    /** The index of the button a letter selects, or -1. */
-    session.indexOfLetter = (letter) => letters.indexOf(String(letter).toLowerCase())
-
     // A button's state is compared as text, so that an object or an array from a
     // stateProvider is compared by value rather than by identity.
     function stateOf(button, index) {
