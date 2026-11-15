@@ -1,33 +1,33 @@
 * hs_interactive-gt
 
-Named commands for Hammerspoon 2. A command is a function with a name, such as
-=window-left-half=, and a one-line description; it can be run by typing part of its name, and
-keys are bound to it by name.
+hs_interactive-gt solves two problems, one after the other.
 
-The design follows Emacs. A command declares how its arguments are read with an
-=interactive= specification, as in Emacs Lisp, and the command chooser is the equivalent of
-=M-x=.
+1. *A function that requires arguments cannot be run from a key.* Hammerspoon 2 can bind a key
+   only to a function without arguments. This Spoon turns a function that requires arguments into
+   an /interactive function/: a function that states, for each of its arguments, how to ask the
+   user for it. When an interactive function is run, this Spoon asks the user for each argument
+   that was not given. The window to act on, for example, is the focused window. When no window is
+   focused, this Spoon asks the user to select the window in a chooser of the open windows.
+2. *Running a function without binding a key to it.* A user runs a function by pressing a key
+   bound to it, and there are usually more functions than key combinations to bind. This Spoon
+   gives each interactive function a name, such as =window-left-half=, and a one-line description,
+   which together make a /command/. The command chooser lists every command. Typing part of a
+   command's name in the chooser finds the command, and selecting the command runs it, whether or
+   not a key is bound to it.
 
-The main features are these:
+Its main features are these:
 
-- *A command chooser.* It lists every command with its description, and with the key bound to
-  it written as macOS writes keys, such as =window-maximize   ⌃⌥⌘M=. Typing part of a name or
-  a description filters the list, and selecting a command runs it. The commands used most
-  recently are listed first.
-- *Arguments read when a command is run.* A command that acts on a window uses the focused
-  window, or shows a chooser of windows when no window is focused. A command that takes a
-  number shows a dialog for it. The same applies to applications, screens and text.
-- *The same command called from code.* Called through =call()=, a command receives its
-  arguments directly and shows no prompt.
-- *Input for other Spoons.* A Spoon that asks for a window, a screen or one item of a list
-  runs a reader through =readerRun()=, so every Spoon asks for input with the same chooser. A
-  Spoon can also export functions whose omitted arguments are read the same way, with
-  =interactiveFunctionCreate()=.
-- *Keys bound to command names.* Every binding can be listed, the command bound to a key can
-  be looked up, and a command can be redefined without binding its key again.
-- *=use()=, which configures a Spoon in one call.* It loads the Spoon, applies its settings,
-  defines its commands, binds their keys, starts it, and records the outcome, in the manner of
-  Emacs's =use-package=.
+- *Interactive functions.* Each argument a function needs is asked for when the function is run,
+  with a chooser or a dialog suited to the argument. /Readers/ describes them.
+- *The command chooser.* It lists every command with its description and the key bound to it,
+  the most recently used first.
+- *Keys bound to command names.* A key is bound to a command's name rather than to a function.
+  A command can therefore be redefined, or defined after its key is bound, without binding the key
+  again.
+- *Commands run from code.* =call()= runs a command with its arguments given, without asking the
+  user.
+- *Loading a Spoon in one call.* =use()= sets up a Spoon in one call, and reports a Spoon that
+  fails to load without stopping the rest of =init.js=, the Hammerspoon 2 configuration file.
 
 The command chooser, after =window= has been typed:
 
@@ -36,17 +36,17 @@ The command chooser, after =window= has been typed:
 
 * Installing
 
-The Spoon is installed and loaded with =hs.spoons.use()=:
+This Spoon is installed and loaded with =hs.spoons.use()=:
 
 #+begin_src js
 hs.spoons.use("hs_interactive-gt", { source: "dmgerman/hammer2spoons" })
 const interactive = hs.spoons["hs_interactive-gt"]
 #+end_src
 
-No other Spoon in this repository requires this one. The readme of each of them suggests
-command definitions for it, to be written with =use()= as shown under /Loading Spoons/.
+Other Spoons in this repository that ask the user for input require this Spoon, and their readmes
+say so.
 
-* Simple usage
+* A first command
 
 This example defines one command, which moves a window to the left half of its screen, and
 binds two keys:
@@ -77,8 +77,8 @@ interactive.keysSet([
 
 =fn= is the function the command runs. =interactive= lists its arguments, one entry per
 argument, in the order =fn= takes them. This command has one argument, and its =reader= says
-how the value is obtained: =readers.window.auto= takes the focused window, and shows a chooser
-of windows when no window is focused.
+how the value is obtained: =readers.window.auto= takes the focused window. When no window is
+focused, it asks the user to select the window in a chooser of the open windows.
 
 The command can be run in two ways:
 
@@ -102,27 +102,21 @@ missing.
 
 | Field         | Meaning                                                          |
 |---------------+------------------------------------------------------------------|
-| =name=        | The command's name, hyphenated, such as =countdown-start=. See /Naming a command that belongs to a Spoon/. |
+| =name=        | The command's name, such as =window-left-half=. See /Naming commands/. |
 | =doc=         | A one-line description, shown in the command chooser and by =keyDescribe()=. |
 | =fn=          | The function the command runs. It receives the arguments.        |
 | =interactive= | How each argument is read. Omitted for a command that takes no argument. |
 | =runDelay=    | Seconds to wait before running the command, when it is run from the command chooser. Defaults to 0. See /Commands that open a chooser/. |
 
-Defining a command with a name that already exists replaces the earlier definition, so a
-configuration can be reloaded without error.
+The command =window-left-half=, under /A first command/, uses four of the five fields.
 
-#+begin_src js
-interactive.define({
-    name: "countdown-cancel",
-    doc:  "Cancel the running countdown.",
-    fn:   () => hs.spoons["hs_countdown-gt"].cancel()
-})
-#+end_src
+Defining a command with a name that already exists replaces the earlier definition. Reloading
+the configuration, which defines every command again, therefore raises no error.
 
 ** Interactive arguments
 
 Each entry in =interactive= describes one argument of =fn=. This command takes a number of
-minutes, read with a dialog that offers 25:
+minutes, read with a dialog whose text field is filled in with 25:
 
 #+begin_src js
 interactive.define({
@@ -145,8 +139,8 @@ An entry has four fields:
 |------------+----------------------------------------------------------------------|
 | =name=     | The argument's name, shown as the prompt's title and in the list of arguments. Defaults to =arg1=, =arg2= and so on. |
 | =reader=   | How the value is obtained: one /variant/ of a reader. See /Readers/. |
-| =default=  | The value the prompt offers, and the value used when the argument is skipped or the reader finds none. |
-| =optional= | When true, the prompt offers *Skip*, which uses the default.         |
+| =default=  | The value filled in when the prompt opens, and the value used when the argument is skipped or the reader finds none. |
+| =optional= | When true, the prompt has a *Skip* button, which uses the default.   |
 
 An entry may also be a bare function, which is then used as the reader of an argument named
 =argN=.
@@ -164,29 +158,12 @@ argument's default, 25:
 
 Cancelling any prompt cancels the command, and =fn= is not called.
 
-** Naming a command that belongs to a Spoon
+** Naming commands
 
-A command defined for a Spoon has that Spoon's name as its prefix, with =hs_= and =-gt=
-removed:
-
-| Spoon               | Prefix       | For example              |
-|---------------------+--------------+--------------------------|
-| =hs_countdown-gt=   | =countdown-= | =countdown-start-until=  |
-| =hs_time-gt=        | =time-=      | =time-show=              |
-| =hs_url-gt=         | =url-=       | =url-route-switch=       |
-
-The command chooser lists the commands of every Spoon together, and nothing else in it shows
-which Spoon a command belongs to. The prefix shows it, and it prevents two Spoons from defining
-the same name for different operations. A command therefore takes the name of the Spoon it
-calls even when another word would describe the operation better: =time-show= rather than
-=clock-show=, because the Spoon is =hs_time-gt=.
-
-Two kinds of command are not covered by the rule:
-
-1. A command implemented in =init.js= itself calls no Spoon, so there is no Spoon to take a
-   prefix from.
-2. This Spoon's built-in commands begin with =commands-=, or are named =spoons-list=. See
-   /Built-in commands/.
+A command's name can be any string, and this Spoon checks only that a name is given. The command
+chooser lists all commands together, and typing part of a name narrows the list. A name that
+begins with what the command acts on, such as =window-left-half=, therefore lets typing =window=
+find every command that acts on a window.
 
 ** Commands that open a chooser
 
@@ -225,14 +202,14 @@ argument names the variant it uses:
 - =auto= takes the value from the snapshot when it has one, and prompts otherwise.
 
 #+begin_src js
-reader: interactive.readers.window.auto      // the focused window, or a chooser if there is none
-reader: interactive.readers.window.prompted  // always a chooser
+reader: interactive.readers.window.auto      // the focused window, or the window the user selects in a chooser
+reader: interactive.readers.window.prompted  // always the window the user selects in a chooser
 reader: interactive.readers.window.implicit  // the focused window, or the default
 #+end_src
 
 ** The built-in readers
 
-The Spoon provides six readers, as =interactive.readers.window= and so on:
+This Spoon provides six readers, as =interactive.readers.window= and so on:
 
 | Reader                | =implicit= and =auto= take  | =prompted= shows             |
 |-----------------------+-----------------------------+------------------------------|
@@ -246,7 +223,7 @@ The Spoon provides six readers, as =interactive.readers.window= and so on:
 =readers.number=, =readers.string= and =readers.choice= have no =implicit= or =auto= variant,
 since there is no current number, text or item to take.
 
-The window chooser offers only standard windows, leaving out dialogs, panels and palettes, unless
+The window chooser lists only standard windows, leaving out dialogs, panels and palettes, unless
 =includeNonStandard= is true. Each row of the window chooser reads =Application — Title=, so
 typing either part of it finds the window. When =readers.window.auto= finds no focused window,
 but the frontmost application is known, it also shows an alert saying that the application
@@ -256,21 +233,23 @@ acting at once.
 A number typed into a dialog that is not a number is reported in an alert, and the command is
 cancelled.
 
-** Narrowing what a reader offers
+** Narrowing what a chooser lists
 
-The =prompted= readers read options from the argument's entry. Some leave choices out of the
-chooser, and =placeholder= sets the text shown in the chooser's empty search field:
+The =prompted= readers read options from the argument's entry. Some options leave choices out of
+the chooser, =placeholder= sets the text shown in the chooser's empty search field, and =choices=
+and =empty= supply the list of =readers.choice=:
 
 | Option              | Reader                        | Default    | Effect                                          |
 |---------------------+-------------------------------+------------+-------------------------------------------------|
 | =includeCurrent=    | window and screen             | true       | false leaves out the window or screen the command started on. |
 | =includeFullscreen= | screen                        | true       | false leaves out screens showing a fullscreen window. |
-| =includeNonStandard= | window                      | false      | true also offers windows that are not standard, such as dialogs, panels and palettes. |
+| =includeNonStandard= | window                      | false      | true also lists windows that are not standard, such as dialogs, panels and palettes. |
 | =placeholder=       | window, application, screen and choice | the reader's name | The text in the chooser's empty search field, such as ="Window to swap with"=. |
 | =choices=           | choice                        | none       | The rows, as ={text, subText, value}=, or a function of the snapshot that returns them. The chosen row's =value= is the argument. |
 | =empty=             | choice                        | "Nothing to choose" | The alert shown when =choices= is empty. |
 
-A command that moves a window to another screen sets both to false:
+A command that moves a window to another screen sets =includeCurrent= and =includeFullscreen= to
+false:
 
 #+begin_src js
 interactive.define({
@@ -293,10 +272,10 @@ a window on it reports =isFullscreen=.
 
 ** A number within a range
 
-=readers.number.ranged(options)= returns a reader for a number between two bounds, which offers
-the value a setting has when the prompt opens. It exists because =readers.number.prompted=
-cannot do either: it accepts any number, and the argument's =default= is fixed when the command
-is defined.
+=readers.number.ranged(options)= returns a reader for a number between two bounds. Its dialog is
+filled in with the value a setting has when the dialog opens. =readers.number.prompted= does
+neither: it accepts any number, and fills in the argument's =default=, which is fixed when the
+command is defined.
 
 =options= has three fields, all optional:
 
@@ -304,7 +283,7 @@ is defined.
 |-----------+---------------------------------------------------------------------------|
 | =min=     | The smallest value accepted.                                              |
 | =max=     | The largest value accepted.                                               |
-| =current= | A function returning the value to offer. When it returns null, or throws, the argument's =default= is offered instead. |
+| =current= | A function returning the value filled in when the dialog opens. When it returns null, or throws, the argument's =default= is filled in instead. |
 
 #+begin_src js
 interactive.define({
@@ -315,18 +294,19 @@ interactive.define({
         reader: interactive.readers.number.ranged({
             min: 0,
             max: 100,
-            current: () => music.systemVolume()
+            // The output device's volume, from 0 to 1, filled in as a percentage.
+            current: () => Math.round(hs.audiodevice.defaultOutputDevice().volume * 100)
         })
     }],
-    fn: (percent) => music.systemVolumeSet(percent)
+    fn: (percent) => { hs.audiodevice.defaultOutputDevice().volume = percent / 100 }
 })
 #+end_src
 
 A value outside the range is reported in an alert, such as /volume (0-100): 150 is outside 0 to
 100/, and the command is cancelled. The value is not clamped to the range.
 
-=ranged= is a function to call, not a variant. What it returns is a reader, and goes in
-=reader:= as =readers.number.prompted= does.
+=ranged()= is a function to call, not a variant. It returns a reader variant, which goes in
+=reader:= in the same way as =readers.number.prompted=.
 
 ** The snapshot
 
@@ -356,20 +336,18 @@ It returns one of four things, or a promise of one:
 4. null or undefined, which also gives the argument its default.
 
 The built-in readers group the variants of one reader in an object, and a new reader can do the
-same. This one offers a chooser of the loaded Spoons:
+same. The following reader asks the user to select one of the loaded Spoons in a chooser. It is
+built on =readers.choice.prompted=, so that its chooser looks like every other prompt, and
+=promptIsOpen()= reports it:
 
 #+begin_src js
 const readSpoonName = {
-    prompted: (context, parameter, snapshot) => new Promise((resolve) => {
-        const chooser = hs.chooser.create()
-        chooser.placeholder = "Spoon"
-        chooser.setChoices(Object.keys(hs.spoons).map((name) => ({
-            text: name,
-            value: name
-        })))
-        chooser.onSelect = (item) => resolve(item ? item.value : interactive.CANCEL)
-        chooser.show()
-    })
+    prompted: (context, parameter, snapshot) => interactive.readers.choice.prompted(context,
+        Object.assign({
+            placeholder: "Spoon",
+            choices: Object.keys(hs.spoons).map((name) => ({ text: name, value: name }))
+        }, parameter),
+        snapshot)
 }
 
 interactive: [
@@ -392,18 +370,23 @@ its own =toString()=, without the type name, and a plain value as JSON.
 
 * Calling commands
 
-A command can be called from code in two ways: with every argument given, or with its readers
-obtaining the arguments that are missing. This section also describes the command chooser and
-how other code can learn that a prompt is open.
+Code runs a command in one of two ways: with every argument given, through =call()=, or with
+the missing arguments read by the command's readers, through =callInteractively()=. This section
+also describes how other Spoons read input without a command, the command chooser, and how other
+code learns that a prompt is open.
 
 ** call(name, ...args)
 
-=call(name, ...args)= runs a command with the arguments given, and returns what its =fn=
-returns. It shows no prompt. It throws an =Error= when no command has that name. It is the way
-to run a command from other code.
+=call(name, ...args)= runs a command by its name, with the arguments given, and returns what its
+=fn= returns. It shows no prompt, and it throws an =Error= when no command has that name.
+
+=call()= serves code that has a command's name rather than its function, such as code that runs
+a command named in a setting or in a list. A call also counts as a use of the command, which
+moves the command to the top of the command chooser, as /Command order/ describes. This call
+moves the focused window to the left half of its screen:
 
 #+begin_src js
-interactive.call("countdown-start-for", 25)
+interactive.call("window-left-half", hs.window.focusedWindow())
 #+end_src
 
 ** readerRun(reader, [parameter], [snapshot])
@@ -431,9 +414,10 @@ cancelled.
 
 =interactiveFunctionCreate()= lets a Spoon export functions whose arguments may be omitted. It
 returns a function that reads each omitted argument with a reader, in the way a command reads
-its arguments, and then calls =fn=. No command is defined. hs_window-gt exports its functions
-this way, so that =leftHalf()= called from a key acts on the focused window, and
-=fractionWidth()= shows a chooser of fractions:
+its arguments, and then calls =fn=. No command is defined. A function exported this way can be
+bound to a key, because the user is asked for its arguments when the key is pressed. In this
+example, =fractionWidth()= called without arguments shows a chooser of fractions, and acts on the
+focused window:
 
 #+begin_src js
 const interactive = hs.spoons["hs_interactive-gt"]
@@ -451,8 +435,9 @@ so is an argument whose entry has no reader. Every reader uses one snapshot, tak
 function is called.
 
 The created function returns what =fn= returns when no reader prompted, so that a call that asks
-nothing stays synchronous. When a reader shows a chooser or a dialog, it returns a promise of
-=fn='s result instead. When a reader is cancelled, =fn= is not called, and the result is null.
+nothing stays synchronous. When a reader shows a chooser or a dialog, the created function returns
+a promise of =fn='s result instead. When a reader is cancelled, =fn= is not called, and the result
+is null.
 
 ** callInteractively(name, options)
 
@@ -497,10 +482,10 @@ prompt requires.
 prompt closes. It returns a function that ends the subscription. =promptIsOpen()= returns
 whether a prompt is open.
 
-A prompt requires every key press, and a hotkey receives a key press before a chooser does.
-=hs_menu-gt= subscribes for that reason. Its on-screen menu binds a hotkey for each option's
-letter, and while a prompt is open it releases them, so that a letter typed into a chooser
-reaches the chooser.
+A prompt requires every key press, and a hotkey receives a key press before a chooser does. Code
+that binds hotkeys while something is displayed, such as an on-screen menu that binds a hotkey
+for each option's letter, subscribes to release those hotkeys while a prompt is open. A letter
+typed into a chooser then reaches the chooser.
 
 Prompts are counted. A command that reads two arguments shows one prompt after another, and
 =fn= is called once when the first opens and once when the last closes.
@@ -516,10 +501,9 @@ unsubscribe()
 
 A Spoon that shows a chooser of its own reports it with =promptOpened()= when the chooser opens
 and =promptClosed()= when it closes, so that =promptIsOpen()= and the subscribers treat it as a
-prompt. hs_selectWindow-gt does this for its window chooser. Every =promptOpened()= must be
-followed by exactly one =promptClosed()=, on every path that closes the chooser. A missing
-=promptClosed()= leaves =promptIsOpen()= true, and hs_menu-gt's menus without their keys, until
-Hammerspoon 2 is reloaded.
+prompt. Every =promptOpened()= must be followed by exactly one =promptClosed()=, on every path
+that closes the chooser. A missing =promptClosed()= leaves =promptIsOpen()= true until
+Hammerspoon 2 is reloaded, and every subscriber keeps its hotkeys released until then.
 
 * Command order
 
@@ -541,9 +525,8 @@ interactive.commands("alphabetic")        // in the order given
 sets the order from a chooser.
 
 A command counts as used when it is run by name: from the command chooser, or through =call()=
-or =callInteractively()=. A command run from its key does not change its position, so the
-order follows the commands that have no key. Emacs does the same:
-=extended-command-history= records what is run with =M-x=, and not what is run from a key.
+or =callInteractively()=. A command run from its key does not change its position, so the order
+follows the commands that have no key, which are the commands looked up in the chooser.
 
 A command counts as used once all its arguments have been read, so a command cancelled at a
 prompt keeps its position. The order is held in memory, and is lost when the configuration is
@@ -587,27 +570,28 @@ interactive.use("PaperWM-gt", {
 interactive.use.report()
 #+end_src
 
-In this example, =config= sets two of the countdown Spoon's settings, =commands= defines one
-command that calls it, and =keys= binds a key to that command. The Spoon's =start()= is called
-last.
+In this example, =config= sets two of hs_countdown-gt's settings, =commands= defines one command
+that calls hs_countdown-gt, and =keys= binds a key to that command. hs_countdown-gt's =start()=
+is called last.
 
 The Spoons are loaded in the order of the calls, so a Spoon that another one requires is
 written first.
 
 ** Keywords
 
-/spec/ takes the following keywords, each listed with its =use-package= equivalent:
+/spec/ takes the following keywords. In the table, "the Spoon" is the Spoon named in the call to
+=use()=:
 
-| Keyword    | use-package | Meaning                                                        |
-|------------+-------------+----------------------------------------------------------------|
-| =disabled= | =:disabled= | When true, the Spoon is not loaded. The call stays in the configuration. |
-| =when=     | =:if=       | A function. The Spoon is loaded only when it returns true.     |
-| =before=   | =:init=     | A function called before the Spoon is loaded.                  |
-| =config=   | =:custom=   | Settings merged into the Spoon's own =config= object.          |
-| =after=    | =:config=   | A function called with the Spoon after it is loaded, used to connect two Spoons. |
-| =commands= | =:commands= | A function called as =(interactive, spoon)=, which defines the Spoon's commands. |
-| =keys=     | =:bind=     | A list of =[modifiers, key, command]=, bound with =keysSet()=. |
-| =start=    | —           | When false, the Spoon's =start()= is not called.               |
+| Keyword    | Meaning                                                                          |
+|------------+----------------------------------------------------------------------------------|
+| =disabled= | When true, the Spoon is not loaded. The call stays in the configuration.         |
+| =when=     | A function. The Spoon is loaded only when it returns true.                       |
+| =before=   | A function called before the Spoon is loaded.                                    |
+| =config=   | Settings merged into the Spoon's own =config= object.                            |
+| =after=    | A function called with the Spoon after it is loaded, used to connect two Spoons. |
+| =commands= | A function called as =(interactive, spoon)=, which defines the Spoon's commands. |
+| =keys=     | A list of =[modifiers, key, command]=, bound with =keysSet()=.                   |
+| =start=    | When false, the Spoon's =start()= is not called.                                 |
 
 Each call catches its own exceptions. A Spoon that fails to load is reported in the console,
 and the calls after it still run. A bare =hs.spoons.load()= that throws, by contrast, stops the
@@ -694,12 +678,12 @@ These functions bind and remove one key, and report the bindings:
 | =bindings()=              | Every binding, as ={mods, key, command}= objects.          |
 | =stop()=                  | Removes every binding. The commands stay defined.          |
 
-The Spoon keeps a reference to every hotkey it creates. In Hammerspoon 2, a hotkey with no
+This Spoon keeps a reference to every hotkey it creates. In Hammerspoon 2, a hotkey with no
 remaining reference is garbage-collected, and its key then does nothing.
 
 * Built-in commands
 
-The Spoon defines five commands of its own:
+This Spoon defines five commands of its own:
 
 | Command                  | Does                                          |
 |--------------------------+-----------------------------------------------|
@@ -709,19 +693,15 @@ The Spoon defines five commands of its own:
 | =commands-bindings-list= | Logs every binding and its command.           |
 | =spoons-list=            | Logs the outcome of every =use()= call.       |
 
-By the rule in /Naming a command that belongs to a Spoon/, these names would begin with
-=interactive-=. They are older than the rule, and they are not renamed because that would break
-the key bindings of every configuration that uses them.
-
 * Notes
 
 - *A prompt brings Hammerspoon 2 to the front.* A dialog makes Hammerspoon 2 the frontmost
-  application before it opens, and makes the previous application frontmost again when it
-  closes. =hs.ui.textPrompt= shows a plain =NSWindow=, and a plain window cannot take the
-  keyboard focus while its application is in the background. Without this, the dialog would
-  appear but would not accept typing, and macOS would bounce the Dock icon instead. A chooser
-  does not require this, because =hs.chooser= uses an =NSPanel= with =.nonactivatingPanel=,
-  which accepts keys while its application is in the background.
+  application before it opens, and makes the previous application frontmost again when it closes.
+  =hs.ui.textPrompt= shows a plain =NSWindow=, and a plain window cannot take the keyboard focus
+  while its application is in the background. If Hammerspoon 2 were not brought to the front, the
+  dialog would appear but would not accept typing, and macOS would bounce the Dock icon instead. A
+  chooser does not require this, because =hs.chooser= uses an =NSPanel= with
+  =.nonactivatingPanel=, which accepts keys while its application is in the background.
 - *Dialogs are modal.* =hs.ui.textPrompt= blocks Hammerspoon 2's main thread while it is
   displayed, and so suspends everything else, timers included.
 - *One or two prompted arguments work best.* Hammerspoon 2 has no form with several fields, so
@@ -733,4 +713,5 @@ the key bindings of every configuration that uses them.
 - No other Spoon is required.
 - When [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] is loaded, the window chooser and the check for fullscreen windows
   use its record of the open windows. That is faster than asking every running application.
-- The Accessibility permission, which Hammerspoon 2 requires to read and move windows.
+- The Accessibility permission, which the window and screen readers require to read the open
+  windows.
