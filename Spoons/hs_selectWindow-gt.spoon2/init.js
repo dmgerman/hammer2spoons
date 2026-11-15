@@ -90,6 +90,7 @@ const config = {
 let filter = null                  // the hs_windowfilter-gt instance used for focus order
 let focusOrder = []                // window ids, most recently focused first
 let chooser = null
+let promptHeld = false             // whether the open chooser is reported to hs_interactive-gt
 let pollTimer = null
 let overlay = null                 // the canvas showing the thumbnail
 let thumbnails = new Map()         // window id -> HSImage
@@ -522,40 +523,69 @@ function chooseFrom(records, placeholder) {
 
     startTrackingFocus()
 
+    // A chooser already open is closed first. Its own callbacks then find that it is no longer
+    // the current chooser, and do not report the new one's prompt as closed.
+    chooserClose()
+
     sessionWindows = new Map(records.map((r) => [r.state.id, r.window]))
     if (!config.persistentThumbnailCache) thumbnails = new Map()
     pendingSnapshots = new Set()
     showingThumbnail = config.showThumbnail
     lastDrawnId = null
 
-    chooser = hs.chooser.create()
-    chooser.placeholder = placeholder || "Window"
-    chooser.searchSubText = true
-    chooser.visibleRows = config.rowsToDisplay
-    chooser.width = chooserWidth()
+    const own = hs.chooser.create()
+    chooser = own
+    own.placeholder = placeholder || "Window"
+    own.searchSubText = true
+    own.visibleRows = config.rowsToDisplay
+    own.width = chooserWidth()
 
-    chooser.setChoices(choicesFor(records))
+    own.setChoices(choicesFor(records))
 
-    chooser.onSelect = (item) => {
+    // Each callback acts only while its chooser is the current one, so that a chooser closed by
+    // a newer one does not end the newer one's session.
+    own.onSelect = (item) => {
+        if (chooser !== own) return
         finishChoosing()
         if (!item || item.id === undefined) return
         focusWindowById(item.id)
     }
 
-    chooser.onShow = () => {
+    own.onShow = () => {
+        if (chooser !== own) return
         takeSessionKeys()
         startPolling()
         // The first row is selected when the chooser opens.
         showThumbnailFor(records[0].state.id)
     }
 
-    chooser.onHide = () => finishChoosing()
+    own.onHide = () => {
+        if (chooser === own) finishChoosing()
+    }
 
-    chooser.show()
-    return chooser
+    // Reported as a prompt of hs_interactive-gt, so that promptIsOpen() is true while it is
+    // open and hs_menu-gt gives up its letter keys. finishChoosing() reports the close.
+    spoonRequired("hs_interactive-gt").promptOpened()
+    promptHeld = true
+    own.show()
+    return own
+}
+
+/** Close the open chooser, if there is one, ending its session first. */
+function chooserClose() {
+    const open = chooser
+    if (!open) return
+    finishChoosing()
+    open.hide()
 }
 
 function finishChoosing() {
+    // onSelect and onHide both call this, so the close is reported once only.
+    if (promptHeld) {
+        promptHeld = false
+        const interactive = hs.spoons["hs_interactive-gt"]
+        if (interactive) interactive.promptClosed()
+    }
     stopPolling()
     releaseSessionKeys()
     hideThumbnail()
@@ -809,17 +839,16 @@ function bindHotkeys(mapping) {
 }
 
 function start() {
-    // Both are required. Checked here, so that a missing one is reported when the Spoon
+    // All three are required. Checked here, so that a missing one is reported when the Spoon
     // starts rather than the first time it is needed.
+    spoonRequired("hs_interactive-gt")
     spoonRequired("hs_window-gt")
     startTrackingFocus()
     return module.exports
 }
 
 function stop() {
-    finishChoosing()
-    if (chooser) chooser.hide()
-    chooser = null
+    chooserClose()
 
     if (filter) {
         const windowfilter = hs.spoons["hs_windowfilter-gt"]

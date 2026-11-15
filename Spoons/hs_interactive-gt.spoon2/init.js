@@ -88,11 +88,17 @@ function promptIsOpen() {
     return promptDepth > 0
 }
 
+/**
+ * Report that a prompt has opened. Exported so that a Spoon with a chooser of its own, such as
+ * hs_selectWindow-gt, is reported by promptIsOpen() like this Spoon's prompts. Every call must
+ * be followed by one call of promptClosed(), on every path that closes the prompt.
+ */
 function promptOpened() {
     promptDepth += 1
     if (promptDepth === 1) notifyPrompt(true)
 }
 
+/** Report that a prompt reported with promptOpened() has closed. */
 function promptClosed() {
     if (promptDepth === 0) return
     promptDepth -= 1
@@ -1280,6 +1286,8 @@ module.exports = {
     execute,
     promptChangeOn,
     promptIsOpen,
+    promptOpened,
+    promptClosed,
     keySet,
     keysSet,
     keyUnset,

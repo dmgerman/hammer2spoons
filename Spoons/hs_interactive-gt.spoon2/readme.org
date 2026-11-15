@@ -488,10 +488,10 @@ its description, and typing searches both the names and the descriptions. The bu
 another. It returns the stored command, as =define()= returned it, or undefined when no command
 has that name.
 
-** promptChangeOn(fn) and promptIsOpen()
+** promptChangeOn(fn), promptIsOpen(), promptOpened() and promptClosed()
 
-These two functions tell other code when a prompt of this Spoon is open, so that the code can
-release keys a prompt requires.
+These functions tell other code when a prompt is open, so that the code can release keys a
+prompt requires.
 
 =promptChangeOn(fn)= calls =fn(true)= when a prompt opens and =fn(false)= when the last open
 prompt closes. It returns a function that ends the subscription. =promptIsOpen()= returns
@@ -513,6 +513,13 @@ const unsubscribe = interactive.promptChangeOn((open) => {
 
 unsubscribe()
 #+end_src
+
+A Spoon that shows a chooser of its own reports it with =promptOpened()= when the chooser opens
+and =promptClosed()= when it closes, so that =promptIsOpen()= and the subscribers treat it as a
+prompt. hs_selectWindow-gt does this for its window chooser. Every =promptOpened()= must be
+followed by exactly one =promptClosed()=, on every path that closes the chooser. A missing
+=promptClosed()= leaves =promptIsOpen()= true, and hs_menu-gt's menus without their keys, until
+Hammerspoon 2 is reloaded.
 
 * Command order
 
