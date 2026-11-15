@@ -319,20 +319,25 @@ const readers = {
         /**
          * Choose a window. The parameter may narrow what is offered:
          *
-         *   includeCurrent  false leaves out the window the command started on, for a
-         *                   command that acts on this window and a second one.
+         *   includeCurrent      false leaves out the window the command started on, for a
+         *                       command that acts on this window and a second one.
+         *   includeNonStandard  true also offers windows that are not standard, such as
+         *                       dialogs, panels and palettes. Only standard windows by default.
          */
         prompted: (context, parameter, snap) => {
             const current = snap ? snap.window : null
             const wantCurrent = parameter.includeCurrent !== false
+            const wantNonStandard = parameter.includeNonStandard === true
 
             // From hs_windowfilter-gt when it is loaded: it tracks every window already,
             // whereas hs.window.orderedWindows() walks every running process and waits on
             // the slowest. The order is lost, which matters only for reading the list.
             const tracker = hs.spoons["hs_windowfilter-gt"]
             const listed = tracker
-                ? tracker.default.records().map((record) => record.window)
-                : hs.window.orderedWindows()
+                ? tracker.default.records()
+                    .filter((record) => wantNonStandard || record.state.standard)
+                    .map((record) => record.window)
+                : hs.window.orderedWindows().filter((w) => wantNonStandard || w.isStandard)
             const windows = listed.filter(
                 (w) => wantCurrent || !current || w.id !== current.id)
 

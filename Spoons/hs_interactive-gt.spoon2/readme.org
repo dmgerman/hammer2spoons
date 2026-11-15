@@ -246,10 +246,12 @@ The Spoon provides six readers, as =interactive.readers.window= and so on:
 =readers.number=, =readers.string= and =readers.choice= have no =implicit= or =auto= variant,
 since there is no current number, text or item to take.
 
-Each row of the window chooser reads =Application — Title=, so typing either part of it finds
-the window. When =readers.window.auto= finds no focused window, but the frontmost application
-is known, it also shows an alert saying that the application reports no visible window. That
-alert explains why a chooser appears instead of the command acting at once.
+The window chooser offers only standard windows, leaving out dialogs, panels and palettes, unless
+=includeNonStandard= is true. Each row of the window chooser reads =Application — Title=, so
+typing either part of it finds the window. When =readers.window.auto= finds no focused window,
+but the frontmost application is known, it also shows an alert saying that the application
+reports no visible window. That alert explains why a chooser appears instead of the command
+acting at once.
 
 A number typed into a dialog that is not a number is reported in an alert, and the command is
 cancelled.
@@ -263,6 +265,7 @@ chooser, and =placeholder= sets the text shown in the chooser's empty search fie
 |---------------------+-------------------------------+------------+-------------------------------------------------|
 | =includeCurrent=    | window and screen             | true       | false leaves out the window or screen the command started on. |
 | =includeFullscreen= | screen                        | true       | false leaves out screens showing a fullscreen window. |
+| =includeNonStandard= | window                      | false      | true also offers windows that are not standard, such as dialogs, panels and palettes. |
 | =placeholder=       | window, application, screen and choice | the reader's name | The text in the chooser's empty search field, such as ="Window to swap with"=. |
 | =choices=           | choice                        | none       | The rows, as ={text, subText, value}=, or a function of the snapshot that returns them. The chosen row's =value= is the argument. |
 | =empty=             | choice                        | "Nothing to choose" | The alert shown when =choices= is empty. |
