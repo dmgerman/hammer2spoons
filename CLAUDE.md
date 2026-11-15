@@ -345,7 +345,12 @@ rather than keeping its Lua spelling.
 | Command names | `hyphenated`, Emacs Lisp style | `window-attach-to-key`, `mouse-screen-center-next` |
 | Spoon directories | `hs_<name>-gt` | `hs_window-gt` |
 
-No underscores in function names.
+No underscores in function names, with one exception. A Spoon that exports a function in a form
+that reads its omitted arguments through `hs_interactive-gt` keeps the function as written under
+the name `_<name>`, and exports the reading form as `<name>`. In `hs_window-gt`, `_leftHalf`
+never prompts, while `module.exports.leftHalf` does. The leading underscore marks the form the
+Spoon calls internally, so that the two cannot be confused in its code. Readmes document only
+`<name>`. The user decided this on 2026-11-15.
 
 ### Subject first, action last
 

@@ -133,10 +133,9 @@ hs.hotkey.bind(["alt"], "w", () => hs.spoons["hs_menu-gt"].onScreenShow(windowMe
 
 For larger changes, such as other letters, other options or another order, the definition of
 the menu can be copied from the Spoon's =init.js=, under =The window menu=, into the
-configuration and edited there. In the copy, each option's =fn= calls the Spoon's exported
-function, such as =() => win.leftHalf()=, instead of the function within the Spoon. An option of
-the copy then reads an omitted window as the exported functions do, and shows a chooser of windows
-when no window is focused.
+configuration and edited there. In the Spoon, each option's =fn= calls =module.exports=, such as
+=() => module.exports.leftHalf()=. In the copy, it calls the Spoon through =hs.spoons=, such as
+=() => win.leftHalf()= with =win= set to =hs.spoons["hs_window-gt"]=.
 
 [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] describes how menus are written.
 
@@ -170,8 +169,8 @@ the console. An argument given as =null= is passed on unchanged.
 A function that shows a chooser returns a promise of its result, which is null when the chooser
 is dismissed. A function that shows none returns its result directly.
 
-Only the exported functions read omitted arguments. The window menu supplies every argument
-itself.
+The window menu calls the exported functions, so its options read omitted arguments in the same
+way. With no window focused, /Left half/, for example, shows a chooser of windows.
 
 ** Return values
 

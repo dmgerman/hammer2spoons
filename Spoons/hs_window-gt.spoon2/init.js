@@ -214,7 +214,7 @@ function focused() {
  * @param {object} window The window to focus.
  * @returns {boolean} Whether the window accepted focus.
  */
-function windowFocus(window) {
+function _windowFocus(window) {
     if (!window) return false
 
     const accepted = window.focus()
@@ -315,7 +315,7 @@ function restore(win, frame) {
  * Each further call goes one position further back, as winner-undo does, rather than
  * undoing the call before it.
  */
-function undo(win) {
+function _undo(win) {
     const window = win || focused()
     if (!window) return module.exports
 
@@ -350,7 +350,7 @@ function undo(win) {
  *
  * It does something only straight after undoing, as winner-redo does.
  */
-function redo(win) {
+function _redo(win) {
     const window = win || focused()
     if (!window) return module.exports
 
@@ -366,7 +366,7 @@ function redo(win) {
 }
 
 /** How many positions are remembered for a window. */
-function historyDepth(win) {
+function _historyDepth(win) {
     const window = win || focused()
     if (!window) return 0
     const entry = history.get(window.id)
@@ -410,7 +410,7 @@ function place(win, grid, cell) {
 }
 
 /** Whether a window already fills its screen. */
-function isMaximized(win) {
+function _isMaximized(win) {
     const window = win || focused()
     if (!window) return false
     const screen = screenFrameOf(window)
@@ -424,13 +424,13 @@ function isMaximized(win) {
  * id. A window maximized by some other means — dragged to fill the screen, or maximized
  * before this Spoon started — has nothing recorded, and an alert says so.
  */
-function maximize(win) {
+function _maximize(win) {
     const window = win || focused()
     if (!window) return false
 
     const entry = entryFor(window)
 
-    if (isMaximized(window)) {
+    if (_isMaximized(window)) {
         if (!entry.unmaximized) {
             alert("No earlier size to go back to")
             return false
@@ -444,22 +444,22 @@ function maximize(win) {
     return place(window, {}, {})
 }
 
-const leftHalf = (win) => place(win, { cols: 2 }, { col: 0 })
-const rightHalf = (win) => place(win, { cols: 2 }, { col: 1 })
-const topHalf = (win) => place(win, { rows: 2 }, { row: 0 })
-const bottomHalf = (win) => place(win, { rows: 2 }, { row: 1 })
-const leftThird = (win) => place(win, { cols: 3 }, { col: 0 })
-const centerThird = (win) => place(win, { cols: 3 }, { col: 1 })
-const rightThird = (win) => place(win, { cols: 3 }, { col: 2 })
-const leftTwoThirds = (win) => place(win, { cols: 3 }, { col: 0, colSpan: 2 })
-const rightTwoThirds = (win) => place(win, { cols: 3 }, { col: 1, colSpan: 2 })
-const topLeft = (win) => place(win, { cols: 2, rows: 2 }, { col: 0, row: 0 })
-const topRight = (win) => place(win, { cols: 2, rows: 2 }, { col: 1, row: 0 })
-const bottomLeft = (win) => place(win, { cols: 2, rows: 2 }, { col: 0, row: 1 })
-const bottomRight = (win) => place(win, { cols: 2, rows: 2 }, { col: 1, row: 1 })
+const _leftHalf = (win) => place(win, { cols: 2 }, { col: 0 })
+const _rightHalf = (win) => place(win, { cols: 2 }, { col: 1 })
+const _topHalf = (win) => place(win, { rows: 2 }, { row: 0 })
+const _bottomHalf = (win) => place(win, { rows: 2 }, { row: 1 })
+const _leftThird = (win) => place(win, { cols: 3 }, { col: 0 })
+const _centerThird = (win) => place(win, { cols: 3 }, { col: 1 })
+const _rightThird = (win) => place(win, { cols: 3 }, { col: 2 })
+const _leftTwoThirds = (win) => place(win, { cols: 3 }, { col: 0, colSpan: 2 })
+const _rightTwoThirds = (win) => place(win, { cols: 3 }, { col: 1, colSpan: 2 })
+const _topLeft = (win) => place(win, { cols: 2, rows: 2 }, { col: 0, row: 0 })
+const _topRight = (win) => place(win, { cols: 2, rows: 2 }, { col: 1, row: 0 })
+const _bottomLeft = (win) => place(win, { cols: 2, rows: 2 }, { col: 0, row: 1 })
+const _bottomRight = (win) => place(win, { cols: 2, rows: 2 }, { col: 1, row: 1 })
 
 /** Centre a window on its screen, keeping its size. */
-function center(win) {
+function _center(win) {
     const window = win || focused()
     if (!window) return false
 
@@ -478,7 +478,7 @@ function center(win) {
 // MARK: - Resizing in place
 
 /** Whether a window already fills its screen's height. */
-function isVerticallyMaximized(win) {
+function _isVerticallyMaximized(win) {
     const window = win || focused()
     if (!window) return false
     const screen = screenFrameOf(window)
@@ -488,7 +488,7 @@ function isVerticallyMaximized(win) {
 }
 
 /** Whether a window already fills its screen's width. */
-function isHorizontallyMaximized(win) {
+function _isHorizontallyMaximized(win) {
     const window = win || focused()
     if (!window) return false
     const screen = screenFrameOf(window)
@@ -505,7 +505,7 @@ function isHorizontallyMaximized(win) {
  * maximize(), a window that filled the height by some other means has nothing recorded, and
  * an alert says so.
  */
-function verticalMaximize(win) {
+function _verticalMaximize(win) {
     const window = win || focused()
     if (!window) return false
 
@@ -514,7 +514,7 @@ function verticalMaximize(win) {
     if (!screen) return false
     const frame = window.frame
 
-    if (isVerticallyMaximized(window)) {
+    if (_isVerticallyMaximized(window)) {
         if (!entry.unmaximizedV) {
             alert("No earlier height to go back to")
             return false
@@ -535,7 +535,7 @@ function verticalMaximize(win) {
  *
  * Only the horizontal pair is restored, so a vertical move made while wide is kept.
  */
-function horizontalMaximize(win) {
+function _horizontalMaximize(win) {
     const window = win || focused()
     if (!window) return false
 
@@ -544,7 +544,7 @@ function horizontalMaximize(win) {
     if (!screen) return false
     const frame = window.frame
 
-    if (isHorizontallyMaximized(window)) {
+    if (_isHorizontallyMaximized(window)) {
         if (!entry.unmaximizedH) {
             alert("No earlier width to go back to")
             return false
@@ -560,7 +560,7 @@ function horizontalMaximize(win) {
 }
 
 /** Halve the height, keeping the top edge. */
-function halfHeight(win) {
+function _halfHeight(win) {
     const window = win || focused()
     if (!window) return false
     const frame = window.frame
@@ -569,7 +569,7 @@ function halfHeight(win) {
 }
 
 /** Halve the width, keeping the left edge. */
-function halfWidth(win) {
+function _halfWidth(win) {
     const window = win || focused()
     if (!window) return false
     const frame = window.frame
@@ -582,7 +582,7 @@ function halfWidth(win) {
  *
  * @param {number} denominator 2 for half the screen's width, 3 for a third, and so on.
  */
-function fractionWidth(denominator, win) {
+function _fractionWidth(denominator, win) {
     const window = win || focused()
     if (!window) return false
 
@@ -600,7 +600,7 @@ function fractionWidth(denominator, win) {
 }
 
 /** Move a window by its own width or height, without resizing it. */
-function moveByOwnSize(direction, win) {
+function _moveByOwnSize(direction, win) {
     const window = win || focused()
     if (!window) return false
 
@@ -698,7 +698,7 @@ function fullscreenScreenIds() {
 }
 
 /** Whether a screen is showing a fullscreen window. */
-function screenHasFullscreenWindow(screen) {
+function _screenHasFullscreenWindow(screen) {
     return screen ? fullscreenScreenIds().has(screen.id) : false
 }
 
@@ -714,7 +714,7 @@ function screenHasFullscreenWindow(screen) {
  * @returns {boolean|Promise<boolean>} Whether the window moved. A promise when a chooser was
  *          shown.
  */
-function windowToScreenMove(target, win) {
+function _windowToScreenMove(target, win) {
     const window = win || focused()
     if (!window) return false
 
@@ -821,11 +821,11 @@ function movable(windows, destinations) {
  * Without `other`, a chooser of the other windows is shown, and the window is the one that
  * was focused before it opened. Returns a promise in that case.
  */
-function tileWith(other, win) {
+function _tileWith(other, win) {
     const window = win || focused()
     if (!window) return false
     if (!other) {
-        return windowChoose(window, "Window to tile with").then((chosen) => chosen ? tileWith(chosen, window) : false)
+        return windowChoose(window, "Window to tile with").then((chosen) => chosen ? _tileWith(chosen, window) : false)
     }
     if (other.id === window.id) {
         alert("A window cannot be tiled with itself")
@@ -845,8 +845,8 @@ function tileWith(other, win) {
 
     // Bring both windows forward, the other one first so that this one ends up in front
     // with the keyboard focus. Choosing the other window took focus away from this one.
-    windowFocus(other)
-    windowFocus(window)
+    _windowFocus(other)
+    _windowFocus(window)
     return true
 }
 
@@ -856,11 +856,11 @@ function tileWith(other, win) {
  * Without `other`, a chooser of the other windows is shown, and the window is the one that
  * was focused before it opened. Returns a promise in that case.
  */
-function windowWithWindowSwap(other, win) {
+function _windowWithWindowSwap(other, win) {
     const window = win || focused()
     if (!window) return false
     if (!other) {
-        return windowChoose(window, "Window to swap with").then((chosen) => chosen ? windowWithWindowSwap(chosen, window) : false)
+        return windowChoose(window, "Window to swap with").then((chosen) => chosen ? _windowWithWindowSwap(chosen, window) : false)
     }
     if (other.id === window.id) {
         alert("A window cannot be swapped with itself")
@@ -878,12 +878,12 @@ function windowWithWindowSwap(other, win) {
     frameSet(window, theirs)
     frameSet(other, mine)
 
-    windowFocus(window)
+    _windowFocus(window)
     return true
 }
 
 /** Swap this window's position and size with the window behind it. */
-function windowWithPreviousSwap(win) {
+function _windowWithPreviousSwap(win) {
     const window = win || focused()
     if (!window) return false
 
@@ -892,7 +892,7 @@ function windowWithPreviousSwap(win) {
         alert("No other window")
         return false
     }
-    return windowWithWindowSwap(other, window)
+    return _windowWithWindowSwap(other, window)
 }
 
 /**
@@ -905,7 +905,7 @@ function windowWithPreviousSwap(win) {
 function windowPrevious() {
     if (previousFocusedId !== null) {
         const still = filterWindows().find((w) => w.id === previousFocusedId)
-        if (still) return windowFocus(still)
+        if (still) return _windowFocus(still)
     }
 
     const ordered = hs.window.orderedWindows()
@@ -913,11 +913,11 @@ function windowPrevious() {
         alert("No previous window")
         return false
     }
-    return windowFocus(ordered[1])
+    return _windowFocus(ordered[1])
 }
 
 /** Send a window behind the others, by focusing the one under it. */
-function windowToBackSend(win) {
+function _windowToBackSend(win) {
     const window = win || focused()
     if (!window) return false
 
@@ -1002,7 +1002,7 @@ function mouseMove(x, y) {
 }
 
 /** Put the pointer in the middle of a window. */
-function mouseWindowCenter(win) {
+function _mouseWindowCenter(win) {
     const window = win || focused()
     if (!window) return false
     const frame = window.frame
@@ -1042,7 +1042,7 @@ function mouseWindowCenterNext() {
     }
     mouseNextOrder = order
 
-    return mouseWindowCenter(ordered[mouseNextIndex])
+    return _mouseWindowCenter(ordered[mouseNextIndex])
 }
 
 /**
@@ -1052,7 +1052,7 @@ function mouseWindowCenterNext() {
  * screen when nothing is focused. fullFrame rather than frame: the middle of the display
  * itself, not of the area left over by the menu bar and the Dock.
  */
-function mouseScreenCenter(screen) {
+function _mouseScreenCenter(screen) {
     const window = focused()
     const target = screen || (window && window.screen) || hs.screen.primary()
     if (!target) return false
@@ -1081,7 +1081,7 @@ function mouseScreenCenterNext() {
     const here = hs.mouse.getCurrentScreen()
     const index = here ? screens.findIndex((s) => s.id === here.id) : -1
     // An unknown current screen gives -1, which starts at the first screen.
-    return mouseScreenCenter(screens[(index + 1) % screens.length])
+    return _mouseScreenCenter(screens[(index + 1) % screens.length])
 }
 
 // MARK: - Windows attached to number keys
@@ -1171,7 +1171,7 @@ function captureDigit(report) {
  *        Calling hs.ax.off() for it would be harmless — it returns without doing anything
  *        when no watcher is registered for that element and notification — but pointless.
  */
-function keyDetach(key, destroyed) {
+function _keyDetach(key, destroyed) {
     if (!keyRelease(String(key), destroyed)) return false
     attachedKeysSave()
     return true
@@ -1305,7 +1305,7 @@ function attachedKeysRestore() {
         const entry = saved[digit] || {}
         const match = found[digit]
         const label = `${keys}-${digit} ${entry.title || ""}`
-        if (match && digitAttach(match.window, digit, true)) {
+        if (match && _digitAttach(match.window, digit, true)) {
             // Keep the title it was attached under, which is what attachedWindows() reports
             // and what the next title match will look for.
             if (entry.title) attachedKeys.get(digit).title = entry.title
@@ -1369,7 +1369,7 @@ function attachedWindows() {
  * When no window has the id, a window of the same application with the same title is
  * attached instead, if no other key holds it. See attachedWindowFind.
  */
-function attachedFocus(digit) {
+function _attachedFocus(digit) {
     const entry = attachedKeys.get(digit)
     if (!entry) return false
 
@@ -1377,7 +1377,7 @@ function attachedFocus(digit) {
     for (const [other, held] of attachedKeys) if (other !== digit) taken.add(held.id)
     const match = attachedWindowFind(entry, allApplicationWindows(), taken)
     if (!match) {
-        keyDetach(digit)
+        _keyDetach(digit)
         alert(`${digit} was ${entry.title}\nthat window has gone, key released`)
         return false
     }
@@ -1387,7 +1387,7 @@ function attachedFocus(digit) {
     const window = match.window
     if (match.byTitle) {
         const title = entry.title
-        if (!digitAttach(window, digit, true)) return false
+        if (!_digitAttach(window, digit, true)) return false
         attachedKeys.get(digit).title = title
         attachedKeysSave()
         alert(`${config.attachModifiers.join("-")}-${digit}\nnow ${title}, found by title`)
@@ -1399,7 +1399,7 @@ function attachedFocus(digit) {
     const here = focused()
     if (here && here.id === window.id) return windowPrevious()
 
-    return windowFocus(window)
+    return _windowFocus(window)
 }
 
 /**
@@ -1411,7 +1411,7 @@ function attachedFocus(digit) {
  *        keys it restores in one alert instead.
  * @returns {boolean} Whether it was attached.
  */
-function digitAttach(target, digit, quiet) {
+function _digitAttach(target, digit, quiet) {
     if (digit.length !== 1 || !config.attachKeys.includes(digit)) {
         alert(`Cannot attach to "${digit}"\nuse one of ${config.attachKeys}`)
         return false
@@ -1420,10 +1420,10 @@ function digitAttach(target, digit, quiet) {
     // Whatever was on this digit is forgotten: its hotkey is destroyed and its entry
     // dropped, so the window it pointed at is no longer reachable through this key and
     // nothing is left holding it.
-    keyDetach(digit)
+    _keyDetach(digit)
 
     const title = target.title || (target.application ? target.application.name : "window")
-    const hotkey = hs.hotkey.bind(config.attachModifiers, digit, () => attachedFocus(digit), null)
+    const hotkey = hs.hotkey.bind(config.attachModifiers, digit, () => _attachedFocus(digit), null)
     if (!hotkey) {
         alert(`Could not bind ${config.attachModifiers.join("-")}-${digit}`)
         return false
@@ -1445,7 +1445,7 @@ function digitAttach(target, digit, quiet) {
     if (element) {
         onDestroyed = () => {
             if (!attachedKeys.has(digit)) return
-            keyDetach(digit, true)
+            _keyDetach(digit, true)
             alert(`${config.attachModifiers.join("-")}-${digit} released\n${title} has closed`)
         }
         try {
@@ -1483,7 +1483,7 @@ function digitAttach(target, digit, quiet) {
  * @param {string|number} [key] The digit. Omit to be asked for it.
  * @returns {boolean} Whether a window was found to attach.
  */
-function keyToWindowAttach(window, key) {
+function _keyToWindowAttach(window, key) {
     const target = window || focused()
     if (!target) {
         alert("No window to attach")
@@ -1491,14 +1491,14 @@ function keyToWindowAttach(window, key) {
     }
 
     if (key !== undefined && key !== null && String(key).trim() !== "") {
-        return digitAttach(target, String(key).trim())
+        return _digitAttach(target, String(key).trim())
     }
 
     alert(`Press a number key for\n${target.title || (target.application ? target.application.name : "window")}`)
     captureDigit((digit) => {
         // null is Escape or a timeout: nothing was chosen, so nothing is said.
         if (digit === null) return
-        digitAttach(target, digit)
+        _digitAttach(target, digit)
     })
     return true
 }
@@ -1748,7 +1748,7 @@ function isolationOn() {
 // MARK: - Information
 
 /** Show a window's application, title, screen and frame. */
-function info(win) {
+function _info(win) {
     const window = win || focused()
     if (!window) {
         alert("No window")
@@ -1764,7 +1764,7 @@ function info(win) {
         `${window.screen ? window.screen.name : "?"}  ` +
         `${Math.round(frame.x)},${Math.round(frame.y)} ` +
         `${Math.round(frame.w)}×${Math.round(frame.h)}`,
-        `history: ${historyDepth(window)}`
+        `history: ${_historyDepth(window)}`
     ].filter(Boolean).join("\n")
 
     hs.ui.alert(text).duration(4).show()
@@ -1799,7 +1799,7 @@ function timestamp() {
  * @param {object} [window] The window. Defaults to the focused one.
  * @returns {Promise} Resolves to the path written, or to null if nothing was captured.
  */
-function screenshot(window) {
+function _screenshot(window) {
     const target = window || focused()
     if (!target) {
         console.error("[hs_window-gt] no window to capture")
@@ -1840,16 +1840,22 @@ function screenshotFailed(application, reason) {
 
 // MARK: - The window menu
 //
-// The menu hs_menu-gt displays for this Spoon. Every option calls a function here directly,
-// with `fn:`, so it needs no command names. The options that ask for a window or a screen do
-// so through hs_interactive-gt's readers. The menu's keys do not take the keyboard focus, so
-// the focused window is still the user's when an option is selected.
+// The menu hs_menu-gt displays for this Spoon. Every option calls an exported function with
+// `fn:`, so it needs no command names, and reads omitted arguments as a key or a command does:
+// the focused window, or a window chosen in a chooser when no window is focused. The menu's keys
+// do not take the keyboard focus, so the focused window is still the user's when an option is
+// selected.
 
-/** Run `action` on the focused window, if there is one. */
-function onFocused(action) {
+/**
+ * Run `action` on the focused window, or on a window chosen in a chooser when no window is
+ * focused, for an option that calls a method of the window rather than a function of the Spoon.
+ */
+function onWindow(action) {
     return () => {
-        const window = focused()
-        if (window) action(window)
+        const interactive = spoonRequired("hs_interactive-gt")
+        return interactive.readerRun(interactive.readers.window.auto).then((window) => {
+            if (window) action(window)
+        })
     }
 }
 
@@ -1860,26 +1866,26 @@ const stay = (button) => Object.assign({ navigate: "stay" }, button)
 const stayOpen = (button) => Object.assign({ navigate: "stay", keepOpen: true }, button)
 
 const MENU_THIRDS = [
-    { label: "Left", icon: "symbol:rectangle.leadinghalf.inset.filled", key: "h", fn: () => leftThird() },
-    { label: "Centre", icon: "symbol:rectangle.center.inset.filled", key: "j", fn: () => centerThird() },
-    { label: "Right", icon: "symbol:rectangle.trailinghalf.inset.filled", key: "l", fn: () => rightThird() },
-    { label: "Left ⅔", key: "u", fn: () => leftTwoThirds() },
-    { label: "Right ⅔", key: "i", fn: () => rightTwoThirds() }
+    { label: "Left", icon: "symbol:rectangle.leadinghalf.inset.filled", key: "h", fn: () => module.exports.leftThird() },
+    { label: "Centre", icon: "symbol:rectangle.center.inset.filled", key: "j", fn: () => module.exports.centerThird() },
+    { label: "Right", icon: "symbol:rectangle.trailinghalf.inset.filled", key: "l", fn: () => module.exports.rightThird() },
+    { label: "Left ⅔", key: "u", fn: () => module.exports.leftTwoThirds() },
+    { label: "Right ⅔", key: "i", fn: () => module.exports.rightTwoThirds() }
 ].map(stayOpen)
 
 const MENU_QUADRANTS = [
-    { label: "Top left", icon: "symbol:rectangle.inset.topleft.filled", key: "q", fn: () => topLeft() },
-    { label: "Top right", icon: "symbol:rectangle.inset.topright.filled", key: "w", fn: () => topRight() },
-    { label: "Bottom left", icon: "symbol:rectangle.inset.bottomleft.filled", key: "a", fn: () => bottomLeft() },
-    { label: "Bottom right", icon: "symbol:rectangle.inset.bottomright.filled", key: "s", fn: () => bottomRight() },
-    { label: "Top half", icon: "symbol:rectangle.tophalf.filled", key: "t", fn: () => topHalf() },
-    { label: "Bottom half", icon: "symbol:rectangle.bottomhalf.filled", key: "b", fn: () => bottomHalf() }
+    { label: "Top left", icon: "symbol:rectangle.inset.topleft.filled", key: "q", fn: () => module.exports.topLeft() },
+    { label: "Top right", icon: "symbol:rectangle.inset.topright.filled", key: "w", fn: () => module.exports.topRight() },
+    { label: "Bottom left", icon: "symbol:rectangle.inset.bottomleft.filled", key: "a", fn: () => module.exports.bottomLeft() },
+    { label: "Bottom right", icon: "symbol:rectangle.inset.bottomright.filled", key: "s", fn: () => module.exports.bottomRight() },
+    { label: "Top half", icon: "symbol:rectangle.tophalf.filled", key: "t", fn: () => module.exports.topHalf() },
+    { label: "Bottom half", icon: "symbol:rectangle.bottomhalf.filled", key: "b", fn: () => module.exports.bottomHalf() }
 ].map(stayOpen)
 
 const MENU_WIDTHS = [2, 3, 4, 5, 6, 7, 8].map((n) => stayOpen({
     label: `1/${n} width`,
     key: String(n),
-    fn: () => fractionWidth(n)
+    fn: () => module.exports.fractionWidth(n)
 }))
 
 /**
@@ -1893,45 +1899,45 @@ const MENU_WIDTHS = [2, 3, 4, 5, 6, 7, 8].map((n) => stayOpen({
 const menu = {
     keepOpen: false,
     buttons: [
-        { label: "Undo", icon: "symbol:arrow.uturn.backward", key: "[", fn: () => undo(), keepOpen: true },
-        { label: "Redo", icon: "symbol:arrow.uturn.forward", key: "]", fn: () => redo(), keepOpen: true },
-        { label: "Attach key", icon: "symbol:number", key: "a", fn: () => keyToWindowAttach() },
+        { label: "Undo", icon: "symbol:arrow.uturn.backward", key: "[", fn: () => module.exports.undo(), keepOpen: true },
+        { label: "Redo", icon: "symbol:arrow.uturn.forward", key: "]", fn: () => module.exports.redo(), keepOpen: true },
+        { label: "Attach key", icon: "symbol:number", key: "a", fn: () => module.exports.keyToWindowAttach() },
 
-        { label: "Maximize", icon: "symbol:arrow.up.left.and.arrow.down.right", key: "m", fn: () => maximize() },
-        { label: "Left half", icon: "symbol:rectangle.lefthalf.filled", key: "h", fn: () => leftHalf() },
-        { label: "Right half", icon: "symbol:rectangle.righthalf.filled", key: "l", fn: () => rightHalf() },
-        { label: "Centre", icon: "symbol:rectangle.center.inset.filled", key: "c", fn: () => center() },
+        { label: "Maximize", icon: "symbol:arrow.up.left.and.arrow.down.right", key: "m", fn: () => module.exports.maximize() },
+        { label: "Left half", icon: "symbol:rectangle.lefthalf.filled", key: "h", fn: () => module.exports.leftHalf() },
+        { label: "Right half", icon: "symbol:rectangle.righthalf.filled", key: "l", fn: () => module.exports.rightHalf() },
+        { label: "Centre", icon: "symbol:rectangle.center.inset.filled", key: "c", fn: () => module.exports.center() },
         { label: "Fullscreen", icon: "symbol:arrow.up.left.and.down.right.magnifyingglass", key: "f",
-          fn: onFocused((window) => window.toggleFullscreen()) },
+          fn: onWindow((window) => window.toggleFullscreen()) },
         { label: "Minimize", icon: "symbol:arrow.down.right.and.arrow.up.left", key: "n",
-          fn: onFocused((window) => window.minimize()) },
+          fn: onWindow((window) => window.minimize()) },
 
-        { label: "Vert max", icon: "symbol:arrow.up.and.down", key: "V", fn: () => verticalMaximize() },
-        { label: "Horiz max", icon: "symbol:arrow.left.and.right", key: "H", fn: () => horizontalMaximize() },
-        { label: "Half height", icon: "symbol:rectangle.tophalf.filled", key: "-", fn: () => halfHeight() },
-        { label: "Half width", icon: "symbol:rectangle.lefthalf.filled", key: "W", fn: () => halfWidth() },
+        { label: "Vert max", icon: "symbol:arrow.up.and.down", key: "V", fn: () => module.exports.verticalMaximize() },
+        { label: "Horiz max", icon: "symbol:arrow.left.and.right", key: "H", fn: () => module.exports.horizontalMaximize() },
+        { label: "Half height", icon: "symbol:rectangle.tophalf.filled", key: "-", fn: () => module.exports.halfHeight() },
+        { label: "Half width", icon: "symbol:rectangle.lefthalf.filled", key: "W", fn: () => module.exports.halfWidth() },
 
-        { label: "Move left", icon: "symbol:arrow.left", key: "left", fn: () => moveByOwnSize("left") },
-        { label: "Move right", icon: "symbol:arrow.right", key: "right", fn: () => moveByOwnSize("right") },
-        { label: "Move up", icon: "symbol:arrow.up", key: "up", fn: () => moveByOwnSize("up") },
-        { label: "Move down", icon: "symbol:arrow.down", key: "down", fn: () => moveByOwnSize("down") },
+        { label: "Move left", icon: "symbol:arrow.left", key: "left", fn: () => module.exports.moveByOwnSize("left") },
+        { label: "Move right", icon: "symbol:arrow.right", key: "right", fn: () => module.exports.moveByOwnSize("right") },
+        { label: "Move up", icon: "symbol:arrow.up", key: "up", fn: () => module.exports.moveByOwnSize("up") },
+        { label: "Move down", icon: "symbol:arrow.down", key: "down", fn: () => module.exports.moveByOwnSize("down") },
 
-        { label: "To screen", icon: "symbol:display.2", key: "s", fn: () => windowToScreenMove() },
-        { label: "Next screen", icon: "symbol:rectangle.on.rectangle", key: "space", fn: () => windowToScreenMove("next") },
-        { label: "Prev screen", icon: "symbol:rectangle.on.rectangle", key: "B", fn: () => windowToScreenMove("previous") },
+        { label: "To screen", icon: "symbol:display.2", key: "s", fn: () => module.exports.windowToScreenMove() },
+        { label: "Next screen", icon: "symbol:rectangle.on.rectangle", key: "space", fn: () => module.exports.windowToScreenMove("next") },
+        { label: "Prev screen", icon: "symbol:rectangle.on.rectangle", key: "B", fn: () => module.exports.windowToScreenMove("previous") },
 
-        { label: "Swap behind", icon: "symbol:arrow.left.arrow.right", key: "S", fn: () => windowWithPreviousSwap() },
-        { label: "Swap with", icon: "symbol:arrow.triangle.swap", key: "x", fn: () => windowWithWindowSwap() },
-        { label: "Tile with", icon: "symbol:rectangle.split.2x1", key: "t", fn: () => tileWith() },
-        { label: "To back", icon: "symbol:square.on.square", key: "0", fn: () => windowToBackSend() },
-        { label: "Prev window", icon: "symbol:arrow.uturn.left", key: "p", fn: () => windowPrevious() },
+        { label: "Swap behind", icon: "symbol:arrow.left.arrow.right", key: "S", fn: () => module.exports.windowWithPreviousSwap() },
+        { label: "Swap with", icon: "symbol:arrow.triangle.swap", key: "x", fn: () => module.exports.windowWithWindowSwap() },
+        { label: "Tile with", icon: "symbol:rectangle.split.2x1", key: "t", fn: () => module.exports.tileWith() },
+        { label: "To back", icon: "symbol:square.on.square", key: "0", fn: () => module.exports.windowToBackSend() },
+        { label: "Prev window", icon: "symbol:arrow.uturn.left", key: "p", fn: () => module.exports.windowPrevious() },
 
-        { label: "Isolate", icon: "symbol:moon.fill", key: "I", fn: () => isolationToggle() },
-        { label: "Info", icon: "symbol:info.circle", key: "i", fn: () => info() },
-        { label: "Screenshot", icon: "symbol:camera", key: "P", fn: () => screenshot() },
-        { label: "Centre mouse", icon: "symbol:cursorarrow", key: "M", fn: () => mouseWindowCenter() },
-        { label: "Mouse next", icon: "symbol:cursorarrow.motionlines", key: "N", fn: () => mouseScreenCenterNext() },
-        { label: "Mouse screen", icon: "symbol:cursorarrow.rays", key: "C", fn: () => mouseScreenCenter() },
+        { label: "Isolate", icon: "symbol:moon.fill", key: "I", fn: () => module.exports.isolationToggle() },
+        { label: "Info", icon: "symbol:info.circle", key: "i", fn: () => module.exports.info() },
+        { label: "Screenshot", icon: "symbol:camera", key: "P", fn: () => module.exports.screenshot() },
+        { label: "Centre mouse", icon: "symbol:cursorarrow", key: "M", fn: () => module.exports.mouseWindowCenter() },
+        { label: "Mouse next", icon: "symbol:cursorarrow.motionlines", key: "N", fn: () => module.exports.mouseScreenCenterNext() },
+        { label: "Mouse screen", icon: "symbol:cursorarrow.rays", key: "C", fn: () => module.exports.mouseScreenCenter() },
 
         { label: "Thirds", icon: "symbol:square.split.1x2", key: "3", children: MENU_THIRDS },
         { label: "Quadrants", icon: "symbol:square.split.2x2", key: "4", children: MENU_QUADRANTS },
@@ -2162,52 +2168,52 @@ function interactiveExportCreate(fn, parameters) {
 module.exports = {
     config,
     // History.
-    undo,
-    redo,
-    historyDepth,
+    undo: _undo,
+    redo: _redo,
+    historyDepth: _historyDepth,
     historyClear,
-    isMaximized,
-    isVerticallyMaximized,
-    isHorizontallyMaximized,
+    isMaximized: _isMaximized,
+    isVerticallyMaximized: _isVerticallyMaximized,
+    isHorizontallyMaximized: _isHorizontallyMaximized,
     // Grid placement.
     place,
-    maximize,
-    leftHalf,
-    rightHalf,
-    topHalf,
-    bottomHalf,
-    leftThird,
-    centerThird,
-    rightThird,
-    leftTwoThirds,
-    rightTwoThirds,
-    topLeft,
-    topRight,
-    bottomLeft,
-    bottomRight,
-    center,
+    maximize: _maximize,
+    leftHalf: _leftHalf,
+    rightHalf: _rightHalf,
+    topHalf: _topHalf,
+    bottomHalf: _bottomHalf,
+    leftThird: _leftThird,
+    centerThird: _centerThird,
+    rightThird: _rightThird,
+    leftTwoThirds: _leftTwoThirds,
+    rightTwoThirds: _rightTwoThirds,
+    topLeft: _topLeft,
+    topRight: _topRight,
+    bottomLeft: _bottomLeft,
+    bottomRight: _bottomRight,
+    center: _center,
     // Resizing in place.
-    verticalMaximize,
-    horizontalMaximize,
-    halfHeight,
-    halfWidth,
-    fractionWidth,
-    moveByOwnSize,
+    verticalMaximize: _verticalMaximize,
+    horizontalMaximize: _horizontalMaximize,
+    halfHeight: _halfHeight,
+    halfWidth: _halfWidth,
+    fractionWidth: _fractionWidth,
+    moveByOwnSize: _moveByOwnSize,
     // Screens.
-    windowToScreenMove,
+    windowToScreenMove: _windowToScreenMove,
     fullscreenScreenIds,
-    screenHasFullscreenWindow,
+    screenHasFullscreenWindow: _screenHasFullscreenWindow,
     // Windows among themselves.
-    tileWith,
-    windowWithWindowSwap,
-    windowWithPreviousSwap,
+    tileWith: _tileWith,
+    windowWithWindowSwap: _windowWithWindowSwap,
+    windowWithPreviousSwap: _windowWithPreviousSwap,
     windowPrevious,
-    windowToBackSend,
-    windowFocus,
+    windowToBackSend: _windowToBackSend,
+    windowFocus: _windowFocus,
     // The mouse.
-    mouseWindowCenter,
+    mouseWindowCenter: _mouseWindowCenter,
     mouseWindowCenterNext,
-    mouseScreenCenter,
+    mouseScreenCenter: _mouseScreenCenter,
     mouseScreenCenterNext,
     mouseMove,
     mouseHighlight,
@@ -2217,15 +2223,15 @@ module.exports = {
     isolationStop,
     isolationOn,
     // Windows attached to number keys.
-    keyToWindowAttach,
-    digitAttach,
-    attachedFocus,
-    keyDetach,
+    keyToWindowAttach: _keyToWindowAttach,
+    digitAttach: _digitAttach,
+    attachedFocus: _attachedFocus,
+    keyDetach: _keyDetach,
     keysAllDetach,
     attachedWindows,
     // Information.
-    info,
-    screenshot,
+    info: _info,
+    screenshot: _screenshot,
     // The window menu.
     menu,
     menuShow,
