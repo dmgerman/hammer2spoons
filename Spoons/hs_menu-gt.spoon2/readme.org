@@ -1,9 +1,10 @@
 * hs_menu-gt
 
-Open a menu of buttons on screen with one key, and press a letter to run what a button does.
+Open a menu of options on screen with one key, and press a letter to select an option. The
+on-screen menu accepts keyboard input only; it does not respond to the mouse.
 
-A menu is a grid of buttons, each with an icon, a label and a letter beneath it. Pressing the
-letter runs the button: it can bring an application forward, open a web page, run a command or
+A menu is a grid of options, each with an icon, a label and a letter beneath it. Pressing the
+letter selects the option, which can bring an application forward, open a web page, run a command or
 a function of your own, or open a submenu. Holding the letter, or pressing it with Control, runs
 a second action, such as hiding the application instead of showing it.
 
@@ -13,14 +14,14 @@ You can use it like this:
   brings one forward.
 - Once you know a menu, you need not see it at all: set a short delay before it is drawn, and
   press the letters straight away.
-- Buttons can show information that changes, such as the time or the audio device in use, and
+- Options can show information that changes, such as the time or the audio device in use, and
   redraw themselves when it changes.
 - The same menu can be shown on a Stream Deck as well, with
-  [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_streamdeck-gt.spoon2][hs_streamdeck-gt]], so a button's action is written once.
+  [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_streamdeck-gt.spoon2][hs_streamdeck-gt]], so an option's action is written once.
 
-A menu of four buttons, each with its letter beneath it:
+A menu of four options, each with its letter beneath it:
 
-#+ATTR_HTML: :alt A menu of four buttons, Safari, Calendar, News and Hello, with the letters s, a, d and f beneath them
+#+ATTR_HTML: :alt A menu of four options, Safari, Calendar, News and Hello, with the letters s, a, d and f beneath them
 [[./images/on-screen-menu.png]]
 
 * Installing
@@ -35,9 +36,9 @@ hs.spoons.use("hs_menu-gt", { source: "dmgerman/hammer2spoons" })
 To keep a particular version, add =ref= with a tag or a commit. To get a newer version, call
 =hs.spoons.update("hs_menu-gt")=.
 
-A button can run a command by name, defined with
+An option can run a command by name, defined with
 [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]].
-That Spoon is optional: only buttons with =command:= need it. Buttons with =fn:=, =app:= or
+That Spoon is not required: only options with =command:= require it. Options with =fn:=, =app:= or
 =url:= work without it.
 
 * Simple usage
@@ -58,17 +59,17 @@ hs.hotkey.bind(["cmd", "ctrl", "alt"], "z", () => menu.onScreenShow(mainMenu), n
 Pressing ⌃⌥⌘Z opens the menu in the middle of the screen you are working on. Pressing =s=
 brings Safari forward and closes the menu. Escape closes it without doing anything.
 
-* Buttons
+* Options
 
-Every field is optional, though a button with none of them is an empty square.
+Every field is optional, though an option with none of them is an empty square.
 
 | Field            | Meaning                                                            |
 |------------------+--------------------------------------------------------------------|
-| =label=          | Text drawn on the button, beneath the icon.                        |
+| =label=          | Text drawn on the option, beneath the icon.                        |
 | =icon=           | The picture. See /Icons/.                                          |
 | =hideLabel=      | Draw the icon without the label.                                   |
 | =key=            | The letter that selects it on screen. Assigned when omitted.       |
-| =command=        | Name of the command a short press runs. Needs hs_interactive-gt.   |
+| =command=        | Name of the command a short press runs. Requires hs_interactive-gt.|
 | =args=           | Arguments passed to that command.                                  |
 | =altCommand=     | Name of the command a long press runs.                             |
 | =altArgs=        | Arguments passed to that command.                                  |
@@ -80,15 +81,15 @@ Every field is optional, though a button with none of them is an empty square.
 | =altFn=          | The same, for a long press.                                        |
 | =navigate=       | Which menu is shown after a press: ="stay"=, ="parent"= or ="root"=. |
 | =keepOpen=       | Whether a menu that can hide stays displayed. See /Menus/.         |
-| =background=     | Background colour of the button, as a hex string.                  |
+| =background=     | Background colour of the option, as a hex string.                  |
 | =labelColor=     | Colour of the label.                                               |
 | =image=          | A ready-made =HSImage=, used as it is.                             |
-| =imageProvider=  | Draws the button. See /Buttons that draw themselves/.              |
-| =stateProvider=  | What the button depends on. It is redrawn only when this changes.  |
+| =imageProvider=  | Draws the option. See /Options that draw themselves/.              |
+| =stateProvider=  | What the option depends on. It is redrawn only when this changes.  |
 | =updateInterval= | Seconds between checks.                                            |
 
-An action is chosen in this order: =fn=, =command=, =app=, =url=. A short press on a button
-with =children= opens the submenu and ignores the rest.
+An action is chosen in this order: =fn=, =command=, =app=, =url=. A short press of the key of an
+option with =children= opens the submenu and ignores the rest.
 
 * Menus
 
@@ -96,9 +97,9 @@ A menu is one of three things, and =children= accepts any of them:
 
 | Shape                     | For                                                      |
 |---------------------------+----------------------------------------------------------|
-| an array of buttons       | The usual menu.                                          |
+| an array of options       | The usual menu.                                          |
 | a function returning one  | A menu computed when it is opened, not when defined.     |
-| =\{buttons, keepOpen\}=     | A menu with a default for its buttons. See /keepOpen/.   |
+| =\{buttons, keepOpen\}=     | A menu with a default for its options. See /keepOpen/.   |
 
 #+begin_src js
 const flat = [ { label: "One" }, { label: "Two" } ]
@@ -158,11 +159,11 @@ has a stack of menus.
 
 Whether the menu remains displayed. This applies only to a presenter that can hide: a Stream
 Deck always displays something, so =keepOpen= has no effect on it. It defaults to false, which
-suits a menu opened for one action. Set it to true for a button that is pressed several times
-in a row.
+suits a menu opened for one action. Set it to true for an option that is selected several
+times in a row.
 
 #+begin_src js
-// Pressed several times in a row: stay in this menu, and keep it displayed.
+// Selected several times in a row: stay in this menu, and keep it displayed.
 { label: "Vol +5", command: "music-volume-up", navigate: "stay", keepOpen: true }
 
 // Opens a chooser, which needs the keyboard, so the on-screen menu closes. navigate: "stay"
@@ -171,14 +172,14 @@ in a row.
 { label: "Choose album", command: "album-choose", navigate: "stay" }
 #+end_src
 
-Because the two are separate, one button suits both devices. A presenter added later uses
+Because the two are separate, one option suits both devices. A presenter added later uses
 =navigate= like any other, and =keepOpen= only if it can hide.
 
-A button with a submenu uses neither: a short press on it opens the submenu.
+An option with a submenu uses neither: a short press of its key opens the submenu.
 
 **** A default for a whole menu
 
-When most buttons of a menu need the same =keepOpen=, it can be set once for the menu. Write
+When most options of a menu need the same =keepOpen=, it can be set once for the menu. Write
 the menu as an object rather than an array: =buttons= holds the menu, and =keepOpen= beside it
 is the default.
 
@@ -194,23 +195,23 @@ const windowMenu = {
 }
 #+end_src
 
-A button's own =keepOpen= always takes precedence. Only a button without one takes the menu's
+An option's own =keepOpen= always takes precedence. Only an option without one takes the menu's
 default.
 
-Two kinds of button do not take the default:
+Two kinds of option do not take the default:
 
-- *A button with a submenu* stays open whatever the menu's default is. A short press opens
-  the submenu, and a hold runs the button's action, which should not close the menu either.
-- *A button in a menu written as an array*, which has no place for a default.
+- *An option with a submenu* stays open whatever the menu's default is. A short press opens
+  the submenu, and a hold runs the option's action, which should not close the menu either.
+- *An option in a menu written as an array*, which has no place for a default.
 
 * Example: a window menu
 
 A menu that places and moves the focused window, using
 [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]. That Spoon provides
 this menu ready to use, with =menuShow()=, and as =menu= to include in a menu of your own. The
-example shows how such a menu is written. Each button calls one of its functions with =fn:=, so
+example shows how such a menu is written. Each option calls one of its functions with =fn:=, so
 the menu does not need hs_interactive-gt. The menu's keys do not take the keyboard focus, so the
-focused window is still yours when a button runs.
+focused window is still yours when an option runs.
 
 #+begin_src js
 const menu = hs.spoons["hs_menu-gt"]
@@ -253,17 +254,17 @@ const windowMenu = {
 hs.hotkey.bind(["alt"], "w", () => menu.onScreenShow(windowMenu, { name: "Windows" }), null)
 #+end_src
 
-Undo and Redo set =keepOpen: true=, so they can be pressed several times in a row; every other
-button closes the menu. Swap with and Tile with show a chooser of the other windows once the
-menu has closed. The menu hs_window-gt provides, which also has buttons for moving the pointer
+Undo and Redo set =keepOpen: true=, so they can be selected several times in a row; every other
+option closes the menu. Swap with and Tile with show a chooser of the other windows once the
+menu has closed. The menu hs_window-gt provides, which also has options for moving the pointer
 and taking a screenshot:
 
-#+ATTR_HTML: :alt A window menu of thirty buttons, such as Undo, Maximize, Left half, Next screen and Isolate, each with an SF Symbol and its letter
+#+ATTR_HTML: :alt A window menu of thirty options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an SF Symbol and its letter
 [[./images/window-menu.png]]
 
-* Buttons that draw themselves
+* Options that draw themselves
 
-A button with =imageProvider= draws its own picture, so it can show the time, a temperature,
+An option with =imageProvider= draws its own picture, so it can show the time, a temperature,
 or which audio device is selected.
 
 #+begin_src js
@@ -279,35 +280,35 @@ const clockButton = {
 }
 #+end_src
 
-=stateProvider= returns whatever the button depends on. It is called every =updateInterval=
+=stateProvider= returns whatever the option depends on. It is called every =updateInterval=
 seconds, and its result is compared with the last one, as text, so an object or an array is
-compared by value. The button is redrawn only when the result differs, which is why the example
+compared by value. The option is redrawn only when the result differs, which is why the example
 above is checked every ten seconds but drawn once a minute.
 
-A button with =updateInterval= and no =stateProvider= is redrawn at every interval.
+An option with =updateInterval= and no =stateProvider= is redrawn at every interval.
 
 =imageProvider(context)= receives ={session, index, state}=, where =state= is the text
 =stateProvider= returned, and returns any of:
 
 | Returns              | Meaning                                                       |
 |----------------------+---------------------------------------------------------------|
-| button fields        | Merged over the button and drawn as any other button is.      |
-| a string             | Drawn as the button's label.                                  |
+| option fields        | Merged over the option and drawn as any other option is.      |
+| a string             | Drawn as the option's label.                                  |
 | an =HSImage=         | Used as it is.                                                |
 | a promise of any     | Waited for.                                                   |
 
-Returning button fields is usually best: icons, colours, labels and text wrapping all work as
-they do for any other button.
+Returning option fields is usually best: icons, colours, labels and text wrapping all work as
+they do for any other option.
 
 ** What is not cached
 
-A button that draws itself is never written to the cache of tiles on disk. Otherwise a clock
+An option that draws itself is never written to the cache of tiles on disk. Otherwise a clock
 would leave a file behind every minute. It is redrawn whenever its state changes, so keep
 =imageProvider= fast, and put anything slow in =stateProvider=, whose result is reused.
 
 ** Where they are redrawn
 
-Buttons are redrawn both on screen and on a Stream Deck. A presenter that cannot change what it
+Options are redrawn both on screen and on a Stream Deck. A presenter that cannot change what it
 displays draws them once, when the menu opens; =session.update(index)= redraws one on demand.
 
 * Icons
@@ -322,52 +323,52 @@ displays draws them once, when the menu opens; =session.update(index)= redraws o
 | ="bundle:com.apple.Mail"= | An application's icon.                               |
 | an =HSImage=              | Used as it is.                                       |
 
-A button with =app= and no =icon= uses that application's icon.
+An option with =app= and no =icon= uses that application's icon.
 
 SF Symbols are template images, black on transparent, so they are recoloured to be visible on
-a dark button.
+a dark option.
 
 * Letters
 
-Each button on screen has a letter beneath it, which selects it. A button's own =key= is used
-when it has one, and the other buttons are given unused letters from =config.alphabet=, home
-row first. In a menu with more buttons than the alphabet has letters, the buttons left over
-have no letter: they can be pressed on a Stream Deck but not from the keyboard.
+Each option on screen has a letter beneath it, which selects it. An option's own =key= is used
+when it has one, and the other options are given unused letters from =config.alphabet=, home
+row first. In a menu with more options than the alphabet has letters, the options left over
+have no letter: they can be selected on a Stream Deck but not from the keyboard.
 
-Declaring =key= on the buttons you use most keeps their letters the same as a menu grows, which
+Declaring =key= on the options you use most keeps their letters the same as a menu grows, which
 matters most for a menu whose contents are computed.
 
 * Presses
 
-A press is reported as the button going down and later coming up, on both devices: a Stream
-Deck reports it through its button callback, and the on-screen menu binds each letter with a
+A press is reported as a key going down and later coming up, on both devices: a Stream Deck
+reports it through its button callback, and the on-screen menu binds each letter with a
 press and a release handler. The same code then decides whether it was a short press or a long
 press, so a hold works the same way on either device.
 
-A hold runs as soon as =config.holdSeconds= has passed, while the button is still down, as the
+A hold runs as soon as =config.holdSeconds= has passed, while the key is still down, as the
 Hammerspoon 1 Spoon did. The release that follows is ignored.
 
 ** From the keyboard
 
-Case matters: =a= and =A= select two different buttons. Holding a letter runs the button's
+Case matters: =a= and =A= select two different options. Holding a letter runs the option's
 hold action, and so does Control with the same letter, which is quicker because it does not wait
 for =holdSeconds=.
 
-| Key            | Runs                                       |
+| Key            | Selects                                    |
 |----------------+--------------------------------------------|
-| =a=            | The button lettered =a=                    |
-| =A=            | The button lettered =A=                    |
-| =ctrl-a=       | The hold action of the button lettered =a= |
-| =ctrl-shift-a= | The hold action of the button lettered =A= |
+| =a=            | The option lettered =a=                    |
+| =A=            | The option lettered =A=                    |
+| =ctrl-a=       | The hold action of the option lettered =a= |
+| =ctrl-shift-a= | The hold action of the option lettered =A= |
 
-Control is bound only for a button that has a hold action, so otherwise the key combination
+Control is bound only for an option that has a hold action, so otherwise the key combination
 stays available to other applications. It adds no action a Stream Deck lacks: it is the same
 action a hold runs.
 
-A button asks for a capital letter as it asks for any letter, with =key: "A"=. Letters given
-out automatically are always lower case, so a button's letter does not change case as the menu
+An option asks for a capital letter as it asks for any letter, with =key: "A"=. Letters given
+out automatically are always lower case, so an option's letter does not change case as the menu
 grows. Digits work as letters do, without a capital form: =ctrl-0= runs the hold action of the
-button lettered =0=.
+option lettered =0=.
 
 * The on-screen menu
 
@@ -384,7 +385,7 @@ the menu until it is closed.
 
 | Key      | Does                          |
 |----------+-------------------------------|
-| a letter | Selects that button.          |
+| a letter | Selects that option.          |
 | Escape   | Closes the menu.              |
 | Delete   | Returns to the parent menu.   |
 
@@ -403,14 +404,14 @@ Settings are on =menu.config=.
 | Setting            | Default                    | Meaning                                     |
 |--------------------+----------------------------+---------------------------------------------|
 | =iconDir=          | =<config>/icons=           | Where a relative icon name is looked up.    |
-| =cacheDir=         | =<config>/.cache/menu-gt=  | Where drawn buttons are kept.               |
-| =tileSize=         | 96                         | Edge of a button image, in points.          |
+| =cacheDir=         | =<config>/.cache/menu-gt=  | Where drawn options are kept.               |
+| =tileSize=         | 96                         | Edge of an option's image, in points.        |
 | =holdSeconds=      | 0.5                        | A press this long is a long press.          |
-| =alphabet=         | home row first             | Letters given to buttons without a =key=.   |
-| =urlBundle=        | null                       | Browser for =url= buttons.                  |
+| =alphabet=         | home row first             | Letters given to options without a =key=.   |
+| =urlBundle=        | null                       | Browser for =url= options.                  |
 | =iconScale=        | 0.74                       | Icon size with a label beneath it.          |
 | =iconScaleAlone=   | 0.94                       | Icon size without a label.                  |
-| =background=       | =#101014=                  | Button background.                          |
+| =background=       | =#101014=                  | Background of an option.                    |
 | =labelColor=       | =#F0F0F0=                  | Label colour.                               |
 | =labelSize=        | 15                         | Size a label starts at. Long labels shrink. |
 | =labelSizeFloor=   | 9                          | How far a label may shrink before it is cut.|
@@ -421,9 +422,9 @@ Settings are on =menu.config=.
 =<config>= is Hammerspoon 2's configuration directory.
 
 =alpha= runs from 0 for invisible to 1 for opaque, and sets the transparency of the whole menu
-on screen: the panel behind the buttons, and each button with its background, icon and label.
-So the whole menu is equally transparent, rather than opaque buttons on a transparent panel. It
-is applied when the menu is displayed, not when a button is drawn, so changing it needs no
+on screen: the panel behind the options, and each option with its background, icon and label.
+So the whole menu is equally transparent, rather than opaque options on a transparent panel. It
+is applied when the menu is displayed, not when an option is drawn, so changing it needs no
 cache cleared. A Stream Deck cannot show transparency and is unaffected. The panel's own colour
 may also have an alpha, as an eight-digit hex colour; the default, =#1C1C1EF5=, already does,
 and the two are multiplied.
@@ -434,7 +435,7 @@ with a warning in the console.
 
 =config.screen= holds the settings of the on-screen menu: =tile=, =spacing=, =padding=,
 =background=, =letterSize=, =letterColor=, =level=, =showDelay=, =cancelKeys=, =backKeys=, and
-=columnsFor(count)=, which returns the number of columns for a given number of buttons.
+=columnsFor(count)=, which returns the number of columns for a given number of options.
 
 =showDelay= is how long to wait, in seconds, before drawing the menu. It defaults to 0, which
 draws it at once. The letters are bound as soon as the menu is opened, so with a delay set, a
@@ -443,9 +444,9 @@ see it, and someone who needs to look does. Until the menu is drawn, each submen
 delay again, so opening a submenu quickly draws nothing either. Once the menu is on screen, a
 new submenu replaces it at once.
 
-* How buttons are drawn
+* How options are drawn
 
-A button is drawn with =hs.canvas=, as a background rectangle, the icon as an =image= element
+An option is drawn with =hs.canvas=, as a background rectangle, the icon as an =image= element
 and the label as one =text= element, and exported with =imageFromCanvas()=. The image is
 twice the tile size in pixels, so a 96 point tile is a 192 pixel image. Drawing one takes a
 few milliseconds.
@@ -466,8 +467,8 @@ Three details:
   reaches =labelSizeFloor=. If it still does not fit, it is cut short with an ellipsis. Beneath
   an icon a label has one line, and on its own up to three.
 
-Each finished button is saved in =cacheDir= as a PNG and used again, so it is drawn once rather
-than every time it is displayed. A button that did not come out as asked, such as one whose icon
+Each finished option is saved in =cacheDir= as a PNG and used again, so it is drawn once rather
+than every time it is displayed. An option that did not come out as asked, such as one whose icon
 could not be loaded, is displayed but not saved, so that the next time the icon is tried again.
 
 #+begin_src js
@@ -475,7 +476,7 @@ menu.imageCacheClear()   // forget the images held in memory
 menu.diskCacheClear()    // delete the saved buttons as well
 #+end_src
 
-Call =diskCacheClear()= after changing =tileSize=, the colours or the fonts. A saved button is
+Call =diskCacheClear()= after changing =tileSize=, the colours or the fonts. A saved option is
 identified by its icon and label, not by the settings it was drawn with, so it would otherwise
 be used again.
 
@@ -489,14 +490,14 @@ A presenter displays a menu on one kind of device. It is an object with these me
 | =progressive=               | True if the display can be changed after it is shown.          |
 | =canHide=                   | True if the presenter can hide the menu, so =keepOpen= applies. |
 | =present(session, buttons)= | Display a page. Called whenever another menu is opened.        |
-| =setImage(index, image)=    | Set one button's image. Progressive presenters only.           |
+| =setImage(index, image)=    | Set one option's image. Progressive presenters only.           |
 | =keysSuspend()=             | Release the keyboard. Optional; see below.                     |
 | =keysResume()=              | Take the keyboard again.                                       |
 | =close()=                   | The menu was closed.                                           |
 
 A progressive presenter is given the page at once and each image as it is drawn. One that cannot
-change what it displays is given the page only when every image is ready, with each button's
-=image= already set. =buttonImage(button, options)= draws one button, for a presenter that
+change what it displays is given the page only when every image is ready, with each option's
+=image= already set. =buttonImage(button, options)= draws one option, for a presenter that
 needs it.
 
 A presenter that uses the keyboard implements =keysSuspend= and =keysResume=. They are called
@@ -509,7 +510,7 @@ The session offers =down(index)=, =up(index)=, =activate(index, kind)=, =push(bu
 =pop()=, =popToRoot()=, =refresh()=, =update(index)=, =close()=, =canPop()=, =buttons()=,
 =letters()=, =indexOfLetter(letter)= and =title()=.
 
-Report presses with =down= and =up= rather than running a button's action directly, so that a
+Report presses with =down= and =up= rather than running an option's action directly, so that a
 hold is recognised. Each presenter has its own session, so opening a submenu on one device does
 not change the menu displayed on another.
 
@@ -520,5 +521,5 @@ not change the menu displayed on another.
 - *Opening another menu stops the drawing of the previous one.* A menu can take seconds to draw
   the first time, which is long enough to open a submenu. Images that belong to a menu no longer
   displayed are not drawn.
-- *Only a frontmost application is hidden.* An =app= button starts an application that is not
+- *Only a frontmost application is hidden.* An =app= option starts an application that is not
   running, but a long press hides it only when it is frontmost.

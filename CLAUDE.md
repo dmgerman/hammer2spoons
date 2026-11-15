@@ -108,7 +108,7 @@ Every readme lists the Spoons it uses, says whether each is optional or required
 load them first.
 
 Most Spoons that do things for the user will provide a menu of those things, and so require
-`hs_menu-gt`. Such a Spoon exports its menu as `menu` and opens it with `menuShow()`, its buttons
+`hs_menu-gt`. Such a Spoon exports its menu as `menu` and opens it with `menuShow()`, its options
 call the Spoon's functions with `fn:`, and its `bindHotkeys()` accepts `menuShow`, so that a user
 can open the menu through the `hotkeys` option of `hs.spoons.use()`. `hs_window-gt` and
 `hs_appleMusic-gt` were the first.

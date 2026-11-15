@@ -2,19 +2,19 @@
 
 Spoons for [[https://github.com/cmsj/Hammerspoon2][Hammerspoon 2]].
 
-#+ATTR_HTML: :alt The window menu of hs_window-gt: thirty-four buttons, each with an icon and the letter that runs it
+#+ATTR_HTML: :alt The window menu of hs_window-gt: thirty-four options, each with an icon and the letter that selects it
 [[./Spoons/hs_window-gt.spoon2/images/window-menu.png]]
 
 The window menu of [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]].
 
 * The Spoons
 
-| Spoon                | What it does                                                                         | Needs                          |
+| Spoon                | What it does                                                                         | Requires                       |
 |----------------------+--------------------------------------------------------------------------------------+--------------------------------|
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]       | Place, resize and move windows from the keyboard or a menu, with undo. Attach windows to number keys, and dim everything but the focused window. | hs_windowfilter-gt, hs_menu-gt |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]       | Place, resize and move windows from the keyboard, with undo, directly or with a menu in which a letter selects each option. Attach windows to number keys, and dim everything but the focused window. | hs_windowfilter-gt, hs_menu-gt |
 | [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_selectWindow-gt.spoon2][hs_selectWindow-gt]] | Switch to a window by typing part of its title, most recently used first, and switch between two applications with one key each. | hs_windowfilter-gt, hs_window-gt |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_appleMusic-gt.spoon2][hs_appleMusic-gt]]   | Control Apple Music from a menu, and play albums from a list of your own, chosen or at random. | hs_menu-gt                     |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]         | Menus of buttons on screen, each run by a letter. The same menus can be shown on a Stream Deck. |                    |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_appleMusic-gt.spoon2][hs_appleMusic-gt]]   | Control Apple Music from the keyboard, with a menu in which a letter selects each option, and play albums from a list of your own, chosen or at random. | hs_menu-gt                     |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]         | Menus of options on screen, operated from the keyboard only: a letter selects each option. The same menus can be shown on a Stream Deck. |                    |
 | [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]  | Named commands, a chooser to run them by name, and key bindings by name, in the manner of Emacs's =M-x=. |              |
 | [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] | Window events filtered by rules, like Hammerspoon 1's =hs.window.filter=.            |                                |
 

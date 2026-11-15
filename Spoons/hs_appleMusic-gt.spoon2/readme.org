@@ -12,7 +12,7 @@ Control Apple Music from the keyboard, and play albums from a list of your own.
 
 * Installing
 
-The Spoon needs [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], which displays its menu. Load it first:
+The Spoon requires [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], which displays its menu. Load it first:
 
 #+begin_src js
 hs.spoons.use("hs_menu-gt", { source: "dmgerman/hammer2spoons" })
@@ -30,12 +30,13 @@ directory; see /The album list/.
 
 * The music menu
 
-#+ATTR_HTML: :alt The music menu: sixteen buttons for playback, volume and albums, each with an icon and the letter that runs it
+#+ATTR_HTML: :alt The music menu: sixteen options for playback, volume and albums, each with an icon and the letter that selects it
 [[./images/music-menu.png]]
 
-Each button has a letter beneath it. Press the letter to run the button.
+Each option has a letter beneath it. Press the letter to select the option. The menu accepts
+keyboard input only; it does not respond to the mouse.
 
-| Letter | Button       | Does                                                        |
+| Letter | Option       | Does                                                        |
 |--------+--------------+-------------------------------------------------------------|
 | p      | Play/Pause   | Play or pause                                               |
 | b / n  | Prev / Next track | Go back or forward a track                             |
@@ -50,10 +51,10 @@ Each button has a letter beneath it. Press the letter to run the button.
 | c      | Choose album | Choose an album from your list and play it                  |
 | m      | Music app    | Bring Music forward, starting it if needed                  |
 
-The menu stays open after the track and volume buttons, so you can press them several times in
+The menu stays open after the track and volume options, so you can select them several times in
 a row. The others close it.
 
-The menu is also =menu=, so a menu of your own can include it, or add your own buttons to it.
+The menu is also =menu=, so a menu of your own can include it, or add your own options to it.
 See [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] for how menus work.
 
 * The album list
@@ -86,7 +87,7 @@ searched for in the Apple Music catalogue each time, and the search is not alway
 
 So write each album as an address. There are two ways to get one:
 
-1. *Add the album that is playing,* with the menu's /Add current/ button or =currentAlbumAdd()=.
+1. *Add the album that is playing,* with the menu's /Add current/ option or =currentAlbumAdd()=.
    It adds the album's address, with its name as a comment. It finds the album by the playing
    track's name, artist and length, so a remaster is not confused with the original.
 2. *Copy the album's link.* In Music, open the album's page, click =⋯= and choose /Share/ →
@@ -105,7 +106,7 @@ alert says so. From then on it is your list: edit it, or add to it.
 
 With auto-play on, the Spoon checks every five minutes whether Music has stopped, and if it has,
 plays an album from your list chosen at random. A paused Music is left alone. Turn it on with the
-menu's /Auto-play/ button, or =autoPlayToggle()=.
+menu's /Auto-play/ option, or =autoPlayToggle()=.
 
 Hammerspoon 2 receives no notification when an album ends, so the Spoon reads Music's state on a
 timer, and there can be up to =config.autoPlayInterval= seconds of silence between albums. A
@@ -113,7 +114,7 @@ smaller value shortens the silence, and reads Music's state more often.
 
 * Functions
 
-Every button of the menu calls one of these, and you can call them from your own configuration.
+Every option of the menu calls one of these, and you can call them from your own configuration.
 
 ** Playback
 
@@ -184,7 +185,7 @@ says so.
 
 ** The menu and keys
 
-=menuShow()= opens the music menu, and =menu= is its buttons. =bindHotkeys({ menuShow: [mods,
+=menuShow()= opens the music menu, and =menu= is its options. =bindHotkeys({ menuShow: [mods,
 key] })= binds a key to it; =hs.spoons.use()= calls it with its =hotkeys= option.
 
 * Configuration
@@ -221,4 +222,4 @@ The store is the country of your system's region, such as =ca= for English (Cana
 
 - Apple Music, with a subscription to play albums that are not in your library.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], loaded before this Spoon.
-- The Accessibility permission, which pressing Play on an album's page needs.
+- The Accessibility permission, which pressing Play on an album's page requires.

@@ -276,7 +276,7 @@ nineteen events and subscribing one handler to several at once is the common cas
 
 * Requirements
 
-Accessibility permission, which Hammerspoon needs in any case to see windows at all.
+Accessibility permission, which Hammerspoon requires in any case to see windows at all.
 
 Application-level events — a window being created, and focus moving between windows of one
 application — need a Hammerspoon 2 that includes the fix for

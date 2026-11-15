@@ -12,7 +12,7 @@ It also attaches windows to number keys, so that a key brings that window forwar
 everything except the window you are working in; moves the pointer to the middle of a window
 or a screen; and captures a window as an image.
 
-All of these are in one menu, which one key opens and in which each runs when you press its
+All of these are in one menu, which one key opens and in which you select each by pressing its
 letter. See /The window menu/ below.
 
 The undo history works like Emacs's winner-mode. It is a ring of past positions, with
@@ -23,7 +23,7 @@ windows records an entry for each and takes two undos.
 
 * Installing
 
-The Spoon needs two others from this repository, loaded before it:
+The Spoon requires two others from this repository, loaded before it:
 
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]], whose events report when the focus moves and when a window closes.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], which displays the window menu.
@@ -83,18 +83,18 @@ bound. =stop()= releases the keys.
 * The window menu
 
 =menuShow()= opens a menu of everything this Spoon does, on the screen you are working on.
-Each button has a letter beneath it: press the letter to run the button. The example under
+Each option has a letter beneath it: press the letter to select the option. The example under
 /Installing/ opens it with ⌥W.
 
 The menu is drawn by hs_menu-gt, and appears at once. You can set a delay before it is drawn.
-The letters work during the delay, so a letter pressed in time runs its button and the menu is
+The letters work during the delay, so a letter pressed in time selects its option and the menu is
 never drawn:
 
 #+begin_src js
 hs.spoons["hs_menu-gt"].config.screen.showDelay = 0.5
 #+end_src
 
-#+ATTR_HTML: :alt The window menu: thirty-four buttons, such as Undo, Maximize, Left half, Next screen and Isolate, each with an icon and its letter
+#+ATTR_HTML: :alt The window menu: thirty-four options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an icon and its letter
 [[./images/window-menu.png]]
 
 A press closes the menu, except Undo and Redo, which you can press several times in a row.
@@ -294,7 +294,7 @@ also logging them to the console. Returns the text.
 
 Capture a window to the pasteboard and to a PNG file in =config.screenshotDir=, named after
 the time and the application. Returns a promise of the file's path, or of =null= when nothing
-was captured. Needs the Screen Recording permission.
+was captured. Requires the Screen Recording permission.
 
 ** start() and stop()
 
@@ -304,7 +304,7 @@ number keys without forgetting them, and unsubscribes.
 
 * With hs_interactive-gt
 
-This Spoon does not need [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]. If you use it, you can give each function a
+This Spoon does not require [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]. If you use it, you can give each function a
 command name, so that it can be run from the command chooser and bound to a key by name. These
 are the names that follow the functions they call:
 
@@ -369,7 +369,7 @@ win.config.mouseHighlightColor = "#00FF00"
 * Requirements
 
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] and [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], loaded before this Spoon.
-- The Accessibility permission, which Hammerspoon 2 needs in any case to move windows.
+- The Accessibility permission, which Hammerspoon 2 requires in any case to move windows.
 - The Screen Recording permission, for =screenshot()= only.
 
 * Notes

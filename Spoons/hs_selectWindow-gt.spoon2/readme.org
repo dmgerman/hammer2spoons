@@ -16,10 +16,10 @@ The chooser limited to Chrome's windows, with the picture of the selected window
 
 * Installing
 
-The Spoon needs two others from this repository, loaded before it:
+The Spoon requires two others from this repository, loaded before it:
 
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]], which keeps a record of the open windows and reports which one gets the focus.
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]], which focuses the chosen window and moves it between screens. It needs
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]], which focuses the chosen window and moves it between screens. It requires
   [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] in turn.
 
 #+begin_src js
@@ -65,7 +65,7 @@ The picture of the selected window is off by default. Set =config.showThumbnail 
 
 A picture is taken once per window and kept while the chooser is open, so going back to a window
 you have already looked at shows it at once. =Shift+Tab= takes it again, for a window that has
-changed. Taking a picture needs the Screen Recording permission. Without it, the chooser works
+changed. Taking a picture requires the Screen Recording permission. Without it, the chooser works
 and shows no pictures.
 
 * Functions
