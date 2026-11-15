@@ -1,0 +1,21 @@
+# Albums for hs_appleMusic-gt: one per line, either an Apple Music album address or
+# Band|Album. Text after a # is a comment; after an address it names the album.
+
+https://music.apple.com/ca/album/kind-of-blue/268443092 # Miles Davis — Kind of Blue
+https://music.apple.com/ca/album/in-a-silent-way/193603857 # Miles Davis — In a Silent Way
+
+https://music.apple.com/ca/album/meddle-2016-remaster/1065973614 # Pink Floyd — Meddle (2016 Remaster)
+https://music.apple.com/ca/album/the-dark-side-of-the-moon/1065973699 # Pink Floyd — The Dark Side of the Moon
+https://music.apple.com/ca/album/wish-you-were-here/1065973975 # Pink Floyd — Wish You Were Here
+https://music.apple.com/ca/album/animals/1065974284 # Pink Floyd — Animals
+https://music.apple.com/ca/album/the-wall/1065975633 # Pink Floyd — The Wall
+
+https://music.apple.com/ca/album/pablo-honey/1097862062 # Radiohead — Pablo Honey
+https://music.apple.com/ca/album/the-bends/1097862703 # Radiohead — The Bends
+https://music.apple.com/ca/album/ok-computer/1097861387 # Radiohead — OK Computer
+https://music.apple.com/ca/album/kid-a/1097862870 # Radiohead — Kid A
+https://music.apple.com/ca/album/amnesiac/1097864180 # Radiohead — Amnesiac
+https://music.apple.com/ca/album/hail-to-the-thief/1097863576 # Radiohead — Hail to the Thief
+https://music.apple.com/ca/album/in-rainbows/1109714933 # Radiohead — In Rainbows
+https://music.apple.com/ca/album/the-king-of-limbs/1109714965 # Radiohead — The King of Limbs
+https://music.apple.com/ca/album/a-moon-shaped-pool/1111577743 # Radiohead — A Moon Shaped Pool

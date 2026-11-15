@@ -1,0 +1,133 @@
+#+TITLE: Review of hs_appleMusic-gt
+#+DATE: 2026-11-15
+
+This is the review of =hs_appleMusic-gt= for the bead =hammer2spoons-ei6.21=, made before it
+moves into this repository, against the same standard as the earlier reviews. The file read is
+=../Spoons/hs_appleMusic-gt/init.js= (1,007 lines), read in full. Line numbers refer to that
+file.
+
+* Bugs
+
+1. *=stop= is exported twice* (lines 969 and 1006). =module.exports= lists the playback =stop=
+   and then =stop: stop_=, the Spoon's lifecycle stop. The second replaces the first, so
+   =hs.spoons["hs_appleMusic-gt"].stop()= turns off auto-play instead of stopping Music, and
+   playback cannot be stopped through the Spoon at all.
+
+2. *Albums written as names often play the wrong album, or nothing* (=resolveAlbum()=, lines
+   712-760). The iTunes search it uses did not find every album. Tested on 2026-11-15 against
+   the =ca= storefront: "Radiohead Pablo Honey" returned no Radiohead album at all; "Pink Floyd
+   Animals", "Pink Floyd The Dark Side of the Moon" and "Radiohead Hail to the Thief" returned no
+   exact match, so the first result would be played; "Miles Davis Kind of Blue" returned three
+   albums of that name. Looking up the artist's albums by its identifier found all of them. Either
+   =resolveAlbum()= looks up the artist's albums when the search finds no exact match, or the
+   readme says to prefer addresses. =addCurrentAlbum()= already writes addresses.
+
+* Local details
+
+3. *The storefront defaults to Canada* (=config.storefront: "ca"=, line 26). Every catalogue
+   search and lookup is made in that country's store, which finds nothing, or the wrong edition,
+   for a user elsewhere. The default should come from the user's region, which =hs.locale=
+   reports, with =config.storefront= to override it.
+
+4. *The album list* defaults to =albums.txt= in the configuration directory, which is general,
+   but nothing tells a new user what to put in it. The Spoon now carries an example,
+   =albums.txt=, with every Radiohead studio album and the user's Miles Davis and Pink Floyd
+   albums, all as addresses of their original releases, except where the user's own list chose a
+   different edition (Meddle, 2016 remaster). Proposed: when the user's list does not exist,
+   =readAlbums()= reads the example instead, and =addCurrentAlbum()= creates the user's list
+   rather than writing into the Spoon's directory, which an update replaces.
+
+* Workarounds
+
+5. *=lib/shell.js=* (line 16). It is used once, to run =/usr/bin/open= with the album's address
+   (=openAlbumURL()=, lines 827-836). The comment explains why AppleScript's =open location= is
+   not used. =hs.urlevent.openURLWithBundle()= opens an address in a given application without a
+   process; if it does not block, it replaces both the shell command and =forShell()=.
+
+6. *Auto-play polls Music every 30 seconds* (=startAutoPlay()=, lines 904-910). Music announces
+   every change of player state as a distributed notification (=com.apple.Music.playerInfo=), but
+   Hammerspoon 2 has no module to receive one. This stays, and is a candidate for an upstream
+   issue (=hammer2spoons-ei6.28=). The cost is one AppleScript call every 30 seconds, and only
+   while auto-play is on.
+
+These are limitations of Music or macOS, not of Hammerspoon 2, and stay as they are:
+
+- Playing an album that is not in the library: Music's scripting reaches only the library, so the
+  album's page is opened and its Play button pressed through accessibility, waiting for the page
+  to render.
+- Skipping a whole album: Music has no "next album", so tracks are skipped until the album name
+  changes.
+
+* Quality
+
+7. *Names.* These put the action first:
+
+   | Now                | Following the rule    | Used in the configuration |
+   |--------------------+-----------------------+---------------------------|
+   | =togglePlayPause=  | =playPauseToggle=     | 2                         |
+   | =nextTrack=        | =trackNext=           | 1                         |
+   | =previousTrack=    | =trackPrevious=       | 1                         |
+   | =nextAlbum=        | =albumNext=           | 1                         |
+   | =previousAlbum=    | =albumPrevious=       | 1                         |
+   | =getCurrentTrack=  | =currentTrackText=    | no                        |
+   | =getCurrentArtist= | =currentArtist=       | no                        |
+   | =getCurrentAlbum=  | =currentAlbum=        | no                        |
+   | =showCurrentTrack= | =currentTrackShow=    | 1                         |
+   | =resolveAlbumURL=  | =albumURLResolve=     | no                        |
+   | =getVolume=        | =volume=              | no                        |
+   | =showVolume=       | =volumeShow=          | 1                         |
+   | =setVolume=        | =volumeSet=           | 1                         |
+   | =adjustVolume=     | =volumeAdjust=        | 1                         |
+   | =readAlbums=       | =albumsRead=          | no                        |
+   | =pickRandomAlbum=  | =albumRandomPick=     | no                        |
+   | =resolveAlbum=     | =albumResolve=        | no                        |
+   | =playAlbum=        | =albumPlay=           | 1                         |
+   | =playEntry=        | =entryPlay=           | no                        |
+   | =playRandomAlbum=  | =albumRandomPlay=     | 1                         |
+   | =chooseAlbum=      | =albumChoose=         | 1                         |
+   | =addCurrentAlbum=  | =currentAlbumAdd=     | 1                         |
+   | =startAutoPlay=    | =autoPlayStart=       | no                        |
+   | =stopAutoPlay=     | =autoPlayStop=        | no                        |
+   | =toggleAutoPlay=   | =autoPlayToggle=      | 1                         |
+   | =isAutoPlayEnabled= | =autoPlayIsEnabled=  | no                        |
+   | playback =stop=    | =playbackStop=        | no                        |
+
+   The user's commands already follow the rule (=appleMusic-track-next=, =appleMusic-album-choose=
+   and so on), except =appleMusic-album-current-add-to-music-file=, which would become
+   =appleMusic-current-album-add=.
+
+8. *No =bindHotkeys()=,* so =hs.spoons.use()='s =hotkeys= option cannot be used. It can be added
+   as in hs_window-gt.
+
+9. *The readme* has to be rewritten from the user's side, and say what the album list is and
+   where it goes.
+
+* What was done
+
+Decided by the user and done on 2026-11-15:
+
+- Item 1 is fixed. The playback stop is =playbackStop()=, and =stop()= is the Spoon's lifecycle
+  stop. It releases the key, stops auto-play, and abandons any album skip or wait for the Play
+  button.
+- Item 2 is documented rather than changed in code. The readme says why a =Band|Album= line can
+  play the wrong album, recommends addresses, and gives two ways to get one: /Add current/, and
+  copying the album's link in Music. =albumResolve()= does not fall back to looking up the
+  artist's albums; that remains possible.
+- Item 3 is fixed. =storefront()= takes the country of =hs.locale.current()=, such as =ca= for
+  =en_CA=, with =us= when it has none, and =config.storefront= overrides it.
+- Item 4: the Spoon carries =albums.txt=, an example list of 16 addresses. When the user's list
+  does not exist, the example is copied to it the first time an album is chosen, with an alert.
+  The user's list is never in the Spoon's directory.
+- Item 5: =lib/shell.js= and =forShell()= are removed. =albumURLOpen()= opens the =music://=
+  address with =hs.urlevent.openURLWithBundle()=, which does not block.
+- Item 6: the timer stays, and =autoPlayInterval= is now 300 seconds. The upstream issue is the
+  bead =hammer2spoons-ei6.39=, not =ei6.28= as written above.
+- Item 7: all 27 functions are renamed, with =volumeGet= rather than =volume= for =getVolume=.
+  Several internal functions are renamed too. The user's =init.js= uses the new names, and the
+  command is now =appleMusic-current-album-add=.
+- Item 8: =bindHotkeys()= accepts only =menuShow=, and the user's configuration binds it to ⌃⌥⌘M.
+  The Spoon now provides its own menu, =menu=, opened with =menuShow()=, and so requires
+  =hs_menu-gt=. The menu holds only Music's buttons; the user's =menus.js= adds the HASS buttons
+  to it. =hammer2spoons-ei6.40= documents that pattern in =hs_menu-gt=.
+- Item 9: the readme is rewritten from the user's side, with a screenshot of the music menu.
+- The version is 2.0.0, since names changed.

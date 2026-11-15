@@ -107,6 +107,12 @@ Hammerspoon 2 has no dependencies between Spoons, so each Spoon handles them its
 Every readme lists the Spoons it uses, says whether each is optional or required, and says to
 load them first.
 
+Most Spoons that do things for the user will provide a menu of those things, and so require
+`hs_menu-gt`. Such a Spoon exports its menu as `menu` and opens it with `menuShow()`, its buttons
+call the Spoon's functions with `fn:`, and its `bindHotkeys()` accepts `menuShow`, so that a user
+can open the menu through the `hotkeys` option of `hs.spoons.use()`. `hs_window-gt` and
+`hs_appleMusic-gt` were the first.
+
 No published Spoon requires `hs_interactive-gt`. Whether to use named commands is the user's
 choice, and any function can be made a command from outside the Spoon that defines it. A Spoon's
 readme may suggest command definitions for users of `hs_interactive-gt`, but the Spoon itself

@@ -26,6 +26,7 @@ These were found by reading every place a Spoon in =../Spoons= refers to another
 | =hs_selectWindow-gt= | =hs_window-gt=       | Required, since 2026-11-15 (ei6.10); its own copies were removed | Its =fullscreenScreenIds()= and two other helpers. Without it, its own versions. | =init.js:660=, =712=, =743= |
 | =hs_menu-gt=         | =hs_interactive-gt=  | Required for buttons that name a command | Running a named command, and asking for its missing arguments. Buttons with =fn:=, =app:= or =url:= work without it; a =command:= button logs an error. Corrected on 2026-11-14. | =init.js:697= |
 | =hs_streamdeck-gt=   | =hs_menu-gt=         | Required | The menus it displays. Without it, it throws "hs_menu-gt is not loaded". | =init.js:80= |
+| =hs_appleMusic-gt=   | =hs_menu-gt=         | Required | Its music menu, whose buttons use =fn:=. Decided on 2026-11-15 (ei6.21). Without it, =start()= throws. | =start()=, =menuShow()= |
 
 There is no cycle. =hs_interactive-gt= mentions =hs_menu-gt= only in a comment (line 994).
 An earlier note in the beads said otherwise, and was wrong.
