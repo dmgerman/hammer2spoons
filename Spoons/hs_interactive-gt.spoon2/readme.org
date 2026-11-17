@@ -129,7 +129,7 @@ interactive.define({
             default: 25
         }
     ],
-    fn: (minutes) => hs.spoons["hs_countdown-gt"].startFor(minutes)
+    fn: (minutes) => hs.spoons["hs_countdown-gt"].countdownStart(minutes)
 })
 #+end_src
 
@@ -553,7 +553,7 @@ interactive.use("hs_countdown-gt", {
         interactive.define({
             name: "countdown-start",
             doc:  "Start a countdown for the default number of minutes.",
-            fn:   () => countDown.startFor()
+            fn:   () => countDown.countdownStart()
         })
     },
 

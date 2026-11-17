@@ -29,7 +29,7 @@ function spoonRequired(name) {
 // MARK: - User-configurable settings
 
 const config = {
-    // Timer length used by startFor() when no length is given.
+    // Timer length used by countdownStart() when no length is given.
     defaultLenMinutes: 25,
     // If true, the last length started becomes defaultLenMinutes.
     useLastTimerAsDefault: true,
@@ -113,11 +113,11 @@ function isPowerOfTwo(value) {
     return (value & (value - 1)) === 0
 }
 
-function showMessage(message, duration) {
+function messageShow(message, duration) {
     hs.ui.alert(message).duration(duration ?? config.messageDuration).show()
 }
 
-function fireCallback(event, minutes) {
+function callbackFire(event, minutes) {
     if (!userCallback) return
     try {
         userCallback(event, minutes)
@@ -216,7 +216,7 @@ function barEnsure() {
 }
 
 // progress is 0.0 to 1.0.
-function barSetProgress(progress) {
+function barProgressSet(progress) {
     barEnsure()
     if (bars.length === 0) return
 
@@ -237,7 +237,7 @@ function barSetProgress(progress) {
 
 function barShow() {
     barEnsure()
-    barSetProgress(0)
+    barProgressSet(0)
     for (const canvas of bars) canvas.show()
     barShowing = true
 }
@@ -245,7 +245,7 @@ function barShow() {
 function barHide() {
     barShowing = false
     if (bars.length === 0) return
-    barSetProgress(0)
+    barProgressSet(0)
     for (const canvas of bars) canvas.hide()
 }
 
@@ -267,7 +267,7 @@ function barReposition() {
         : 0
     barsDestroy()
     barsBuild()
-    barSetProgress(progress)
+    barProgressSet(progress)
 }
 
 // MARK: - Menu bar
@@ -285,11 +285,11 @@ function menuBarReset() {
     menuBar.setMenu([
         {
             title: `${config.menuBarIconActive} Start ${config.defaultLenMinutes} min`,
-            fn: () => startFor(config.defaultLenMinutes)
+            fn: () => countdownStart(config.defaultLenMinutes)
         },
         {
             title: `${config.menuBarIconActive} Start for ...`,
-            fn: () => startAsk()
+            fn: () => countdownPromptedStart()
         }
     ])
     if (config.menuBarAlwaysShow) {
@@ -299,7 +299,7 @@ function menuBarReset() {
     }
 }
 
-function menuBarUpdateTitle() {
+function menuBarTitleUpdate() {
     if (!menuBar) return
     const hours = Math.floor(timeLeft / 3600)
     const minutes = Math.floor((timeLeft % 3600) / 60)
@@ -320,10 +320,10 @@ function menuBarUpdate(isPaused) {
         : `${config.menuBarIconPause} Pause`
 
     menuBar.setMenu([
-        {title: `${config.menuBarIconStop} Stop`, fn: () => cancel()},
+        {title: `${config.menuBarIconStop} Stop`, fn: () => countdownCancel()},
         {title: resumeLabel, fn: () => pauseToggle()}
     ])
-    menuBarUpdateTitle()
+    menuBarTitleUpdate()
 }
 
 // MARK: - Warnings and end of timer
@@ -336,7 +336,7 @@ function warningUpdate() {
         const hours = Math.floor(minutesLeft / 60)
         const minutes = minutesLeft % 60
         const pad = (n) => String(n).padStart(2, "0")
-        showMessage(`Time left ${pad(hours)}:${pad(minutes)}`, config.warningDuration)
+        messageShow(`Time left ${pad(hours)}:${pad(minutes)}`, config.warningDuration)
     }
 }
 
@@ -344,7 +344,7 @@ function endOfTimerNotify(requestedMinutes) {
     // Kept so focus can be restored once the dialog is acknowledged.
     const previousWindow = hs.window.focusedWindow()
 
-    fireCallback(events.end, requestedMinutes)
+    callbackFire(events.end, requestedMinutes)
 
     const message = requestedMinutes
         ? `Time is up: ${requestedMinutes} minutes`
@@ -374,7 +374,7 @@ function endOfTimerNotify(requestedMinutes) {
 
 // MARK: - Timer
 
-function resetTimer() {
+function timerReset() {
     timerRunning = false
     if (tickTimer) {
         tickTimer.stop()
@@ -397,14 +397,14 @@ function tick() {
         timerRunning = false
         // Saved before the reset, which clears it, and needed by the notification.
         const requestedMinutes = timerLenMinutes
-        resetTimer()
+        timerReset()
         endOfTimerNotify(requestedMinutes)
         return
     }
 
-    barSetProgress(1 - timeLeft / (timerLenMinutes * 60))
+    barProgressSet(1 - timeLeft / (timerLenMinutes * 60))
     warningUpdate()
-    menuBarUpdateTitle()
+    menuBarTitleUpdate()
 }
 
 // MARK: - Public API
@@ -418,23 +418,23 @@ function tick() {
  * @param {function} [callback] Called as `(event, minutes)` on each timer event.
  *        Not called for the end event if the timer is cancelled.
  */
-function startFor(minutes, callback) {
+function countdownStart(minutes, callback) {
     if (minutes === undefined || minutes === null) minutes = config.defaultLenMinutes
 
     if (timerRunning) {
-        showMessage("Error. Timer is already running. It is not possible to start another one.")
+        messageShow("Error. Timer is already running. It is not possible to start another one.")
         return module.exports
     }
     if (!Number.isInteger(minutes)) {
-        showMessage(`Error. Minutes should be an integer [${minutes}]`)
+        messageShow(`Error. Minutes should be an integer [${minutes}]`)
         return module.exports
     }
     if (minutes < 0) {
-        showMessage(`Error. Trying to start a timer for negative minutes [${minutes}]`)
+        messageShow(`Error. Trying to start a timer for negative minutes [${minutes}]`)
         return module.exports
     }
     if (callback !== undefined && callback !== null && typeof callback !== "function") {
-        showMessage("Error. Second parameter should be a function")
+        messageShow("Error. Second parameter should be a function")
         return module.exports
     }
 
@@ -446,15 +446,15 @@ function startFor(minutes, callback) {
     endingTime = nowSeconds() + minutes * 60
     timerRunning = true
     timeLeft = minutes * 60
-    // The handle is kept because pauseToggle() and resetTimer() need it.
+    // The handle is kept because pauseToggle() and timerReset() need it.
     tickTimer = hs.timer.doEvery(1, () => tick())
 
     menuBarUpdate(false)
 
     if (config.useLastTimerAsDefault) config.defaultLenMinutes = minutes
-    showMessage(`Timer started for ${minutes} minutes`)
+    messageShow(`Timer started for ${minutes} minutes`)
 
-    fireCallback(events.start, 0)
+    callbackFire(events.start, 0)
     return module.exports
 }
 
@@ -465,7 +465,7 @@ function startFor(minutes, callback) {
  *        suffix may be upper or lower case, and the space before it is optional.
  * @returns {{minutes: number}|{error: string}} One key or the other, never both.
  */
-function parseTimeOfDay(time) {
+function timeOfDayParse(time) {
     // Anchored, so trailing text is reported rather than ignored. An ignored suffix would
     // otherwise shift the end time by twelve hours with no error reported.
     const match = /^\s*(\d{1,2}):(\d{2})\s*([ap]m)?\s*$/i.exec(time)
@@ -497,13 +497,13 @@ function parseTimeOfDay(time) {
  * Start a countdown that ends at a given time of day. A time earlier than the
  * current time is taken to mean tomorrow.
  *
- * @param {string} time A time of day, in the forms `parseTimeOfDay` accepts.
+ * @param {string} time A time of day, in the forms `timeOfDayParse` accepts.
  * @param {function} [callback] Called as `(event, minutes)` on each timer event.
  */
-function startUntil(time, callback) {
-    const parsed = parseTimeOfDay(time)
+function countdownUntilStart(time, callback) {
+    const parsed = timeOfDayParse(time)
     if (parsed.error) {
-        showMessage(parsed.error)
+        messageShow(parsed.error)
         return module.exports
     }
 
@@ -511,7 +511,7 @@ function startUntil(time, callback) {
     const current = now.getHours() * 60 + now.getMinutes()
     // Positive remainder, so a target earlier than now lands tomorrow.
     const minutes = ((parsed.minutes - current) % (24 * 60) + 24 * 60) % (24 * 60)
-    return startFor(minutes, callback)
+    return countdownStart(minutes, callback)
 }
 
 /**
@@ -521,11 +521,11 @@ function startUntil(time, callback) {
  * @param {function} [callback] Passed through to the timer.
  * @returns {?string} What was wrong with the answer, or null once the timer runs.
  */
-function startFromAnswer(answer, callback) {
+function countdownFromAnswerStart(answer, callback) {
     if (answer.includes(":")) {
-        const parsed = parseTimeOfDay(answer)
+        const parsed = timeOfDayParse(answer)
         if (parsed.error) return parsed.error
-        startUntil(answer, callback)
+        countdownUntilStart(answer, callback)
         return null
     }
 
@@ -538,7 +538,7 @@ function startFromAnswer(answer, callback) {
         return `Illegal number [${answer}]. Must be more than zero`
     }
 
-    startFor(Math.round(minutes), callback)
+    countdownStart(Math.round(minutes), callback)
     return null
 }
 
@@ -554,7 +554,7 @@ function startFromAnswer(answer, callback) {
  * @returns {Promise<object>} A promise of this Spoon, once the countdown starts or the question
  *          is cancelled.
  */
-function startAsk(callback) {
+function countdownPromptedStart(callback) {
     const interactive = spoonRequired("hs_interactive-gt")
     const hint = "Minutes, or a time of day such as 10:30 or 9:30 pm"
 
@@ -562,7 +562,7 @@ function startAsk(callback) {
         interactive.readerRun(interactive.readers.string.prompted, { name: message, default: defaultText })
             .then((answer) => {
                 if (answer === null) return module.exports
-                const error = startFromAnswer(answer, callback)
+                const error = countdownFromAnswerStart(answer, callback)
                 return error ? ask(`${error}. ${hint}`, answer) : module.exports
             })
 
@@ -580,15 +580,15 @@ function pauseToggle() {
         pausedAt = nowSeconds()
         tickTimer.stop()
         menuBarUpdate(true)
-        fireCallback(events.pause, timeLeft / 60)
-        showMessage("Timer paused")
+        callbackFire(events.pause, timeLeft / 60)
+        messageShow("Timer paused")
     } else {
         endingTime += nowSeconds() - pausedAt
         pausedAt = null
         tickTimer.start()
         menuBarUpdate(false)
-        fireCallback(events.resume, timeLeft / 60)
-        showMessage("Timer resumed")
+        callbackFire(events.resume, timeLeft / 60)
+        messageShow("Timer resumed")
     }
     return module.exports
 }
@@ -596,15 +596,15 @@ function pauseToggle() {
 /**
  * Cancel a running countdown. The end event is not fired; the cancel event is.
  */
-function cancel() {
+function countdownCancel() {
     if (!timerRunning) {
-        showMessage("Error. Timer not running")
+        messageShow("Error. Timer not running")
         return module.exports
     }
     const minutesLeft = timeLeft / 60
-    fireCallback(events.cancel, minutesLeft)
-    resetTimer()
-    showMessage(`Timer was cancelled (time left ${minutesLeft.toFixed(1)} min).`)
+    callbackFire(events.cancel, minutesLeft)
+    timerReset()
+    messageShow(`Timer was cancelled (time left ${minutesLeft.toFixed(1)} min).`)
     return module.exports
 }
 
@@ -615,11 +615,11 @@ function cancel() {
  */
 function progressSet(progress) {
     if (!timerRunning) {
-        showMessage("Error. Timer not running")
+        messageShow("Error. Timer not running")
         return module.exports
     }
     if (typeof progress !== "number" || !(progress >= 0 && progress <= 1)) {
-        showMessage(`Error. Progress must be a number from 0.0 to 1.0 [${progress}]`)
+        messageShow(`Error. Progress must be a number from 0.0 to 1.0 [${progress}]`)
         return module.exports
     }
     const minutesLeft = timerLenMinutes * (1 - progress)
@@ -628,8 +628,8 @@ function progressSet(progress) {
     // therefore counted from now, so that the new end time is not moved by the time before.
     if (pausedAt !== null) pausedAt = nowSeconds()
     timeLeft = Math.round(minutesLeft * 60)
-    showMessage(`Timer reset to ${(progress * 100).toFixed(1)}% (${minutesLeft.toFixed(1)} minutes left)`)
-    fireCallback(events.setProgress, minutesLeft)
+    messageShow(`Timer reset to ${(progress * 100).toFixed(1)}% (${minutesLeft.toFixed(1)} minutes left)`)
+    callbackFire(events.setProgress, minutesLeft)
     return module.exports
 }
 
@@ -644,10 +644,10 @@ function progressSet(progress) {
  * can include it as a submenu with `children: hs.spoons["hs_countdown-gt"].menu`.
  */
 const menu = [
-    { label: "Start", icon: "symbol:timer", key: "t", fn: () => module.exports.startFor() },
-    { label: "Start for…", icon: "symbol:keyboard", key: "f", fn: () => module.exports.startAsk() },
+    { label: "Start", icon: "symbol:timer", key: "t", fn: () => module.exports.countdownStart() },
+    { label: "Start for…", icon: "symbol:keyboard", key: "f", fn: () => module.exports.countdownPromptedStart() },
     { label: "Pause/Resume", icon: "symbol:playpause", key: "p", fn: () => module.exports.pauseToggle() },
-    { label: "Cancel", icon: "symbol:stop.circle", key: "c", fn: () => module.exports.cancel() }
+    { label: "Cancel", icon: "symbol:stop.circle", key: "c", fn: () => module.exports.countdownCancel() }
 ]
 
 /** Display the countdown menu on screen, with hs_menu-gt. */
@@ -708,7 +708,7 @@ function start() {
 
 /** Cancel any running countdown and remove the menu bar item, bar and hotkeys. */
 function stop() {
-    if (timerRunning) resetTimer()
+    if (timerRunning) timerReset()
     if (screenWatcher) {
         hs.screen.off("change", screenWatcher)
         screenWatcher = null
@@ -726,17 +726,17 @@ function stop() {
 module.exports = {
     config,
     events,
-    startFor,
-    startUntil,
-    startAsk,
+    countdownStart,
+    countdownUntilStart,
+    countdownPromptedStart,
     pauseToggle,
-    cancel,
+    countdownCancel,
     progressSet,
     menu,
     menuShow,
     bindHotkeys,
     start,
     stop,
-    isRunning: () => timerRunning,
+    countdownIsRunning: () => timerRunning,
     timeLeft: () => timeLeft
 }

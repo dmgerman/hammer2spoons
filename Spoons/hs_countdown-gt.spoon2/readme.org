@@ -71,7 +71,7 @@ countdown runs, and /Pause/ or /Resume/ and /Stop/ while one runs.
 A countdown has a length in whole minutes. Only one countdown runs at a time, so starting
 another while one runs is refused, with a message.
 
-/Start for…/, or =startAsk()=, asks for the length in a dialog. The answer is either a number of
+/Start for…/, or =countdownPromptedStart()=, asks for the length in a dialog. The answer is either a number of
 minutes, such as =45=, or a time of day, such as =14:30=, at which the countdown ends. An answer
 that is neither is reported in the dialog, which asks again with that answer filled in, to be
 corrected. Cancel closes the dialog without starting a countdown.
@@ -130,18 +130,29 @@ Setting =alertSound= to null stops both the sound and the notification.
 This Spoon exports the following functions. A function that acts on the countdown returns this
 Spoon.
 
-| Function                       | Action                                                    |
-|--------------------------------+-----------------------------------------------------------|
-| =startFor([minutes], [callback])= | Starts a countdown of =minutes=, or of =config.defaultLenMinutes= when it is omitted. |
-| =startUntil(time, [callback])= | Starts a countdown that ends at =time=, a time of day as /Times of day/ describes. |
-| =startAsk([callback])=         | Asks for a length, as /Starting a countdown/ describes, and returns a promise of this Spoon once the countdown starts or the dialog is cancelled. |
-| =pauseToggle()=                | Pauses the countdown, or resumes a paused one.            |
-| =cancel()=                     | Cancels the countdown.                                    |
-| =progressSet(progress)=        | Moves the countdown to a point in its length, from =0.0= to =1.0=. =progressSet(0.9)= on a 25 minute countdown leaves 2.5 minutes. |
-| =isRunning()=                  | Returns whether a countdown is running. A paused countdown is running. |
-| =timeLeft()=                   | Returns the seconds left, or 0 when no countdown is running. |
-| =menuShow()=                   | Displays the countdown menu.                              |
-| =bindHotkeys(mapping)=         | Binds the key given as ={ menuShow: [modifiers, key] }= to =menuShow()=. A second call releases the key of the first, and any other name is an error. |
+| Function                                | Action                                                    |
+|-----------------------------------------+-----------------------------------------------------------|
+| =countdownStart([minutes], [callback])= | Starts a countdown of =minutes=, or of =config.defaultLenMinutes= when it is omitted. |
+| =countdownUntilStart(time, [callback])= | Starts a countdown that ends at =time=, a time of day as /Times of day/ describes. |
+| =countdownPromptedStart([callback])=    | Asks for a length, as /Starting a countdown/ describes, and returns a promise of this Spoon once the countdown starts or the dialog is cancelled. |
+| =pauseToggle()=                         | Pauses the countdown, or resumes a paused one.            |
+| =countdownCancel()=                     | Cancels the countdown.                                    |
+| =progressSet(progress)=                 | Moves the countdown to a point in its length, from =0.0= to =1.0=. =progressSet(0.9)= on a 25 minute countdown leaves 2.5 minutes. |
+| =countdownIsRunning()=                  | Returns whether a countdown is running. A paused countdown is running. |
+| =timeLeft()=                            | Returns the seconds left, or 0 when no countdown is running. |
+| =menuShow()=                            | Displays the countdown menu.                              |
+| =bindHotkeys(mapping)=                  | Binds the key given as ={ menuShow: [modifiers, key] }= to =menuShow()=. A second call releases the key of the first, and any other name is an error. |
+
+Version 4.0.0 renamed five of these functions, so that each name begins with what it acts on.
+A configuration written for an earlier version has to use the new names:
+
+| Before 4.0.0   | From 4.0.0               |
+|----------------+--------------------------|
+| =startFor=     | =countdownStart=         |
+| =startUntil=   | =countdownUntilStart=    |
+| =startAsk=     | =countdownPromptedStart= |
+| =cancel=       | =countdownCancel=        |
+| =isRunning=    | =countdownIsRunning=     |
 
 =start()= checks that hs_interactive-gt and hs_menu-gt are loaded, and adds the menu bar item and
 the progress bars. =stop()= cancels the countdown, and removes the menu bar item, the progress bars
@@ -154,7 +165,7 @@ countdown. A callback is how code in the configuration acts on a countdown, for 
 on a "do not disturb" setting when one starts:
 
 #+begin_src js
-hs.spoons["hs_countdown-gt"].startFor(25, (event, minutes) => {
+hs.spoons["hs_countdown-gt"].countdownStart(25, (event, minutes) => {
     console.log(`countdown ${event}, ${minutes} minutes`)
 })
 #+end_src
