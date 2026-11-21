@@ -294,6 +294,11 @@ The window keeps its relative position and size within the screen. A window that
 screen it was on before goes back to the position it had there. That position is not used when
 the window has been moved or resized by other means since this Spoon last moved it.
 
+A fullscreen window is fullscreen again on the new screen. macOS refuses to move a fullscreen
+window, so the window leaves fullscreen, moves, and enters fullscreen again. The function then
+returns a promise of whether the window was moved. The move is given up when the window has not
+left fullscreen after =config.fullscreenLeaveWait= seconds.
+
 *** fullscreenScreenIds(), screenHasFullscreenWindow([screen])
 
 =fullscreenScreenIds= returns a =Set= of the ids of the screens that are showing a fullscreen
@@ -461,6 +466,7 @@ win.config.mouseHighlightColor = "#00FF00"
 | =attachKeyWait=          | =5=         | The number of seconds =keyToWindowAttach()= waits for a digit when none is given. |
 | =attachFile=             | =logs/window-keys.json= in the configuration directory | The file the attachments are saved in. |
 | =focusReassertDelay=     | =0.3=       | The number of seconds after which =windowFocus()= makes the window its application's main window again. 0 turns this off. See /Notes/. |
+| =fullscreenLeaveWait=    | =3=         | The number of seconds =windowToScreenMove()= waits for a window to leave fullscreen before giving up. |
 
 * Commands for hs_interactive-gt
 
@@ -502,7 +508,9 @@ this Spoon's design.
 - *Fullscreen windows are refused.* macOS refuses to move a fullscreen window. A window moved to
   a screen that is showing a fullscreen window is placed in that window's Space, and then neither
   =hs.window.allWindows()= nor its own application lists it. This Spoon therefore refuses any
-  operation involving a fullscreen window, or a screen showing one, and an alert says so.
+  operation involving a fullscreen window, or a screen showing one, and an alert says so. The one
+  exception is =windowToScreenMove=, which takes the window out of fullscreen before
+  moving it.
 - *windowFocus() raises the window a second time.* After =focus()= returns, an application can
   make a different one of its windows its main window while it processes the activation, and
   bring that other window to the front. Hammerspoon 2's =focus()= makes the window main again

@@ -65,7 +65,11 @@ const config = {
     // Seconds after focusing a window before asserting again that it is its application's
     // main window. See windowFocus() for the measurements. 0 switches the second assertion
     // off, which loses windows on a screen other than the one in use.
-    focusReassertDelay: 0.3
+    focusReassertDelay: 0.3,
+
+    // Seconds windowToScreenMove() waits for a window to leave fullscreen before
+    // giving up. A window measured on 2026-11-21 left it within 0.1 s.
+    fullscreenLeaveWait: 3
 }
 
 // MARK: - State
@@ -701,7 +705,8 @@ function _screenHasFullscreenWindow(screen) {
 }
 
 /**
- * Move a window to another screen, keeping its place within the screen.
+ * Move a window to another screen, keeping its place within the screen. A fullscreen window
+ * is fullscreen again on the new screen.
  *
  * Screens showing a fullscreen window are skipped: a window moved there would be behind the
  * fullscreen one and never visible.
@@ -710,7 +715,7 @@ function _screenHasFullscreenWindow(screen) {
  *        the screen in a chooser.
  * @param {object} [win] The window. Defaults to the focused one.
  * @returns {boolean|Promise<boolean>} Whether the window moved. A promise when a chooser was
- *          shown.
+ *          shown, or when the window is fullscreen.
  */
 function _windowToScreenMove(target, win) {
     const window = win || focused()
@@ -720,7 +725,7 @@ function _windowToScreenMove(target, win) {
     if (!current) return false
 
     if (target === undefined || target === null) {
-        return screenChoose(window).then((screen) => screen ? windowOnScreenPlace(window, current, screen) : false)
+        return screenChoose(window).then((screen) => screen ? windowToScreenPut(window, current, screen) : false)
     }
     if (typeof target === "object") {
         if (target.id === current.id) return false
@@ -728,16 +733,36 @@ function _windowToScreenMove(target, win) {
             alert("That screen is showing a fullscreen window")
             return false
         }
-        return windowOnScreenPlace(window, current, target)
+        return windowToScreenPut(window, current, target)
     }
 
+    const screen = screenWithoutFullscreenFind(current, target)
+    return screen ? windowToScreenPut(window, current, screen) : false
+}
+
+/** Put a window on another screen, through fullscreenWindowOnScreenPlace() when it is fullscreen. */
+function windowToScreenPut(window, current, target) {
+    return window.isFullscreen
+        ? fullscreenWindowOnScreenPlace(window, current, target)
+        : windowOnScreenPlace(window, current, target)
+}
+
+/**
+ * The screen after or before `current`, in the order of hs.screen.all(), that is not showing a
+ * fullscreen window. An alert gives the reason when there is none.
+ *
+ * @param {object} current The screen to start from, which is never returned.
+ * @param {string} direction "next" or "previous".
+ * @returns {object} The HSScreen, or null.
+ */
+function screenWithoutFullscreenFind(current, direction) {
     const screens = screenList()
     if (screens.length < 2) {
         alert("Only one screen")
-        return false
+        return null
     }
     const index = screens.findIndex((s) => s.id === current.id)
-    const step = target === "previous" ? -1 : 1
+    const step = direction === "previous" ? -1 : 1
 
     // Go through the screens in order until one without a fullscreen window is found,
     // stopping before coming back to the screen the window is already on.
@@ -745,10 +770,10 @@ function _windowToScreenMove(target, win) {
     for (let n = 1; n < screens.length; n++) {
         const position = (((index + step * n) % screens.length) + screens.length) % screens.length
         const candidate = screens[position]
-        if (!occupied.has(candidate.id)) return windowOnScreenPlace(window, current, candidate)
+        if (!occupied.has(candidate.id)) return candidate
     }
     alert("Every other screen has a fullscreen window")
-    return false
+    return null
 }
 
 /**
@@ -779,6 +804,63 @@ function windowOnScreenPlace(window, current, target) {
         frame.h * (to.h / from.h)
     ))
     return true
+}
+
+/**
+ * The move fullscreenWindowOnScreenPlace() is waiting to make, or null. Only one runs at a
+ * time, and stop() ends it.
+ */
+let fullscreenMove = null
+
+/** End the waiting move, resolving its promise with `moved`. */
+function fullscreenMoveEnd(moved) {
+    if (!fullscreenMove) return
+    fullscreenMove.timer.stop()
+    const resolve = fullscreenMove.resolve
+    fullscreenMove = null
+    resolve(moved)
+}
+
+/**
+ * Put a fullscreen window on another screen, where it is fullscreen again.
+ *
+ * macOS refuses to move a fullscreen window, so the window leaves fullscreen, is placed by
+ * windowOnScreenPlace(), and enters fullscreen on the new screen. Its isFullscreen attribute
+ * turns false within about 0.1 s of leaving, before the animation ends, and a move made at
+ * that point holds. Measured on 2026-11-21 with a TextEdit window between two displays: the
+ * whole move took about 0.25 s, and the window was fullscreen on the new screen every time.
+ * No fixed delay is needed, so the attribute is polled until it changes, and the move is
+ * given up after config.fullscreenLeaveWait seconds.
+ *
+ * @returns {boolean|Promise<boolean>} A promise of whether the window moved, or false when
+ *          another fullscreen window is still being moved.
+ */
+function fullscreenWindowOnScreenPlace(window, current, target) {
+    if (fullscreenMove) {
+        alert("A fullscreen window is already being moved")
+        return false
+    }
+
+    return new Promise((resolve) => {
+        const started = Date.now()
+        window.toggleFullscreen()
+        fullscreenMove = {
+            resolve: resolve,
+            timer: hs.timer.doEvery(0.05, () => {
+                if (!fullscreenMove) return
+                if (window.isFullscreen) {
+                    if (Date.now() - started > config.fullscreenLeaveWait * 1000) {
+                        alert("The window did not leave fullscreen")
+                        fullscreenMoveEnd(false)
+                    }
+                    return
+                }
+                windowOnScreenPlace(window, current, target)
+                window.toggleFullscreen()
+                fullscreenMoveEnd(true)
+            })
+        }
+    })
 }
 
 // MARK: - Windows among themselves
@@ -2053,6 +2135,7 @@ function stop() {
     // Released without saving, so that config.attachFile still lists them for start().
     for (const digit of [...attachedKeys.keys()]) keyRelease(digit)
     captureStop()
+    fullscreenMoveEnd(false)
     if (windowFilter) {
         // destroy() unsubscribes as well. Without hs_windowfilter-gt, unsubscribing is all
         // that is left to do.
