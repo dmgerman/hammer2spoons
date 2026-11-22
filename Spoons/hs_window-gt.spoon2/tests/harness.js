@@ -137,8 +137,12 @@ async function runAll(options) {
     }
 
     const runId = Date.now()
-    const dir = `${hs.fs.tempDirectory()}/hs_window-gt-tests-${runId}`
-    hs.fs.mkdir(dir)
+    const made = `${hs.fs.tempDirectory()}/hs_window-gt-tests-${runId}`
+    hs.fs.mkdir(made)
+    // Resolved, so that a test comparing a path the Spoon built from this directory sees the
+    // same spelling: the Spoon resolves config.screenshotDir, which turns /var into
+    // /private/var.
+    const dir = hs.fs.pathToAbsolute(made) || made
     const fixtures = requireFresh(`${__dirname}/fixture.js`)
     const spoon = requireFresh(SPOON_FILE)
     // The copy writes its attached keys and its screenshots here, never where the user's do.
