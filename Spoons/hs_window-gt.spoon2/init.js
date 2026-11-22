@@ -725,7 +725,7 @@ function _windowToScreenMove(target, win) {
     if (!current) return false
 
     if (target === undefined || target === null) {
-        return screenChoose(window).then((screen) => screen ? windowToScreenPut(window, current, screen) : false)
+        return screenChoose(window).then((screen) => screen ? windowToScreenPut(window, current, screen) : null)
     }
     if (typeof target === "object") {
         if (target.id === current.id) return false
@@ -905,7 +905,7 @@ function _tileWith(other, win) {
     const window = win || focused()
     if (!window) return false
     if (!other) {
-        return windowChoose(window, "Window to tile with").then((chosen) => chosen ? _tileWith(chosen, window) : false)
+        return windowChoose(window, "Window to tile with").then((chosen) => chosen ? _tileWith(chosen, window) : null)
     }
     if (other.id === window.id) {
         alert("A window cannot be tiled with itself")
@@ -940,7 +940,7 @@ function _windowWithWindowSwap(other, win) {
     const window = win || focused()
     if (!window) return false
     if (!other) {
-        return windowChoose(window, "Window to swap with").then((chosen) => chosen ? _windowWithWindowSwap(chosen, window) : false)
+        return windowChoose(window, "Window to swap with").then((chosen) => chosen ? _windowWithWindowSwap(chosen, window) : null)
     }
     if (other.id === window.id) {
         alert("A window cannot be swapped with itself")

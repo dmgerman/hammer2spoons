@@ -14,8 +14,9 @@ make test TESTS="tests/selftest/*.test.js"    # the given files
 #+end_src
 
 Hammerspoon 2 first shows a chooser asking whether to start. The tests move windows and the
-pointer, so the mouse and the keyboard are left alone from the start until the alert with the
-totals appears. =tests/run= then prints one line per test and exits with 0 when every test passed
+pointer, so the mouse and the keyboard are left alone from the start until a second chooser says
+that the tests have finished, with their totals. The results are printed once that chooser is
+closed. =tests/run= then prints one line per test and exits with 0 when every test passed
 or was skipped, 1 when a test failed or the run was cancelled, and 2 when the tests could not be
 run or did not finish within =HS_WINDOW_TESTS_TIMEOUT= seconds (600 by default).
 

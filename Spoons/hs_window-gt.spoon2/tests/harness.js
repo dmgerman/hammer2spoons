@@ -178,9 +178,21 @@ async function runAll(options) {
     const count = (status) => results.filter((r) => r.status === status).length
     const lines = results.map((r) => [r.status, r.file.replace(/^.*\//, ""), r.name, r.message || ""].join("\t"))
     lines.push(["result", count("fail") ? "fail" : "pass", count("pass"), count("fail"), count("skip")].join("\t"))
-    hs.ui.alert(`hs_window-gt tests: ${count("pass")} passed, ${count("fail")} failed, ${count("skip")} skipped`)
-        .duration(3).show()
+    // The user asked to acknowledge the end of a run, so that they know when the mouse and the
+    // keyboard can be used again. The report is written only after that, whichever choice
+    // closes the chooser.
+    await finishConfirm(`${count("pass")} passed, ${count("fail")} failed, ${count("skip")} skipped`)
     reportWrite(options.reportFile, lines)
+}
+
+// Shows a chooser saying that the tests have finished, with their totals, and resolves when
+// the user closes it.
+async function finishConfirm(totals) {
+    const interactive = hs.spoons["hs_interactive-gt"]
+    await interactive.readerRun(interactive.readers.choice.prompted, {
+        placeholder: "The hs_window-gt tests have finished. The mouse and keyboard can be used again",
+        choices: [{ text: "OK", subText: totals, value: "ok" }]
+    })
 }
 
 module.exports = { run }
