@@ -42,13 +42,18 @@ A test file is named =<area>.test.js= and exports a list of tests. Each test has
 =run= function, and optionally a =timeout= in seconds, which is 10 by default. =run= may be
 asynchronous, and receives one argument with these fields:
 
-| Field    | Holds                                                                      |
-|----------+----------------------------------------------------------------------------|
-| =spoon=  | The fresh copy of hs_window-gt                                             |
-| =dir=    | The temporary directory of the run                                         |
-| =assert= | =ok(value, message)=, =equal(actual, expected, message)= and =fail(message)= |
-| =skip=   | =skip(reason)= ends the test and reports it as skipped                     |
-| =wait=   | =wait(seconds)= returns a promise that resolves after that many seconds    |
+| Field         | Holds                                                                      |
+|---------------+----------------------------------------------------------------------------|
+| =spoon=       | The fresh copy of hs_window-gt                                             |
+| =dir=         | The temporary directory of the run                                         |
+| =runId=       | A number unique to the run, which is part of every test window's title     |
+| =assert=      | =ok(value, message)=, =equal(actual, expected, message)=, =fail(message)= and =frameEqual(actual, expected, message)= |
+| =skip=        | =skip(reason)= ends the test and reports it as skipped                     |
+| =wait=        | =wait(seconds)= returns a promise that resolves after that many seconds    |
+| =windowsOpen= | =windowsOpen(count)= opens that many test windows, 1 by default, and resolves to their =HSWindow= objects |
+| =frameSet=    | =frameSet(window, frame)= sets a window's frame and waits for it to take effect |
+| =screenFrame= | =screenFrame(window)= returns the usable frame of the window's screen      |
+| =screensNeed= | =screensNeed(count)= ends the test as skipped when fewer screens are connected |
 
 #+begin_src js
 module.exports = [
@@ -63,5 +68,28 @@ module.exports = [
 ]
 #+end_src
 
-A test acts only on windows it opens itself, and closes them, also when it fails. The Spoon's
-internal functions are tested through the exported functions that use them.
+A test acts only on windows it opens with =windowsOpen()=. The Spoon's internal functions are
+tested through the exported functions that use them.
+
+* The test windows
+
+=windowsOpen()= starts =tests/fixture-windows.jxa= with =osascript -l JavaScript=. That script
+opens one plain Cocoa window for each title it is given and keeps them open until its process
+ends. The harness ends the process after each test, also when the test fails or times out, so
+a test does not close its own windows.
+
+The windows belong to a separate process rather than to Hammerspoon 2, for one reason.
+hs_windowfilter-gt leaves Hammerspoon 2's own windows out of its default filter, which
+hs_window-gt uses. A window made with =hs.ui.window()= can be moved, but the Spoon would receive no
+event when it is focused, moved or closed.
+
+Three measurements, made on 2026-11-23, govern how frames are compared and chosen:
+
+1. A window rounds each value of its frame to a whole point, and a value can move by up to one
+   point in doing so: y = 200.25 was read back as 201. =assert.frameEqual()= therefore accepts
+   a difference of 1 point in each value.
+2. A test window cannot be smaller than 87 by 33 points, so a test does not ask for less.
+3. The windows appear about 0.3 s after their process starts. =windowsOpen()= waits up to 5 s.
+
+Expected frames are computed from =screenFrame()=, never from the size of one display. A test that
+needs two screens calls =screensNeed(2)= first.

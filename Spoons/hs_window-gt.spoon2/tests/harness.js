@@ -69,10 +69,19 @@ async function startConfirm(count) {
 }
 
 // Runs one test and returns its result. A test that does not finish within its timeout fails;
-// its promise is abandoned, and the timer that ended it is stopped.
-async function testRun(file, test, context) {
+// its promise is abandoned, and the timer that ended it is stopped. The test's windows are
+// closed whatever happened.
+async function testRun(file, test, shared, fixtures) {
     const started = Date.now()
     const seconds = test.timeout || TEST_TIMEOUT
+    const fixture = fixtures.create(shared.runId, skip)
+    const context = Object.assign({}, shared, {
+        assert: Object.assign({ frameEqual: fixture.frameEqual }, assert),
+        windowsOpen: fixture.windowsOpen,
+        frameSet: fixture.frameSet,
+        screenFrame: fixture.screenFrame,
+        screensNeed: fixture.screensNeed
+    })
     let timer = null
     const timeout = new Promise((resolve, reject) => {
         timer = hs.timer.doAfter(seconds, () => reject(new Error(`did not finish within ${seconds} s`)))
@@ -86,6 +95,7 @@ async function testRun(file, test, context) {
         result.message = String(error && error.message || error)
     } finally {
         if (timer) timer.stop()
+        await fixture.close()
     }
     result.seconds = (Date.now() - started) / 1000
     return result
@@ -122,8 +132,10 @@ async function runAll(options) {
         return
     }
 
-    const dir = `${hs.fs.tempDirectory()}/hs_window-gt-tests-${Date.now()}`
+    const runId = Date.now()
+    const dir = `${hs.fs.tempDirectory()}/hs_window-gt-tests-${runId}`
     hs.fs.mkdir(dir)
+    const fixtures = requireFresh(`${__dirname}/fixture.js`)
     const spoon = requireFresh(SPOON_FILE)
     // The copy writes its attached keys and its screenshots here, never where the user's do.
     spoon.config.attachFile = `${dir}/window-keys.json`
@@ -141,7 +153,7 @@ async function runAll(options) {
                 continue
             }
             for (const test of tests) {
-                results.push(await testRun(file, test, { spoon, dir, assert, skip, wait }))
+                results.push(await testRun(file, test, { spoon, dir, runId, skip, wait }, fixtures))
             }
         }
     } finally {

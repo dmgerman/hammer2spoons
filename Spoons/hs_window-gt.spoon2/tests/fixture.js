@@ -1,0 +1,94 @@
+// The windows and screens that hs_window-gt's tests act on. The harness creates one fixture
+// for each test and closes it afterwards, also when the test fails or times out, so a test
+// never has to close its own windows. See tests/readme.org.
+
+const WINDOWS_SCRIPT = `${__dirname}/fixture-windows.jxa`
+
+// Seconds to wait for the windows to appear after their process starts. They appear in about
+// 0.3 s.
+const OPEN_TIMEOUT = 5
+
+// Points by which a frame read back may differ from the frame that was set. A window rounds
+// each value of its frame to a whole point, and a value can move by up to 1 point in doing so:
+// on 2026-11-23, y = 200.25 was read back as 201.
+const FRAME_TOLERANCE = 1
+
+// The smallest size the fixture windows take: 87 by 33 points, the width of the title bar's
+// buttons and the height of the title bar. A test asking for less would get this instead.
+const WINDOW_MINIMUM = { w: 87, h: 33 }
+
+function wait(seconds) {
+    return new Promise((resolve) => hs.timer.doAfter(seconds, resolve))
+}
+
+function frameText(f) {
+    return `{x: ${f.x}, y: ${f.y}, w: ${f.w}, h: ${f.h}}`
+}
+
+// Whether two frames are equal within FRAME_TOLERANCE.
+function frameClose(a, b) {
+    return ["x", "y", "w", "h"].every((k) => Math.abs(a[k] - b[k]) <= FRAME_TOLERANCE)
+}
+
+function create(runId, skip) {
+    const tasks = []
+    let opened = 0
+
+    // Opens count windows in a new process and resolves to their HSWindow objects, in order.
+    // Their titles are unique to this run, so no other window can be mistaken for them.
+    async function windowsOpen(count = 1) {
+        const titles = []
+        for (let i = 0; i < count; i++) titles.push(`hs_window-gt test ${runId} ${++opened}`)
+        const task = hs.task.create("/usr/bin/osascript", ["-l", "JavaScript", WINDOWS_SCRIPT, ...titles],
+            null, null, null)
+        tasks.push(task)
+        task.start()
+
+        const started = Date.now()
+        while (Date.now() - started < OPEN_TIMEOUT * 1000) {
+            const windows = hs.window.allWindows()
+            const found = titles.map((title) => windows.find((w) => w.title === title))
+            if (found.every(Boolean)) return found
+            await wait(0.1)
+        }
+        throw new Error(`the test windows did not appear within ${OPEN_TIMEOUT} s`)
+    }
+
+    // Sets a window's frame and waits for it to take effect. A test uses this to put a window
+    // where it wants it before calling the Spoon.
+    async function frameSet(window, frame) {
+        window.frame = new HSRect(frame.x, frame.y, frame.w, frame.h)
+        await wait(0.2)
+    }
+
+    // The usable frame of the screen a window is on, without the menu bar and the Dock. The
+    // Spoon places windows within this frame, so expected frames are computed from it.
+    function screenFrame(window) {
+        const screen = window.screen
+        if (!screen) throw new Error(`window "${window.title}" is on no screen`)
+        return screen.frame
+    }
+
+    // Ends the test as skipped when fewer than count screens are connected.
+    function screensNeed(count) {
+        const connected = hs.screen.all().length
+        if (connected < count) skip(`needs ${count} screens, and ${connected} is connected`)
+    }
+
+    function frameEqual(actual, expected, message) {
+        if (!frameClose(actual, expected)) {
+            throw new Error(`${message ? message + ": " : ""}expected ${frameText(expected)}, got ${frameText(actual)}`)
+        }
+    }
+
+    // Closes every window this fixture opened, by ending their processes.
+    async function close() {
+        if (!tasks.length) return
+        for (const task of tasks.splice(0)) task.terminate()
+        await wait(0.3)
+    }
+
+    return { windowsOpen, frameSet, screenFrame, screensNeed, frameEqual, close }
+}
+
+module.exports = { create, FRAME_TOLERANCE, WINDOW_MINIMUM }

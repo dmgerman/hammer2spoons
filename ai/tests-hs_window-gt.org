@@ -43,3 +43,45 @@ After it:
 
 The first run found that =hs.alert.show()= threw after the tests had finished, which left a
 =.partial= report and the file =mktemp= had created. Both were fixed before the second run.
+
+* The test windows (hammer2spoons-2hw)
+
+Decided on 2026-11-23. The test windows are plain Cocoa windows opened by
+=tests/fixture-windows.jxa=, run with =osascript -l JavaScript=, one process per call of
+=windowsOpen()=.
+
+Two kinds of window were tried through =hs2=:
+
+1. A titled window made with =hs.ui.window()=. =hs.window.allWindows()= finds it, setting its
+   frame through =HSWindow= works, and =destroy()= removes it. It was rejected because
+   hs_windowfilter-gt's =skipInDefault= lists "Hammerspoon 2", so the filter hs_window-gt creates
+   with =create({})= never reports its focus, moves or closing. The history and =windowPrevious()=
+   tests need those events. =hs.ui.window()= also takes its starting position with y = 0 at the
+   bottom.
+2. A window opened by =osascript=. Its application is named "osascript" and has no bundle
+   identifier. The default filter of hs_windowfilter-gt reports it, it is a standard window,
+   =focus()= makes it the focused window, and terminating the process closes it. With the
+   accessory activation policy it shows no Dock icon.
+
+Measured on the 1800 by 1169 point built-in display, whose usable frame is
+={x: 0, y: 39, w: 1800, h: 1130}=:
+
+| Frame set                     | Frame read back       |
+|-------------------------------+-----------------------|
+| 100.5, 200.25, 333.3, 222.7   | 100, 201, 333, 223    |
+| 0, 39, 600, 1130              | the same              |
+| 900, 604, 900, 565            | the same              |
+| 50, 60, 20, 20                | 50, 60, 87, 33        |
+| 0, 39, 1800, 1130             | the same              |
+
+The tolerance is therefore 1 point, and 87 by 33 is the smallest size.
+
+One probe called =create({})= on the user's loaded hs_windowfilter-gt without destroying the
+filter. That filter has no subscriptions, and nothing outside the Spoon can reach it to destroy
+it. It stays as one empty object until the next reload. The fixture never creates a filter.
+
+The self-test, =tests/selftest/fixture.test.js=, was run on 2026-11-23 after fixing one fault in
+the test file itself (some windows have a =null= title). Every test gave its intended result,
+with two failing on purpose. The test after those two found none of their windows open, no
+=osascript= process was left, and the user's windows had not moved. =use.status()= showed every
+Spoon =loaded=. Only one screen was connected, so the test of =screensNeed(2)= was skipped.

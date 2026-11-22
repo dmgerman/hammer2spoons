@@ -1,0 +1,24 @@
+// Opens one plain window for each title given, for hs_window-gt's tests, and keeps them open
+// until the process is terminated. Run with osascript -l JavaScript; tests/fixture.js starts it.
+//
+// The windows belong to this process rather than to Hammerspoon 2, because hs_windowfilter-gt
+// leaves Hammerspoon 2's own windows out of its default filter, which hs_window-gt uses. The
+// Spoon would then receive no events about them.
+
+ObjC.import("Cocoa")
+
+function run(argv) {
+    const app = $.NSApplication.sharedApplication
+    // An accessory application has no Dock icon, but its windows can still be focused.
+    app.setActivationPolicy($.NSApplicationActivationPolicyAccessory)
+    const style = $.NSWindowStyleMaskTitled | $.NSWindowStyleMaskClosable |
+        $.NSWindowStyleMaskResizable | $.NSWindowStyleMaskMiniaturizable
+    argv.forEach((title, i) => {
+        const window = $.NSWindow.alloc.initWithContentRectStyleMaskBackingDefer(
+            $.NSMakeRect(200 + 40 * i, 200 + 40 * i, 400, 300), style, $.NSBackingStoreBuffered, false)
+        window.title = title
+        window.releasedWhenClosed = false
+        window.makeKeyAndOrderFront(null)
+    })
+    app.run
+}
