@@ -1,0 +1,45 @@
+#+title: How hs_window-gt's tests run
+
+This records the decisions taken in hammer2spoons-yvf, the first bead of hammer2spoons-cvl. The
+user decided on 2026-11-17. =Spoons/hs_window-gt.spoon2/tests/readme.org= describes the result
+for whoever writes or runs the tests.
+
+* Decisions
+
+1. *Where the tests run.* They run in the user's running Hammerspoon 2, through =hs2=. Before
+   anything moves, the harness asks in a chooser whether to start, so that the user can stop
+   using the mouse and the keyboard first. The user asked for this confirmation.
+2. *Which copy of the Spoon.* The tests call a fresh copy, not =hs.spoons["hs_window-gt"]=. Its
+   =attachFile= and =screenshotDir= point into a temporary directory.
+3. *How results come back.* The harness writes a report file, and =tests/run= waits for it.
+4. *Internal functions.* They are tested through the exported functions that use them. The
+   Spoon's interface does not change for the tests.
+
+* Facts the design relies on
+
+These were checked on 2026-11-17 through =hs2=, and in =Engine/require.js= at upstream commit
+=7efbe802=.
+
+- =require.cache= is keyed by the path as it was given, without resolving symbolic links. The
+  configuration's copy is cached as =~/.config/Hammerspoon2/Spoons/hs_window-gt/init.js=, so
+  loading =hammer2spoons/Spoons/hs_window-gt.spoon2/init.js= gives a separate copy. Its =config=
+  is a different object from the loaded copy's.
+- =hs2= prints ={}= for a promise and does not wait for it. It exits with status 65 when the
+  JavaScript throws.
+- =hs.fs.move()= fails when the destination exists.
+- =hs.alert= does not exist; alerts are shown with =hs.ui.alert()=.
+
+* Checks of the harness
+
+The self-test, =make test TESTS="tests/selftest/*.test.js"=, was run twice on 2026-11-17. The
+second run reported 3 passed, 2 failed (both on purpose) and 1 skipped, and exited with status 1.
+After it:
+
+- every Spoon in =use.status()= was still =loaded=;
+- the user's =logs/window-keys.json= had not been modified, and the loaded copy still had its
+  attached key;
+- no file was left in the temporary directory, and =require.cache= held only the configuration's
+  copy of the Spoon.
+
+The first run found that =hs.alert.show()= threw after the tests had finished, which left a
+=.partial= report and the file =mktemp= had created. Both were fixed before the second run.

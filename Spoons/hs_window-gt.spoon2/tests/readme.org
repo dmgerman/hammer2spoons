@@ -1,0 +1,67 @@
+#+title: hs_window-gt's tests
+
+These are the tests of hs_window-gt. They run inside the running Hammerspoon 2, because most of
+the Spoon acts on real windows and screens. They are marked =export-ignore=, so users who install
+the Spoon do not download them.
+
+* Running the tests
+
+The tests are run from the Spoon's directory, with Hammerspoon 2 running and =hs.ipc= started:
+
+#+begin_src sh
+make test                                     # every tests/*.test.js
+make test TESTS="tests/selftest/*.test.js"    # the given files
+#+end_src
+
+Hammerspoon 2 first shows a chooser asking whether to start. The tests move windows and the
+pointer, so the mouse and the keyboard are left alone from the start until the alert with the
+totals appears. =tests/run= then prints one line per test and exits with 0 when every test passed
+or was skipped, 1 when a test failed or the run was cancelled, and 2 when the tests could not be
+run or did not finish within =HS_WINDOW_TESTS_TIMEOUT= seconds (600 by default).
+
+The tests in =tests/selftest/= check the harness itself. Two of them fail on purpose.
+
+* How a run works
+
+A run has four steps:
+
+1. =tests/run= sends one line through =hs2=, which loads =tests/harness.js= and calls its
+   =run()=. =hs2= does not wait for a promise, so =run()= returns at once and the tests continue
+   inside Hammerspoon 2.
+2. The harness loads a fresh copy of the Spoon from =../init.js=. =require()= caches a module
+   under the path it was given, and the configuration loads the Spoon through its link in
+   =Spoons/=, so this copy has its own state and its own =config=. Its =attachFile= and
+   =screenshotDir= point into a temporary directory, so it never reads or writes the user's
+   attached keys. The harness starts the copy before the tests and stops it afterwards.
+3. Each test runs in turn. A test that takes longer than its timeout fails.
+4. The harness writes a report, and =tests/run= prints it. The temporary directory is removed.
+
+* Writing a test
+
+A test file is named =<area>.test.js= and exports a list of tests. Each test has a =name=, a
+=run= function, and optionally a =timeout= in seconds, which is 10 by default. =run= may be
+asynchronous, and receives one argument with these fields:
+
+| Field    | Holds                                                                      |
+|----------+----------------------------------------------------------------------------|
+| =spoon=  | The fresh copy of hs_window-gt                                             |
+| =dir=    | The temporary directory of the run                                         |
+| =assert= | =ok(value, message)=, =equal(actual, expected, message)= and =fail(message)= |
+| =skip=   | =skip(reason)= ends the test and reports it as skipped                     |
+| =wait=   | =wait(seconds)= returns a promise that resolves after that many seconds    |
+
+#+begin_src js
+module.exports = [
+    {
+        name: "leftHalf places the window on the left half of its screen",
+        run: async (t) => {
+            // ...
+            await t.wait(0.3)
+            t.assert.equal(window.frame.x, screen.x)
+        }
+    }
+]
+#+end_src
+
+A test acts only on windows it opens itself, and closes them, also when it fails. The Spoon's
+internal functions are tested through the exported functions that use them.

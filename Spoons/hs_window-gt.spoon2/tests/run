@@ -1,0 +1,70 @@
+#!/bin/bash
+# Runs hs_window-gt's tests in the running Hammerspoon 2 and prints one line per test.
+#
+#   tests/run [test files...]
+#
+# Without arguments it runs every tests/*.test.js. Hammerspoon 2 first asks on screen whether to
+# start. The exit status is 0 when every test passed or was skipped, 1 when a test failed or the
+# run was cancelled, and 2 when the tests could not be run or did not finish in time.
+
+set -u
+tests_dir=$(cd "$(dirname "$0")" && pwd)
+
+if [ $# -eq 0 ]; then
+    shopt -s nullglob
+    set -- "$tests_dir"/*.test.js
+    if [ $# -eq 0 ]; then
+        echo "There are no test files in $tests_dir." >&2
+        exit 2
+    fi
+fi
+files=()
+for file in "$@"; do
+    if [ ! -f "$file" ]; then
+        echo "No such test file: $file" >&2
+        exit 2
+    fi
+    files+=("$(cd "$(dirname "$file")" && pwd)/$(basename "$file")")
+done
+
+# Seconds to wait for the report. This includes the time the user takes to start the tests.
+timeout=${HS_WINDOW_TESTS_TIMEOUT:-600}
+
+report_dir=$(mktemp -d -t hs_window-gt-tests)
+trap 'rm -rf "$report_dir"' EXIT
+report="$report_dir/report.txt"
+files_json=$(printf '%s\n' "${files[@]}" | jq -R . | jq -s -c .)
+harness="$tests_dir/harness.js"
+line="delete require.cache[$(jq -n --arg p "$harness" '$p')]; require($(jq -n --arg p "$harness" '$p')).run({files: $files_json, reportFile: $(jq -n --arg p "$report" '$p')})"
+
+echo "Starting the tests. Confirm the start in Hammerspoon 2."
+if ! printf '%s\n' "$line" | hs2 --no-prompt >/dev/null; then
+    echo "Hammerspoon 2 could not start the tests." >&2
+    exit 2
+fi
+
+waited=0
+while [ ! -f "$report" ]; do
+    if [ "$waited" -ge "$timeout" ]; then
+        echo "No report after $timeout seconds." >&2
+        exit 2
+    fi
+    sleep 1
+    waited=$((waited + 1))
+done
+
+status=2
+while IFS=$'\t' read -r kind a b c d; do
+    case "$kind" in
+        pass|fail|skip)
+            printf '%-4s  %s: %s%s\n' "$(echo "$kind" | tr a-z A-Z)" "$a" "$b" "${c:+  ($c)}" ;;
+        result)
+            case "$a" in
+                pass) echo "$b passed, $c failed, $d skipped."; status=0 ;;
+                fail) echo "$b passed, $c failed, $d skipped."; status=1 ;;
+                cancelled) echo "The tests were cancelled."; status=1 ;;
+                *) echo "The tests stopped with an error: $b" >&2; status=2 ;;
+            esac ;;
+    esac
+done < "$report"
+exit $status
