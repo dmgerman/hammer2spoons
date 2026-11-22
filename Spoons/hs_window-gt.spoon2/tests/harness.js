@@ -83,6 +83,7 @@ async function testRun(file, test, shared, fixtures) {
         screenFrame: fixture.screenFrame,
         screensNeed: fixture.screensNeed,
         alertsCapture: fixture.alertsCapture,
+        canvasesCapture: fixture.canvasesCapture,
         promptCancel: fixture.promptCancel
     })
     let timer = null

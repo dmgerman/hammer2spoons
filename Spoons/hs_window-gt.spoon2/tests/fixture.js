@@ -119,6 +119,26 @@ function create(runId, skip) {
         return alerts
     }
 
+    // Records every canvas created through hs.canvas.create() until the test ends, and returns
+    // the list it records into. Each entry holds the frame the canvas was created with and the
+    // canvas itself. hs.canvas.create is restored by close().
+    let canvasOriginal = null
+    const canvases = []
+    function canvasesCapture() {
+        if (canvasOriginal) return canvases
+        canvasOriginal = hs.canvas.create
+        const original = canvasOriginal
+        hs.canvas.create = function (frame) {
+            const canvas = original.apply(hs.canvas, arguments)
+            canvases.push({ frame: Object.assign({}, frame), canvas })
+            return canvas
+        }
+        return canvases
+    }
+
+    // Where the pointer was when the test started. close() puts it back.
+    const pointer = hs.mouse.absolutePosition()
+
     // Waits for a prompt of hs_interactive-gt to open, then cancels it with Escape. A test calls
     // this, without waiting for it, before calling a function that prompts.
     async function promptCancel() {
@@ -132,13 +152,30 @@ function create(runId, skip) {
         hs.eventtap.keyStroke([], "escape", null)
     }
 
-    // Closes every window this fixture opened, then ends their processes, and restores
-    // hs.ui.alert. Each window still open is closed with its close button first, for the reason
-    // given at windowClose(); ending the process is for a window that did not close.
+    // Closes every window this fixture opened, then ends their processes, restores hs.ui.alert
+    // and hs.canvas.create, and puts the pointer back. Each window still open is closed with its
+    // close button first, for the reason given at windowClose(); ending the process is for a
+    // window that did not close. A window left in fullscreen is taken out of it first, because
+    // closing it would leave its Space on screen.
     async function close() {
         if (alertOriginal) {
             hs.ui.alert = alertOriginal
             alertOriginal = null
+        }
+        if (canvasOriginal) {
+            hs.canvas.create = canvasOriginal
+            canvasOriginal = null
+        }
+        hs.mouse.setAbsolutePosition(pointer.x, pointer.y)
+        for (const window of windows) {
+            try {
+                if (window.isFullscreen) {
+                    window.toggleFullscreen()
+                    await wait(1)
+                }
+            } catch (e) {
+                // Already closed.
+            }
         }
         if (!tasks.length) return
         const open = new Set(hs.window.allWindows().map((w) => w.id))
@@ -155,7 +192,7 @@ function create(runId, skip) {
         await wait(0.3)
     }
 
-    return { windowsOpen, windowClose, frameSet, screenFrame, screensNeed, frameEqual, alertsCapture, promptCancel, close }
+    return { windowsOpen, windowClose, frameSet, screenFrame, screensNeed, frameEqual, alertsCapture, canvasesCapture, promptCancel, close }
 }
 
 module.exports = { create, FRAME_TOLERANCE, WINDOW_MINIMUM }

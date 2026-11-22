@@ -57,6 +57,7 @@ asynchronous, and receives one argument with these fields:
 | =screenFrame= | =screenFrame(window)= returns the usable frame of the window's screen      |
 | =screensNeed= | =screensNeed(count)= ends the test as skipped when fewer screens are connected |
 | =alertsCapture= | =alertsCapture()= returns a list that receives the message of every alert shown until the test ends. The alerts are still shown. |
+| =canvasesCapture= | =canvasesCapture()= returns a list that receives ={frame, canvas}= for every canvas created until the test ends. The canvases are still shown. |
 | =promptCancel= | =promptCancel()= waits for a prompt of hs_interactive-gt to open and cancels it with Escape. It is called without =await=, before the function that prompts. |
 
 #+begin_src js
@@ -72,7 +73,9 @@ module.exports = [
 ]
 #+end_src
 
-A test acts only on windows it opens with =windowsOpen()=. The Spoon's internal functions are
+A test acts only on windows it opens with =windowsOpen()=. After each test the harness puts
+the pointer back where it was, rounded to a whole point, and takes any test window out of
+fullscreen before closing it. The Spoon's internal functions are
 tested through the exported functions that use them.
 
 * The test windows
