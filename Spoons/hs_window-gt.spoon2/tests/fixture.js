@@ -32,6 +32,8 @@ function frameClose(a, b) {
 
 function create(runId, skip) {
     const tasks = []
+    // Every window opened, so that close() can close each one with its close button.
+    const windows = []
     let opened = 0
 
     // Opens count windows in a new process and resolves to their HSWindow objects, in order.
@@ -46,12 +48,32 @@ function create(runId, skip) {
 
         const started = Date.now()
         while (Date.now() - started < OPEN_TIMEOUT * 1000) {
-            const windows = hs.window.allWindows()
-            const found = titles.map((title) => windows.find((w) => w.title === title))
-            if (found.every(Boolean)) return found
+            const all = hs.window.allWindows()
+            const found = titles.map((title) => all.find((w) => w.title === title))
+            if (found.every(Boolean)) {
+                windows.push(...found)
+                return found
+            }
             await wait(0.1)
         }
         throw new Error(`the test windows did not appear within ${OPEN_TIMEOUT} s`)
+    }
+
+    // Closes a window during a test, with its close button, and resolves when it is gone.
+    //
+    // A window is closed this way, not by ending its process, because hs_windowfilter-gt reports
+    // windowDestroyed only for the close button. On 2026-11-23, ending the process produced no
+    // event within 2 s, and the window stayed in hs_windowfilter-gt's list of windows.
+    async function windowClose(window) {
+        if (!windows.some((w) => w.id === window.id)) {
+            throw new Error(`window "${window.title}" was not opened by this test`)
+        }
+        window.close()
+        const started = Date.now()
+        while (hs.window.allWindows().some((w) => w.id === window.id)) {
+            if (Date.now() - started > OPEN_TIMEOUT * 1000) throw new Error(`window "${window.title}" did not close`)
+            await wait(0.1)
+        }
     }
 
     // Sets a window's frame and waits for it to take effect. A test uses this to put a window
@@ -110,19 +132,30 @@ function create(runId, skip) {
         hs.eventtap.keyStroke([], "escape", null)
     }
 
-    // Closes every window this fixture opened, by ending their processes, and restores
-    // hs.ui.alert.
+    // Closes every window this fixture opened, then ends their processes, and restores
+    // hs.ui.alert. Each window still open is closed with its close button first, for the reason
+    // given at windowClose(); ending the process is for a window that did not close.
     async function close() {
         if (alertOriginal) {
             hs.ui.alert = alertOriginal
             alertOriginal = null
         }
         if (!tasks.length) return
+        const open = new Set(hs.window.allWindows().map((w) => w.id))
+        for (const window of windows.splice(0)) {
+            if (!open.has(window.id)) continue
+            try {
+                window.close()
+            } catch (e) {
+                // Ending the process below closes it.
+            }
+        }
+        await wait(0.5)
         for (const task of tasks.splice(0)) task.terminate()
         await wait(0.3)
     }
 
-    return { windowsOpen, frameSet, screenFrame, screensNeed, frameEqual, alertsCapture, promptCancel, close }
+    return { windowsOpen, windowClose, frameSet, screenFrame, screensNeed, frameEqual, alertsCapture, promptCancel, close }
 }
 
 module.exports = { create, FRAME_TOLERANCE, WINDOW_MINIMUM }

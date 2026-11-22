@@ -9,8 +9,10 @@ ObjC.import("Cocoa")
 
 function run(argv) {
     const app = $.NSApplication.sharedApplication
-    // An accessory application has no Dock icon, but its windows can still be focused.
-    app.setActivationPolicy($.NSApplicationActivationPolicyAccessory)
+    // A regular application, which shows an icon in the Dock while the tests run.
+    // hs_windowfilter-gt tracks only standard applications, and an accessory application,
+    // which would have no Dock icon, is not one: its windows would produce no events.
+    app.setActivationPolicy($.NSApplicationActivationPolicyRegular)
     const style = $.NSWindowStyleMaskTitled | $.NSWindowStyleMaskClosable |
         $.NSWindowStyleMaskResizable | $.NSWindowStyleMaskMiniaturizable
     argv.forEach((title, i) => {

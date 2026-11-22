@@ -78,6 +78,7 @@ async function testRun(file, test, shared, fixtures) {
     const context = Object.assign({}, shared, {
         assert: Object.assign({ frameEqual: fixture.frameEqual }, assert),
         windowsOpen: fixture.windowsOpen,
+        windowClose: fixture.windowClose,
         frameSet: fixture.frameSet,
         screenFrame: fixture.screenFrame,
         screensNeed: fixture.screensNeed,
@@ -147,11 +148,22 @@ async function runAll(options) {
     try {
         spoon.start()
         for (const file of options.files) {
-            let tests
+            let loaded
             try {
-                tests = requireFresh(file)
+                loaded = requireFresh(file)
             } catch (error) {
                 results.push({ file, name: "(loading the file)", status: "fail", message: String(error.message || error) })
+                continue
+            }
+            // A file exports a list of tests, or {screens, tests} when every test in it needs
+            // that many screens. Such a file is skipped as a whole when fewer are connected.
+            const tests = Array.isArray(loaded) ? loaded : loaded.tests
+            const connected = hs.screen.all().length
+            if (!Array.isArray(loaded) && loaded.screens > connected) {
+                for (const test of tests) {
+                    results.push({ file, name: test.name, status: "skip",
+                        message: `needs ${loaded.screens} screens, and ${connected} is connected` })
+                }
                 continue
             }
             for (const test of tests) {

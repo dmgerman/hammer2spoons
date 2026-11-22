@@ -60,8 +60,21 @@ Two kinds of window were tried through =hs2=:
    bottom.
 2. A window opened by =osascript=. Its application is named "osascript" and has no bundle
    identifier. The default filter of hs_windowfilter-gt reports it, it is a standard window,
-   =focus()= makes it the focused window, and terminating the process closes it. With the
-   accessory activation policy it shows no Dock icon.
+   =focus()= makes it the focused window, and terminating the process closes it.
+
+Two corrections were made on 2026-11-23, in hammer2spoons-9gb, when the test that a closed
+window's history is forgotten failed:
+
+1. The fixture first used the accessory activation policy, to avoid a Dock icon. An accessory
+   application's =kind= is not ="standard"=, and hs_windowfilter-gt's =worthTracking()= skips it,
+   so the Spoon received no event about its windows. The placement tests passed regardless,
+   because they need no event. The fixture now uses the regular policy, and an =osascript=
+   icon shows in the Dock during a run. A probe then received =windowCreated=, =windowMoved= and
+   =windowFocused=.
+2. Ending the process produced no =windowDestroyed= within 2 s. Closing the window with
+   =HSWindow.close()= produced it within 0.5 s. The fixture now closes every window with its
+   close button before ending the process. The number of windows in hs_windowfilter-gt's
+   =status()= was 30 before and after a full run, so a run leaves nothing in its list.
 
 Measured on the 1800 by 1169 point built-in display, whose usable frame is
 ={x: 0, y: 39, w: 1800, h: 1130}=:
@@ -76,9 +89,10 @@ Measured on the 1800 by 1169 point built-in display, whose usable frame is
 
 The tolerance is therefore 1 point, and 87 by 33 is the smallest size.
 
-One probe called =create({})= on the user's loaded hs_windowfilter-gt without destroying the
-filter. That filter has no subscriptions, and nothing outside the Spoon can reach it to destroy
-it. It stays as one empty object until the next reload. The fixture never creates a filter.
+Two probes, on 2026-11-23, called =create({})= on the user's loaded hs_windowfilter-gt without
+destroying the filter. Those filters have no subscriptions, and nothing outside the Spoon can
+reach them to destroy them. They stay as two empty objects until the next reload. The fixture
+never creates a filter.
 
 The self-test, =tests/selftest/fixture.test.js=, was run on 2026-11-23 after fixing one fault in
 the test file itself (some windows have a =null= title). Every test gave its intended result,

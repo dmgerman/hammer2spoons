@@ -51,6 +51,7 @@ asynchronous, and receives one argument with these fields:
 | =skip=        | =skip(reason)= ends the test and reports it as skipped                     |
 | =wait=        | =wait(seconds)= returns a promise that resolves after that many seconds    |
 | =windowsOpen= | =windowsOpen(count)= opens that many test windows, 1 by default, and resolves to their =HSWindow= objects |
+| =windowClose= | =windowClose(window)= closes a test window with its close button, and resolves when it is gone |
 | =frameSet=    | =frameSet(window, frame)= sets a window's frame and waits for it to take effect |
 | =screenFrame= | =screenFrame(window)= returns the usable frame of the window's screen      |
 | =screensNeed= | =screensNeed(count)= ends the test as skipped when fewer screens are connected |
@@ -77,13 +78,20 @@ tested through the exported functions that use them.
 
 =windowsOpen()= starts =tests/fixture-windows.jxa= with =osascript -l JavaScript=. That script
 opens one plain Cocoa window for each title it is given and keeps them open until its process
-ends. The harness ends the process after each test, also when the test fails or times out, so
-a test does not close its own windows.
+ends. After each test, also when the test fails or times out, the harness closes every window
+with its close button and then ends the process, so a test does not close its own windows. An
+=osascript= icon is shown in the Dock while the process runs.
 
-The windows belong to a separate process rather than to Hammerspoon 2, for one reason.
-hs_windowfilter-gt leaves Hammerspoon 2's own windows out of its default filter, which
-hs_window-gt uses. A window made with =hs.ui.window()= can be moved, but the Spoon would receive no
-event when it is focused, moved or closed.
+Three things about hs_windowfilter-gt decide how the windows are made and closed. hs_window-gt
+learns that a window was focused, moved or closed only through hs_windowfilter-gt.
+
+1. Its default filter, which hs_window-gt uses, leaves out Hammerspoon 2's own windows. The test
+   windows therefore belong to a separate process rather than being made with =hs.ui.window()=.
+2. It tracks only standard applications, those with an icon in the Dock. The process is
+   therefore a regular application, and has an icon.
+3. It reports =windowDestroyed= when a window is closed with its close button. Ending the
+   process produced no event, and left the window in its list. A test that closes a window
+   during the test does so with =windowClose()=, which uses the close button.
 
 Three measurements, made on 2026-11-23, govern how frames are compared and chosen:
 
@@ -93,5 +101,18 @@ Three measurements, made on 2026-11-23, govern how frames are compared and chose
 2. A test window cannot be smaller than 87 by 33 points, so a test does not ask for less.
 3. The windows appear about 0.3 s after their process starts. =windowsOpen()= waits up to 5 s.
 
-Expected frames are computed from =screenFrame()=, never from the size of one display. A test that
-needs two screens calls =screensNeed(2)= first.
+Expected frames are computed from =screenFrame()=, never from the size of one display.
+
+* The tests that need two screens
+
+Every test that needs two screens is in =tests/two-screens.test.js=, so that they can be run
+together when a second screen is connected, for example an iPad through Sidecar:
+
+#+begin_src sh
+make test-two-screens
+#+end_src
+
+That file exports ={screens: 2, tests: [...]}= instead of a list. When fewer screens are
+connected, the harness reports each of its tests as skipped without running them, and every
+other file runs as usual. A test elsewhere that needs two screens for one check calls
+=screensNeed(2)= instead, but such a test belongs in this file.
