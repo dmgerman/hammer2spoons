@@ -80,7 +80,9 @@ async function testRun(file, test, shared, fixtures) {
         windowsOpen: fixture.windowsOpen,
         frameSet: fixture.frameSet,
         screenFrame: fixture.screenFrame,
-        screensNeed: fixture.screensNeed
+        screensNeed: fixture.screensNeed,
+        alertsCapture: fixture.alertsCapture,
+        promptCancel: fixture.promptCancel
     })
     let timer = null
     const timeout = new Promise((resolve, reject) => {

@@ -81,14 +81,48 @@ function create(runId, skip) {
         }
     }
 
-    // Closes every window this fixture opened, by ending their processes.
+    // Records the message of every alert shown through hs.ui.alert() until the test ends, and
+    // returns the list it records into. The alerts are still shown. hs.ui.alert is restored by
+    // close().
+    let alertOriginal = null
+    const alerts = []
+    function alertsCapture() {
+        if (alertOriginal) return alerts
+        alertOriginal = hs.ui.alert
+        const original = alertOriginal
+        hs.ui.alert = function (message) {
+            alerts.push(String(message))
+            return original.apply(hs.ui, arguments)
+        }
+        return alerts
+    }
+
+    // Waits for a prompt of hs_interactive-gt to open, then cancels it with Escape. A test calls
+    // this, without waiting for it, before calling a function that prompts.
+    async function promptCancel() {
+        const interactive = hs.spoons["hs_interactive-gt"]
+        const started = Date.now()
+        while (!interactive.promptIsOpen()) {
+            if (Date.now() - started > OPEN_TIMEOUT * 1000) throw new Error("no prompt opened")
+            await wait(0.1)
+        }
+        await wait(0.3)
+        hs.eventtap.keyStroke([], "escape", null)
+    }
+
+    // Closes every window this fixture opened, by ending their processes, and restores
+    // hs.ui.alert.
     async function close() {
+        if (alertOriginal) {
+            hs.ui.alert = alertOriginal
+            alertOriginal = null
+        }
         if (!tasks.length) return
         for (const task of tasks.splice(0)) task.terminate()
         await wait(0.3)
     }
 
-    return { windowsOpen, frameSet, screenFrame, screensNeed, frameEqual, close }
+    return { windowsOpen, frameSet, screenFrame, screensNeed, frameEqual, alertsCapture, promptCancel, close }
 }
 
 module.exports = { create, FRAME_TOLERANCE, WINDOW_MINIMUM }

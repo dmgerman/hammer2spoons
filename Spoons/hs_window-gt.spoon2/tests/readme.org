@@ -54,6 +54,8 @@ asynchronous, and receives one argument with these fields:
 | =frameSet=    | =frameSet(window, frame)= sets a window's frame and waits for it to take effect |
 | =screenFrame= | =screenFrame(window)= returns the usable frame of the window's screen      |
 | =screensNeed= | =screensNeed(count)= ends the test as skipped when fewer screens are connected |
+| =alertsCapture= | =alertsCapture()= returns a list that receives the message of every alert shown until the test ends. The alerts are still shown. |
+| =promptCancel= | =promptCancel()= waits for a prompt of hs_interactive-gt to open and cancels it with Escape. It is called without =await=, before the function that prompts. |
 
 #+begin_src js
 module.exports = [
