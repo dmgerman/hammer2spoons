@@ -68,13 +68,14 @@ countdown runs, and /Pause/ or /Resume/ and /Stop/ while one runs.
 
 * Starting a countdown
 
-A countdown has a length in whole minutes. Only one countdown runs at a time, so starting
-another while one runs is refused, with a message.
+A countdown has a length in whole minutes, of at least 1. Only one countdown runs at a time, so
+starting another while one runs is refused, with a message.
 
 /Start for…/, or =countdownPromptedStart()=, asks for the length in a dialog. The answer is either a number of
 minutes, such as =45=, or a time of day, such as =14:30=, at which the countdown ends. An answer
 that is neither is reported in the dialog, which asks again with that answer filled in, to be
-corrected. Cancel closes the dialog without starting a countdown.
+corrected. A number of minutes is rounded to a whole number, and one that rounds to 0, such as
+=0.4=, is reported in the same way. Cancel closes the dialog without starting a countdown.
 
 The length used by /Start/ is =config.defaultLenMinutes=. Each countdown started also sets that
 length, so /Start/ repeats the last length used. Setting =config.useLastTimerAsDefault= to false
@@ -93,8 +94,8 @@ A time of day is written in one of these forms:
 =am= and =pm= may be written in capitals, and the space before them may be left out. The minutes
 are always two digits.
 
-A time earlier than the current time means that time tomorrow, so at 22:00 a countdown to =7:00=
-runs for nine hours. A time that is not in one of these forms, such as =24:00=, =13:00 pm= or
+A time earlier than the current time, or the current minute itself, means that time tomorrow, so
+at 22:00 a countdown to =7:00= runs for nine hours. A time that is not in one of these forms, such as =24:00=, =13:00 pm= or
 =10:30 sharp=, is reported and starts no countdown.
 
 * While a countdown runs

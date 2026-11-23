@@ -1,6 +1,6 @@
 {
     "name": "hs_countdown-gt",
     "author": "ashfinal <ashfinal@gmail.com>, Daniel Marques <danielbmarques@gmail.com>, Omar El-Domeiri <omar@doesnotexist.com>, Daniel German <dmg@turingmachine.org>",
-    "version": "4.0.0",
+    "version": "4.0.1",
     "description": "A countdown timer shown as a progress bar along the bottom edge of every screen and as the time left in the menu bar, with warnings as the end approaches and an alert when the time is up."
 }

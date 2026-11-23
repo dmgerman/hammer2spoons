@@ -429,8 +429,11 @@ function countdownStart(minutes, callback) {
         messageShow(`Error. Minutes should be an integer [${minutes}]`)
         return module.exports
     }
-    if (minutes < 0) {
-        messageShow(`Error. Trying to start a timer for negative minutes [${minutes}]`)
+    // A countdown of 0 minutes would end at the next tick, with the sound, the notification
+    // and the dialog, so it is refused as a negative length is (found by the tests on
+    // 2026-11-23).
+    if (minutes < 1) {
+        messageShow(`Error. A timer must run for at least 1 minute [${minutes}]`)
         return module.exports
     }
     if (callback !== undefined && callback !== null && typeof callback !== "function") {
@@ -509,8 +512,9 @@ function countdownUntilStart(time, callback) {
 
     const now = new Date()
     const current = now.getHours() * 60 + now.getMinutes()
-    // Positive remainder, so a target earlier than now lands tomorrow.
-    const minutes = ((parsed.minutes - current) % (24 * 60) + 24 * 60) % (24 * 60)
+    // Positive remainder, so a target earlier than now lands tomorrow. The current minute
+    // itself also means tomorrow, rather than a countdown of 0 minutes.
+    const minutes = ((parsed.minutes - current) % (24 * 60) + 24 * 60) % (24 * 60) || 24 * 60
     return countdownStart(minutes, callback)
 }
 
@@ -534,11 +538,14 @@ function countdownFromAnswerStart(answer, callback) {
     if (answer.trim() === "" || !Number.isFinite(minutes)) {
         return `Illegal number [${answer}]`
     }
-    if (minutes <= 0) {
-        return `Illegal number [${answer}]. Must be more than zero`
+    // Checked after rounding, because a countdown has a length in whole minutes: 0.4 would
+    // otherwise pass as more than zero and start a countdown of 0 minutes.
+    const rounded = Math.round(minutes)
+    if (rounded < 1) {
+        return `Illegal number [${answer}]. Must be at least 1 minute`
     }
 
-    countdownStart(Math.round(minutes), callback)
+    countdownStart(rounded, callback)
     return null
 }
 
