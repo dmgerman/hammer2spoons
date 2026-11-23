@@ -76,8 +76,8 @@ module.exports = {
         // The user's Spoon notices the restored contents at its next poll, and ignores them
         // while it is still paused. Waiting longer than its interval lets that poll pass first.
         const user = userSpoon()
-        const interval = user ? Number(user.config.watchInterval) || 0.8 : 0.8
-        await new Promise((resolve) => hs.timer.doAfter(interval * 2 + 0.5, resolve))
+        const userInterval = user ? Number(user.config.watchInterval) || 0.8 : 0.8
+        await new Promise((resolve) => hs.timer.doAfter(userInterval * 2 + 0.5, resolve))
         if (user && userIgnored) {
             user.config.honorIgnoredIdentifiers = userIgnored.honor
             user.config.ignoredIdentifiers = userIgnored.ids

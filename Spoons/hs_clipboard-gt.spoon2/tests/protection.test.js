@@ -19,7 +19,7 @@ module.exports = [
             const text = `clipboard test ${t.runId} protection`
             const before = user().historyEntries().length
             hs.pasteboard.writeString(text)
-            await t.wait(t.spoon.config.watchInterval * 2 + 0.4)
+            await t.wait((Number(hs.pasteboard.watcherInterval) || 0.8) * 2 + 0.5)
             t.assert.equal(t.spoon.historyEntries()[0], text, "the copy's newest entry")
             t.assert.ok(!user().historyEntries().includes(text), "the user's history recorded the text")
             t.assert.equal(user().historyEntries().length, before, "entries in the user's history")

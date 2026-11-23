@@ -35,3 +35,18 @@ A run that does not reach its end, because Hammerspoon 2 stopped, leaves the use
 hs_clipboard-gt paused until the configuration is reloaded.
 
 =tests/protection.test.js= checks the first two.
+
+* Copying in a test
+
+=tests/clipboard.js= holds the helpers the test files share. A copy waits until the copy's
+history changes, for at most two readings of the clipboard and a margin. A copy that must not be
+recorded waits that whole time.
+
+The clipboard is read every =hs.pasteboard.watcherInterval= seconds. Hammerspoon 2 reads that
+setting only when its clipboard watcher starts, which happens when the first Spoon listens, so
+the user's hs_clipboard-gt has already set it and a test cannot shorten it.
+
+Readings fall at the same fractions of a second each time, so waiting cannot make two readings
+fall within one second. The test of two images copied within one second therefore sends the
+watcher's change event itself, through =hs.pasteboard._watcherEmitter=, which is private to
+Hammerspoon 2 and used in that test only.

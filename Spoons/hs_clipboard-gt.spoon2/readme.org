@@ -257,7 +257,8 @@ by =start()=, so that a password-like entry left in it by an earlier version is 
 when nothing is copied afterwards.
 
 Each image is a PNG file in =clipboardDir=, named after the time it was copied, such as
-=20261115T165612.png=. The directory holds exactly the images that the history refers to.
+=20261115T165612.png=. A second image copied in the same second is given a number, such as
+=20261115T165612-2.png=. The directory holds exactly the images that the history refers to.
 
 * Credits
 

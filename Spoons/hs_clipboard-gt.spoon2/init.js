@@ -414,7 +414,7 @@ function pasteboardHasImage() {
  * Store the image on the pasteboard as a file, and put an entry at the top of the history.
  *
  * The file is named for the time it was copied, which sorts and reads well in a directory
- * listing, and makes two copies in the same second the only collision to worry about.
+ * listing. Two copies in the same second are told apart by a number after the second's.
  */
 function imageCapture() {
     const image = hs.pasteboard.readImage()
@@ -423,7 +423,10 @@ function imageCapture() {
     hs.fs.mkdir(config.clipboardDir)
 
     const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "")
-    const path = `${config.clipboardDir}/${stamp}.png`
+    // A second image copied in the same second is given -2, -3 and so on, so that it does not
+    // overwrite the first. The tests found the collision on 2026-11-23.
+    let path = `${config.clipboardDir}/${stamp}.png`
+    for (let n = 2; hs.fs.exists(path); n++) path = `${config.clipboardDir}/${stamp}-${n}.png`
 
     if (!image.saveToFile(path)) {
         console.error(`[hs_clipboard-gt] could not write ${path}`)
