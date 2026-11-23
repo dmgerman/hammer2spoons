@@ -41,7 +41,9 @@ Anything particular to one Spoon goes in that Spoon's own files, which =sync= do
 - =tests/spoon.js=, when the copy under test must be set up before it starts. It exports
   =setup(spoon, dir)=, which the harness calls with the copy and the run's temporary directory.
   hs_window-gt uses it to point its attachment file and its screenshot directory into that
-  directory;
+  directory. It may also export =teardown(spoon, dir)=, which the harness calls after it stops
+  the copy, to undo what =setup()= changed outside the copy. hs_clipboard-gt uses the two to
+  pause the user's own hs_clipboard-gt and to put the user's clipboard back;
 - =tests/readme.org=, which describes that Spoon's tests.
 
 =make test= starts the tests at once, shows no chooser at the start or the end, and prints the

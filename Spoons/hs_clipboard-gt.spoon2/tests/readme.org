@@ -1,0 +1,37 @@
+#+title: hs_clipboard-gt's tests
+
+These are the tests of hs_clipboard-gt. They run inside the running Hammerspoon 2, on a fresh copy
+of the Spoon. They are marked =export-ignore=, so users who install the Spoon do not download them.
+
+The harness, the runner, the test windows, the makefile and the self-tests are copies of the
+files in =tests-common/= at the top of the repository. They are never edited here.
+=tests-common/readme.org= explains how they are kept the same, and hs_window-gt's
+=tests/readme.org= describes how a run works and everything a test receives.
+
+* Running the tests
+
+#+begin_src sh
+make test                                          # every tests/*.test.js, without choosers
+tests/run tests/selftest/harness.test.js           # the given files, asking on screen first
+#+end_src
+
+Run only the files a change can affect.
+
+* The user's clipboard
+
+Hammerspoon 2 has only the general pasteboard, which is the user's clipboard, so these tests
+write to it. =tests/spoon.js= protects the user in three ways, which the user agreed to on
+2026-11-23:
+
+1. The copy keeps its history and its images in the run's directory.
+2. The user's own hs_clipboard-gt is paused for the run, so that it records nothing the tests
+   copy. Its =ignoredIdentifiers= is replaced with a list that matches every type, so it ignores
+   every change. It keeps running, so the history it holds in memory, including the
+   password-like entries it never saves, is untouched. =teardown()= puts the setting back.
+3. The clipboard's text, HTML, RTF, address and image are saved before the run and put back
+   after it. Anything else on the clipboard, such as files copied in the Finder, is lost.
+
+A run that does not reach its end, because Hammerspoon 2 stopped, leaves the user's
+hs_clipboard-gt paused until the configuration is reloaded.
+
+=tests/protection.test.js= checks the first two.

@@ -181,9 +181,12 @@ async function runAll(options) {
     const fixtures = requireFresh(`${__dirname}/fixture.js`)
     const spoon = requireFresh(SPOON_FILE)
     // A Spoon whose copy must not touch the user's files points them into the run's directory
-    // here. tests/spoon.js exports setup(spoon, dir); a Spoon that needs nothing has no such file.
+    // here. tests/spoon.js exports setup(spoon, dir), and may export teardown(spoon, dir), which
+    // runs after the copy is stopped, to undo what setup() did outside the copy. A Spoon that
+    // needs neither has no such file.
     const setupFile = `${__dirname}/spoon.js`
-    if (hs.fs.exists(setupFile)) requireFresh(setupFile).setup(spoon, dir)
+    const setup = hs.fs.exists(setupFile) ? requireFresh(setupFile) : null
+    if (setup) setup.setup(spoon, dir)
     // Every test window's title starts with this, so that no other window is mistaken for one.
     const titlePrefix = `${SPOON_NAME} test ${runId} `
 
@@ -220,6 +223,13 @@ async function runAll(options) {
         }
     } finally {
         if (typeof spoon.stop === "function") spoon.stop()
+        if (setup && typeof setup.teardown === "function") {
+            try {
+                await setup.teardown(spoon, dir)
+            } catch (e) {
+                console.error(`[tests] tests/spoon.js teardown() failed: ${e && e.message ? e.message : e}`)
+            }
+        }
         hs.fs.deletePath(dir)
         await frontWindowsRestore(front)
     }
