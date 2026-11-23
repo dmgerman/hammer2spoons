@@ -15,8 +15,20 @@ make test TESTS="tests/selftest/*.test.js"    # the given files
 
 Hammerspoon 2 first shows a chooser asking whether to start. The tests move windows and the
 pointer, so the mouse and the keyboard are left alone from the start until a second chooser says
-that the tests have finished, with their totals. The results are printed once that chooser is
-closed. =tests/run= then prints one line per test and exits with 0 when every test passed
+that the tests have finished, with their totals. That chooser asks whether the run was
+uninterrupted. The results are printed once it is closed. When the answer is that the mouse or
+the keyboard was used, =tests/run= says that the results may be wrong, and exits with 1.
+
+Before the first test, the harness records the window in front on each screen, and the focused
+window. After the last test, it focuses each of them again, the focused window last. The order of
+the windows behind them is not restored, because macOS cannot send a window back.
+
+** Which tests to run
+
+A full run takes about ten minutes, and the mouse and the keyboard cannot be used meanwhile. Run
+only the files that a change can affect, with =make test TESTS=...=. Run every file only when a
+change can affect all of them, such as a change to =harness.js=, =fixture.js= or the Spoon's
+=frameSet()=, or before a change to the Spoon is committed. =tests/run= then prints one line per test and exits with 0 when every test passed
 or was skipped, 1 when a test failed or the run was cancelled, and 2 when the tests could not be
 run or did not finish within =HS_WINDOW_TESTS_TIMEOUT= seconds (600 by default).
 

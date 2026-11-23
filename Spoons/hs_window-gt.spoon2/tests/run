@@ -66,6 +66,15 @@ while IFS=$'\t' read -r kind a b c d e; do
                 cancelled) echo "The tests were cancelled."; status=1 ;;
                 *) echo "The tests stopped with an error: $b" >&2; status=2 ;;
             esac ;;
+        front)
+            echo "Before the tests: $a"
+            echo "After restoring:  $b" ;;
+        interrupted)
+            case "$a" in
+                yes) echo "The mouse or the keyboard was used during the run, so these results may be wrong."
+                     [ "$status" -eq 0 ] && status=1 ;;
+                unknown) echo "The end-of-run chooser was dismissed, so it is not known whether the run was uninterrupted." ;;
+            esac ;;
     esac
 done < "$report"
 exit $status

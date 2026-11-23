@@ -106,15 +106,34 @@ function create(runId, skip) {
     // Records the message of every alert shown through hs.ui.alert() until the test ends, and
     // returns the list it records into. The alerts are still shown. hs.ui.alert is restored by
     // close().
+    //
+    // The list also has a property `durations`, which holds the seconds given to each alert's
+    // duration(), at the same index as its message, or undefined when duration() was not called.
+    // Each alert is returned inside a Proxy that records duration() and passes every call on to
+    // the real alert, so that an alert another Spoon shows during the test works as usual.
     let alertOriginal = null
     const alerts = []
+    alerts.durations = []
     function alertsCapture() {
         if (alertOriginal) return alerts
         alertOriginal = hs.ui.alert
         const original = alertOriginal
         hs.ui.alert = function (message) {
-            alerts.push(String(message))
-            return original.apply(hs.ui, arguments)
+            const index = alerts.push(String(message)) - 1
+            const real = original.apply(hs.ui, arguments)
+            if (!real) return real
+            const proxy = new Proxy(real, {
+                get(target, property) {
+                    const value = target[property]
+                    if (typeof value !== "function") return value
+                    return (...args) => {
+                        if (property === "duration") alerts.durations[index] = args[0]
+                        const result = value.apply(target, args)
+                        return result === target ? proxy : result
+                    }
+                }
+            })
+            return proxy
         }
         return alerts
     }

@@ -159,6 +159,7 @@ async function runAll(options) {
     spoon.config.attachFile = `${dir}/window-keys.json`
     spoon.config.screenshotDir = dir
 
+    const front = frontWindowsRecord()
     const results = []
     try {
         spoon.start()
@@ -188,27 +189,91 @@ async function runAll(options) {
     } finally {
         spoon.stop()
         hs.fs.deletePath(dir)
+        await frontWindowsRestore(front)
     }
+    const restored = frontWindowsRecord()
 
     const count = (status) => results.filter((r) => r.status === status).length
     const lines = results.map((r) => [r.status, r.file.replace(/^.*\//, ""), r.name, r.message || ""].join("\t"))
     const failed = count("fail") + count("fixed")
     lines.push(["result", failed ? "fail" : "pass", count("pass"), failed, count("skip"), count("known")].join("\t"))
     // The user asked to acknowledge the end of a run, so that they know when the mouse and the
-    // keyboard can be used again. The report is written only after that, whichever choice
-    // closes the chooser.
-    await finishConfirm(`${count("pass")} passed, ${failed} failed, ${count("skip")} skipped, ${count("known")} known failures`)
+    // keyboard can be used again, and to say whether they used either during the run, which can
+    // make tests fail. The report is written only after that, whichever choice closes the
+    // chooser.
+    const answer = await finishConfirm(`${count("pass")} passed, ${failed} failed, ${count("skip")} skipped, ${count("known")} known failures`)
+    lines.push(["interrupted", answer === "no" ? "no" : answer === "yes" ? "yes" : "unknown"].join("\t"))
+    lines.push(["front", frontWindowsDescribe(front), frontWindowsDescribe(restored)].join("\t"))
+    // The chooser took the focus, and closing it may not give it back to the window that had it.
+    if (front.focused) frontWindowFocus(front.focused)
     reportWrite(options.reportFile, lines)
 }
 
-// Shows a chooser saying that the tests have finished, with their totals, and resolves when
-// the user closes it.
+// Shows a chooser saying that the tests have finished, with their totals, and asking whether
+// the run was uninterrupted. Resolves to "no" when it was, "yes" when the user used the mouse
+// or the keyboard, and null when the chooser was dismissed.
 async function finishConfirm(totals) {
     const interactive = hs.spoons["hs_interactive-gt"]
-    await interactive.readerRun(interactive.readers.choice.prompted, {
-        placeholder: "The hs_window-gt tests have finished. The mouse and keyboard can be used again",
-        choices: [{ text: "OK", subText: totals, value: "ok" }]
+    return interactive.readerRun(interactive.readers.choice.prompted, {
+        placeholder: "The hs_window-gt tests have finished. Did they run without interruption?",
+        choices: [
+            { text: "Yes, I did not use the mouse or the keyboard", subText: totals, value: "no" },
+            { text: "No, I used the mouse or the keyboard during the run", subText: totals, value: "yes" }
+        ]
     })
+}
+
+// The window in front on each screen, and the focused window, before the tests start. Only the
+// front window of each screen is recorded: macOS can bring a window forward but cannot send one
+// back, so the order of the windows behind it cannot be restored.
+//
+// Only standard, visible windows count. hs.window.orderedWindows() also lists windows such as a
+// menu bar agent's and the Finder's desktop, which were measured in front of the user's windows
+// on 2026-11-23.
+function frontWindowsRecord() {
+    const ordered = hs.window.orderedWindows().filter((w) => {
+        try {
+            return w.isStandard && w.isVisible
+        } catch (e) {
+            return false
+        }
+    })
+    const perScreen = []
+    for (const screen of hs.screen.all()) {
+        const window = ordered.find((w) => w.screen && w.screen.id === screen.id)
+        if (window) perScreen.push(window)
+    }
+    return { perScreen, focused: hs.window.focusedWindow() }
+}
+
+// The recorded windows, by application name and window id, for the report. Titles are left out,
+// because they can hold the user's private information.
+function frontWindowsDescribe(front) {
+    const name = (w) => `${w.application ? w.application.name : "?"} #${w.id}`
+    return `in front: ${front.perScreen.map(name).join(", ")}; focused: ${front.focused ? name(front.focused) : "none"}`
+}
+
+// Focuses a recorded window, if it still exists. Returns whether it did.
+function frontWindowFocus(window) {
+    const id = window.id
+    if (!hs.window.allWindows().some((w) => w.id === id)) return false
+    try {
+        window.focus()
+        return true
+    } catch (e) {
+        return false
+    }
+}
+
+// Brings back the window that was in front on each screen, then the focused window, so that it
+// ends up with the focus.
+async function frontWindowsRestore(front) {
+    const focusedId = front.focused ? front.focused.id : null
+    for (const window of front.perScreen) {
+        if (window.id === focusedId) continue
+        if (frontWindowFocus(window)) await wait(0.3)
+    }
+    if (front.focused && frontWindowFocus(front.focused)) await wait(0.3)
 }
 
 module.exports = { run }
