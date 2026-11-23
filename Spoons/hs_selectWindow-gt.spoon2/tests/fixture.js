@@ -52,8 +52,11 @@ function create(titlePrefix, skip, dir) {
         const titles = []
         for (let i = 0; i < count; i++) titles.push(`${titlePrefix}${++opened}`)
         const commands = `${dir}/window-commands-${++processes}`
+        // The callbacks are left out, not passed as null: hs.task.create() logs "Unable to create
+        // JSCallback: value is not a function" for each null, two for every process (measured on
+        // 2026-11-23).
         const task = hs.task.create("/usr/bin/osascript",
-            ["-l", "JavaScript", WINDOWS_SCRIPT, `--commands=${commands}`, ...titles], null, null, null)
+            ["-l", "JavaScript", WINDOWS_SCRIPT, `--commands=${commands}`, ...titles])
         tasks.push(task)
         task.start()
 
@@ -123,7 +126,7 @@ function create(titlePrefix, skip, dir) {
         const before = new Set(hs.window.allWindows().map((w) => w.id))
         const commands = `${dir}/window-commands-${++processes}`
         const task = hs.task.create("/usr/bin/osascript",
-            ["-l", "JavaScript", WINDOWS_SCRIPT, `--commands=${commands}`, `--borderless:${title}`], null, null, null)
+            ["-l", "JavaScript", WINDOWS_SCRIPT, `--commands=${commands}`, `--borderless:${title}`])
         tasks.push(task)
         task.start()
         const started = Date.now()
@@ -242,16 +245,51 @@ function create(titlePrefix, skip, dir) {
     const pointer = hs.mouse.absolutePosition()
 
     // Waits for a prompt of hs_interactive-gt to open, then cancels it with Escape. A test calls
-    // this, without waiting for it, before calling a function that prompts.
-    async function promptCancel() {
+    // this, without waiting for it, before calling a function that prompts, and may wait for the
+    // promise it returns afterwards. The promise rejects when no prompt opens.
+    //
+    // The work is done by hs.timer callbacks, which keep running while a modal prompt, such as
+    // hs.ui.textPrompt, is open. A promise of the test does not resolve then, so waiting with
+    // wait() left a modal prompt open (found on 2026-11-23). In the user's configuration, closing
+    // a dialog takes two presses of Escape, so a second is sent when the prompt is still open
+    // after the first. A chooser closes at the first. Each key is sent only while the user's
+    // hs_interactive-gt reports a prompt open.
+    function promptCancel() {
         const interactive = hs.spoons["hs_interactive-gt"]
         const started = Date.now()
-        while (!interactive.promptIsOpen()) {
-            if (Date.now() - started > OPEN_TIMEOUT * 1000) throw new Error("no prompt opened")
-            await wait(0.1)
-        }
-        await wait(0.3)
-        hs.eventtap.keyStroke([], "escape", null)
+        let openedAt = null
+        let escapes = 0
+        let timer = null
+        const stop = () => { if (timer) timer.stop(); timer = null }
+        cleanups.push(stop)
+        return new Promise((resolve, reject) => {
+            timer = hs.timer.doEvery(0.1, () => {
+                const open = interactive.promptIsOpen()
+                if (openedAt === null) {
+                    if (open) openedAt = Date.now()
+                    else if (Date.now() - started > OPEN_TIMEOUT * 1000) {
+                        stop()
+                        reject(new Error("no prompt opened"))
+                    }
+                    return
+                }
+                if (!open) {
+                    stop()
+                    resolve()
+                    return
+                }
+                // The first Escape 0.3 s after the prompt opened, and the second 0.5 s later.
+                const due = escapes === 0 ? 300 : 300 + 500 * escapes
+                if (Date.now() - openedAt < due) return
+                if (escapes >= 2) {
+                    stop()
+                    reject(new Error("the prompt did not close after two presses of Escape"))
+                    return
+                }
+                escapes++
+                hs.eventtap.keyStroke([], "escape", null)
+            })
+        })
     }
 
     // Closes every window this fixture opened, then ends their processes, restores hs.ui.alert

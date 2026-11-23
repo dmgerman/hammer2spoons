@@ -97,16 +97,9 @@ module.exports = [
         timeout: 15,
         run: async (t) => {
             quiet(t)
-            // The prompt is modal, and no promise of the test resolves while it is open, so it is
-            // cancelled from timers set before it opens. In the user's configuration, cancelling a
-            // prompt takes two presses of Escape, so a second is sent if the prompt is still open
-            // after the first. Each key is sent only while the user's hs_interactive-gt reports a
-            // prompt open.
-            const interactive = hs.spoons["hs_interactive-gt"]
-            const escape = () => { if (interactive.promptIsOpen()) hs.eventtap.keyStroke([], "escape", null) }
-            const timers = [hs.timer.doAfter(0.8, escape), hs.timer.doAfter(1.4, escape)]
-            t.cleanup(() => { for (const timer of timers) timer.stop() })
+            const cancelled = t.promptCancel()
             const result = await t.spoon.countdownPromptedStart()
+            await cancelled
             t.assert.equal(result, t.spoon, "the promise's value")
             t.assert.equal(t.spoon.countdownIsRunning(), false, "countdownIsRunning()")
         }
