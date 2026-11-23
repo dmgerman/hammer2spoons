@@ -218,6 +218,28 @@ function windowState(window) {
     }
 }
 
+/**
+ * windowState() as exported, for callers outside the tracker. It differs from windowState() in
+ * two ways, so that it returns what the readme describes:
+ *
+ * 1. `focused` is read from hs.window.focusedWindow(). windowState() leaves it false, because the
+ *    tracker sets it from the focus it follows.
+ * 2. A window that has closed gives null. Hammerspoon 2 no longer throws when a closed window is
+ *    read: its title is empty and its frame and screen are null, measured on 2026-11-23. The
+ *    frame being null is taken as the window having closed. The tracker keeps windowState(),
+ *    which returns a record for it, and learns of the closing from the notification.
+ *
+ * @param {object} window An HSWindow.
+ * @returns {object} The state, or null.
+ */
+function windowStatePublic(window) {
+    const state = windowState(window)
+    if (!state || !state.frame) return null
+    const focused = hs.window.focusedWindow()
+    state.focused = Boolean(focused) && focused.id === state.id
+    return state
+}
+
 /** Whether two states differ in any field the events or rules care about. */
 function sameState(a, b) {
     if (!a || !b) return false
@@ -1067,7 +1089,7 @@ module.exports = {
     default: defaultFilter,
     status,
     // For callers that want the pieces without a filter.
-    windowState,
+    windowState: windowStatePublic,
     matches,
     start,
     stop

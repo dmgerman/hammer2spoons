@@ -189,11 +189,11 @@ A handler is called with three arguments: =(event, window, state)=.
 =state= holds the window's =id=, =title=, =application=, =bundleID=, =pid=, =role=, =standard=,
 =visible=, =minimized=, =fullscreen=, =hidden=, =focused=, =onScreen=, =screenName=, =screenID=
 and =frame=. A handler should read these fields rather than the window, because a window that
-has closed can no longer be read:
+has closed no longer reports its title, frame or screen:
 
 #+begin_src js
 f.on("windowDestroyed", (event, window, state) => {
-    // window.title throws here; state.title holds the title the window had.
+    // window.title is empty here; state.title holds the title the window had.
     console.log(`closed: ${state.title}`)
 })
 #+end_src
