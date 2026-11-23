@@ -95,6 +95,11 @@ A window is accepted only when it satisfies every key that is present.
 ="AXWindow"= for any other. =allowRegions= takes one rectangle ={x, y, w, h}=, in screen
 coordinates, or an array of them.
 
+A window that has been reported as standard stays standard, including while it is minimized or
+its application is hidden. macOS reports some such windows as another kind, such as a window of a
+hidden application as a dialog, and this Spoon keeps the earlier value. A window first seen while
+off screen keeps the value macOS reports.
+
 ** Matching
 
 The value of a key that /matches/ may be a string, a regular expression, a function, or an

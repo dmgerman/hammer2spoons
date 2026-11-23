@@ -720,6 +720,31 @@ function emitDestroyed(record) {
 }
 
 /**
+ * Keep a window standard once it has been reported as standard.
+ *
+ * macOS changes the subrole it reports for some windows when they leave the screen. A window
+ * of a hidden application is reported as AXDialog instead of AXStandardWindow: Music's main
+ * window did this on 2026-11-23, and was reported as AXStandardWindow again once the
+ * application was shown. Some minimized windows do the same. The window has not changed kind,
+ * so the earlier value is kept.
+ *
+ * It is kept whether or not the window is on screen. A window's properties do not change
+ * together, as the comment in trackWindow()'s handler says, so a condition on being off screen
+ * would depend on the order in which macOS changes them.
+ *
+ * A window first seen while off screen cannot be corrected, because there is no earlier value
+ * to keep.
+ *
+ * @param {object} was The window's previous state, or null.
+ * @param {object} state Its new state, changed in place.
+ */
+function standardKeep(was, state) {
+    if (!was || !was.standard || state.standard) return
+    state.standard = true
+    state.role = "AXStandardWindow"
+}
+
+/**
  * Recompute a window's state and emit whatever changed.
  *
  * Most events originate here. An accessibility notification reports only that a window
@@ -737,6 +762,7 @@ function refresh(id, alsoEmit) {
     state.focused = isFocused(id)
 
     const was = record.state
+    standardKeep(was, state)
     record.state = state
 
     // Collected rather than emitted one by one: they all describe the same change, and the

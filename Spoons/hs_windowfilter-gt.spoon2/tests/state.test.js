@@ -80,6 +80,33 @@ module.exports = [
         }
     },
     {
+        name: "a window that was standard stays standard in a filter's records while it is minimized and while its application is hidden",
+        run: async (t) => {
+            // macOS reports some such windows with another subrole, such as AXDialog. The test
+            // windows are among them when minimized, so this test fails without the workaround.
+            const window = await windowOpen(t)
+            const filter = t.spoon.create({ allowTitles: (title) => (title || "").startsWith(t.titlePrefix) })
+            t.cleanup(() => t.spoon.destroy(filter))
+            // A handler starts the tracking, which is what keeps the earlier value. Without one,
+            // records() reads each window afresh.
+            filter.on("windowCreated", () => {})
+            await t.wait(0.5)
+            const standard = () => {
+                const record = filter.records().find((r) => r.state.id === window.id)
+                return record ? `${record.state.standard} ${record.state.role}` : "not listed"
+            }
+            t.assert.equal(standard(), "true AXStandardWindow", "on screen")
+            window.minimize()
+            await t.wait(1)
+            t.assert.equal(standard(), "true AXStandardWindow", "minimized")
+            window.unminimize()
+            await t.wait(1)
+            window.application.hide()
+            await t.wait(1)
+            t.assert.equal(standard(), "true AXStandardWindow", "with its application hidden")
+        }
+    },
+    {
         name: "windowState reports a fullscreen window as fullscreen",
         timeout: 15,
         run: async (t) => {
