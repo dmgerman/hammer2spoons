@@ -248,7 +248,9 @@ hs.spoons["hs_clipboard-gt"].config.historySize = 200
 | =historyFile=              | =clipboard/clipboard.json= in the configuration directory | The file of the history. |
 
 =watchInterval= sets the interval of Hammerspoon 2's clipboard watcher, which every Spoon shares.
-The last Spoon to set it decides the interval for all of them.
+Hammerspoon 2 reads the interval only when the watcher starts, which happens when the first
+Spoon begins to watch the clipboard. That Spoon's value is then used for all of them. A value
+set while another Spoon is watching takes effect only after every Spoon has stopped watching.
 
 =previewPollSeconds= exists because =hs.chooser= reports no change of the selected row. While the
 chooser is open, this Spoon reads the selected row at that interval, and a smaller value makes

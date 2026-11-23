@@ -18,8 +18,10 @@
 // Four departures from the v1 Spoon:
 //   * Changes arrive through hs.pasteboard.on("change") rather than a timer of the Spoon's
 //     own, so config.watchInterval sets the interval of the shared pasteboard watcher.
-//   * The history is a JSON file under logs/, not an entry in the application defaults.
-//   * Images are not stored. v1 kept them URL-encoded in the same list.
+//   * The history is a JSON file in config.clipboardDir, not an entry in the application
+//     defaults.
+//   * Images are files in config.clipboardDir, with a limit of their own. v1 kept them
+//     URL-encoded in the same list.
 //   * There is no hs.dialog, so an entry longer than config.maxEntrySize is truncated
 //     when it is stored instead of prompting. v1's max-size toggle is gone with it.
 
@@ -39,8 +41,10 @@ function spoonRequired(name) {
 // MARK: - User-configurable settings
 
 const config = {
-    // Seconds between pasteboard samples. This is a property of the shared watcher, so
-    // the last module to set it wins.
+    // Seconds between pasteboard samples. This is a property of the shared watcher, which
+    // Hammerspoon 2 reads only when the watcher starts, as the first Spoon begins to listen.
+    // A value set while another Spoon is listening takes effect only once none is. See
+    // Hammerspoon 2's hs.pasteboard.js, read on 2026-11-23.
     watchInterval: 0.8,
 
     // How many entries to keep, and how much of one.

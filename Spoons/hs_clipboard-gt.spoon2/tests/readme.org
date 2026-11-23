@@ -70,6 +70,19 @@ shows nothing and does not touch that position.
 
 * What is not tested
 
+Every statement of the Spoon's readme has a test, except the ones below. Each is listed with the
+reason it has none. =tests/readme-review.test.js= holds the tests added when the readme was read
+as a whole against the others.
+
 1. *A right-click on a row.* The right-click menu needs the position of a row on screen, which
    =hs.chooser= does not report. The tests run each action through the chooser's right-click
    handler, with the row and the menu item, as the chooser does.
+2. *=watchInterval= and =previewPollSeconds=.* The clipboard is read at the interval the user's
+   hs_clipboard-gt set when it started, which a test cannot change, as "Copying in a test"
+   explains. The preview is drawn at the first reading of the selected row, and the tests cannot
+   tell one reading from the next.
+3. *Installing.* =hs.spoons.use()= downloads the Spoon from GitHub. The tests load a copy of the
+   Spoon from this directory instead.
+4. *The sections that only describe:* "Credits" and "Requirements". Each requirement they name
+   has a test of its own, except upstream pull request #377, which every build the tests run on
+   includes.
