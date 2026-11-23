@@ -39,3 +39,29 @@ on the application brings the dialog forward.
 The Spoon writes no files, so the copy needs no =tests/spoon.js=. Its =start()=, which the harness
 calls, adds its own menu bar item and progress bars, beside the user's. Its =stop()=, which the
 harness calls at the end, stops a running countdown and removes both.
+
+* What is not tested
+
+Every statement of the Spoon's readme has a test, except the ones below. Each is listed with the
+reason it has none. =tests/readme-review.test.js= holds the tests added when the readme was read
+as a whole against the others.
+
+1. *The bars rebuilt when a display is connected, disconnected or resized.* A test cannot connect
+   or disconnect a display, and resizing one would rearrange the user's windows.
+2. *The notification needing the Notifications permission.* The tests record the notification
+   instead of sending it, so that none reaches the user, and a test cannot take the permission
+   away.
+3. *The menu included as a submenu with =children:=.* Showing a submenu is hs_menu-gt's work, and
+   its own tests cover it. The tests here check that =menu= is the menu =menuShow()= displays.
+4. *Installing.* =hs.spoons.use()= downloads the Spoon from GitHub. The tests load a copy of the
+   Spoon from this directory instead. The =hotkeys= option calls =bindHotkeys()=, which has a test.
+5. *The sections that only describe:* "Credits" and "Requirements". Each requirement they name
+   has a test of its own, except the Notifications permission, for the reason in item 2.
+
+* Cancelling a prompt
+
+A prompt of hs_interactive-gt is modal, and no promise of a test resolves while it is open. A test
+therefore answers or cancels a prompt from =hs.timer= callbacks set before the prompt opens. In the
+user's configuration, closing a dialog with Escape takes two presses, so a test that cancels a
+prompt sends a second Escape when the prompt is still open after the first. The fixture's
+=promptCancel()= waits with promises, and so cannot cancel a modal prompt.
