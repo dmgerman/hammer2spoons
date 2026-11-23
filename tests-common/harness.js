@@ -190,7 +190,10 @@ async function runAll(options) {
     const front = frontWindowsRecord()
     const results = []
     try {
-        spoon.start()
+        // As Hammerspoon 2 does when it loads and starts a Spoon: init() when the Spoon has one,
+        // then start() when it has one. A Spoon may have either, both or neither.
+        if (typeof spoon.init === "function") spoon.init()
+        if (typeof spoon.start === "function") spoon.start()
         for (const file of options.files) {
             let loaded
             try {
@@ -216,7 +219,7 @@ async function runAll(options) {
             }
         }
     } finally {
-        spoon.stop()
+        if (typeof spoon.stop === "function") spoon.stop()
         hs.fs.deletePath(dir)
         await frontWindowsRestore(front)
     }
