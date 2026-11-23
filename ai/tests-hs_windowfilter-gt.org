@@ -72,3 +72,36 @@ window's first change as concerning a window it never accepted, and emitted noth
 limited to one screen received neither windowRejected nor windowMoved when its window moved to
 another screen. Version 0.3.7 records, when such a handler is registered, which followed windows
 the filter's rules accept, without emitting anything.
+
+* Settings (hammer2spoons-atg.8)
+
+Every setting has a test with a value other than its default, except =applicationRetryDelays=,
+which applies only when an application refuses to be observed. Two defects were found and fixed
+in version 0.3.8:
+
+1. =default= kept the =skipInDefault= array it was created with, so a new list assigned to
+   =config.skipInDefault= had no effect. =default= now reads the setting each time it judges a
+   window.
+2. The windows an application opens as it starts were read once, and never again after
+   =createdRescanDelay=: no windowCreated notification comes for them. A borderless window that
+   got its title 0.3 s after opening was therefore never found. The tracker now schedules the
+   later reading when an application starts while windows are observed.
+
+The test windows can now be borderless, without a title: =fixture-windows.jxa= takes
+=--borderless:<title>=, and closes such a window with a =close= command, because it has no close
+button. A probe showed the user's copy tracking a titled borderless window and leaving out an
+untitled one, and removing the titled one when it was closed by the command.
+
+* A window not yet visible when its application is unhidden (hammer2spoons-atg.8)
+
+In the full run of 2026-11-23, after =unhide()=, a test received windowUnhidden but not
+windowOnScreen; every earlier run had received both. A diagnosis repeated the unhide five times
+and read the window directly: 1 ms after =unhide()=, the application was still hidden and the
+window not visible; by 50 ms both had changed. The tracker read the window once, about 14 ms
+after =unhide()=, on the application's notification, not after =stateDebounce= as the readme
+says. A read between the two changes reports the window unhidden but not visible, so not on
+screen, and nothing read it again. The five attempts did not reproduce the failure; the
+explanation fits the failure and the timings.
+
+Version 0.3.9 reads the application's windows a second time, =stateDebounce= after a hide,
+unhide, activation or deactivation. The event tests then passed, each event still once.

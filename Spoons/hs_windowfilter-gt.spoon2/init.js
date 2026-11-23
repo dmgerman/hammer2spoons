@@ -1045,14 +1045,32 @@ function trackerStart() {
         for (const [id, record] of tracked) {
             const state = record.state
             if (!state) continue
-            const reachable = (pid !== null && state.pid === pid) ||
+            const ofApplication = pid !== null && state.pid === pid
+            const reachable = ofApplication ||
                 id === previouslyFocused || id === focusedId || state.focused
             if (reachable) refresh(id)
+            // The application's windows are read again after stateDebounce. Its windows do not
+            // all change at the moment its notification arrives: measured on 2026-11-23, a
+            // window was still not visible 1 ms after its application was unhidden, and was by
+            // 50 ms. A read in between reported the window unhidden but not on screen, and
+            // windowOnScreen never came. The timer is keyed by the window, so forgetWindow()
+            // and trackerStop() stop it.
+            if (ofApplication) debounce(id, `${id}:presence`, config.stateDebounce, () => refresh(id))
         }
     }
 
     applicationListeners = [
-        ["didLaunch", (application) => trackApplication(application)],
+        ["didLaunch", (application) => {
+            trackApplication(application)
+            // The windows an application opens as it starts are read once, by trackApplication().
+            // A window that has no title then, and is not standard, is skipped, and no
+            // windowCreated notification will come for it to be read again. So the application's
+            // windows are read again after createdRescanDelay, as for a window it creates later.
+            const pid = application ? application.pid : null
+            if (pid !== null && trackedApps.has(pid)) {
+                debounce(pid, `app${pid}:createdLater`, config.createdRescanDelay, () => scanApplication(application))
+            }
+        }],
         ["didTerminate", (application) => { if (application) forgetApplication(application.pid) }],
         ...PRESENCE_EVENTS.map((event) => [event, onPresenceChange])
     ]
@@ -1136,9 +1154,11 @@ function stop() {
 
 // Visible windows of ordinary applications, which is what most callers want. Hammerspoon's
 // own windows are left out: a filter reporting Hammerspoon's menu windows is rarely useful.
+// config.skipInDefault is read each time a window is judged, so that a new list assigned to it
+// takes effect, as every other setting does.
 const defaultFilter = create({
     visible: true,
-    rejectApplications: config.skipInDefault
+    rejectApplications: (name) => config.skipInDefault.includes(name)
 })
 
 module.exports = {

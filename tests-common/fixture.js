@@ -37,8 +37,10 @@ function create(titlePrefix, skip, dir) {
     // Every window opened, so that close() can close each one with its close button.
     const windows = []
     // Window id -> {file, index}: the command file of its process, and its number in that
-    // process, for windowTitleSet().
+    // process, for windowTitleSet() and the close command.
     const commandsOf = new Map()
+    // Ids of the borderless windows, which have no close button.
+    const borderless = new Set()
     // Functions a test registered with cleanup(), run by close() in reverse order.
     const cleanups = []
     let opened = 0
@@ -78,7 +80,7 @@ function create(titlePrefix, skip, dir) {
         if (!windows.some((w) => w.id === window.id)) {
             throw new Error(`window "${window.title}" was not opened by this test`)
         }
-        window.close()
+        await windowCloseRequest(window)
         const started = Date.now()
         while (hs.window.allWindows().some((w) => w.id === window.id)) {
             if (Date.now() - started > OPEN_TIMEOUT * 1000) throw new Error(`window "${window.title}" did not close`)
@@ -89,6 +91,17 @@ function create(titlePrefix, skip, dir) {
     // Changes a test window's title, through its process's command file, and resolves when the
     // window shows the new title. The process reads the file every 0.1 s.
     async function windowTitleSet(window, title) {
+        const started = Date.now()
+        await commandSend(window, "title", title)
+        while (window.title !== title) {
+            if (Date.now() - started > OPEN_TIMEOUT * 1000) throw new Error(`the title did not change to "${title}"`)
+            await wait(0.05)
+        }
+    }
+
+    // Sends one command to the process of a test window: "title" with the new title, or
+    // "close". Resolves once the command is in the process's command file.
+    async function commandSend(window, command, argument) {
         const commands = commandsOf.get(window.id)
         if (!commands) throw new Error(`window "${window.title}" was not opened by this test`)
         const started = Date.now()
@@ -97,13 +110,42 @@ function create(titlePrefix, skip, dir) {
             if (Date.now() - started > OPEN_TIMEOUT * 1000) throw new Error("the window process does not read its commands")
             await wait(0.05)
         }
+        const line = argument === undefined ? `${command} ${commands.index}` : `${command} ${commands.index} ${argument}`
         // Written under another name and then moved, so that the process never reads half a line.
-        hs.fs.write(`${commands.file}.partial`, `title ${commands.index} ${title}\n`, false)
+        hs.fs.write(`${commands.file}.partial`, `${line}\n`, false)
         hs.fs.move(`${commands.file}.partial`, commands.file)
-        while (window.title !== title) {
-            if (Date.now() - started > OPEN_TIMEOUT * 1000) throw new Error(`the title did not change to "${title}"`)
-            await wait(0.05)
+    }
+
+    // Opens one borderless window, which is not a standard window and has no close button, with
+    // the given title or with none, in a new process. Resolves to its HSWindow. It is found as the
+    // new window of an osascript process with that title, since an empty title cannot identify it.
+    async function windowOpenBorderless(title = "") {
+        const before = new Set(hs.window.allWindows().map((w) => w.id))
+        const commands = `${dir}/window-commands-${++processes}`
+        const task = hs.task.create("/usr/bin/osascript",
+            ["-l", "JavaScript", WINDOWS_SCRIPT, `--commands=${commands}`, `--borderless:${title}`], null, null, null)
+        tasks.push(task)
+        task.start()
+        const started = Date.now()
+        while (Date.now() - started < OPEN_TIMEOUT * 1000) {
+            const window = hs.window.allWindows().find((w) => !before.has(w.id) &&
+                w.application && w.application.name === "osascript" && (w.title || "") === title)
+            if (window) {
+                windows.push(window)
+                commandsOf.set(window.id, { file: commands, index: 1 })
+                borderless.add(window.id)
+                return window
+            }
+            await wait(0.1)
         }
+        throw new Error(`the borderless window did not appear within ${OPEN_TIMEOUT} s`)
+    }
+
+    // Closes a window: a borderless one through its process, which closes it as a close button
+    // would, and any other with its close button.
+    async function windowCloseRequest(window) {
+        if (borderless.has(window.id)) await commandSend(window, "close")
+        else window.close()
     }
 
     // Registers a function that close() runs after the test, also when it fails or times out.
@@ -255,7 +297,7 @@ function create(titlePrefix, skip, dir) {
         for (const window of windows.splice(0)) {
             if (!open.has(window.id)) continue
             try {
-                window.close()
+                await windowCloseRequest(window)
             } catch (e) {
                 // Ending the process below closes it.
             }
@@ -265,7 +307,7 @@ function create(titlePrefix, skip, dir) {
         await wait(0.3)
     }
 
-    return { windowsOpen, windowClose, windowTitleSet, cleanup, frameSet, screenFrame, screensNeed, frameEqual, alertsCapture, canvasesCapture, promptCancel, close }
+    return { windowsOpen, windowOpenBorderless, windowClose, windowTitleSet, cleanup, frameSet, screenFrame, screensNeed, frameEqual, alertsCapture, canvasesCapture, promptCancel, close }
 }
 
 module.exports = { create, FRAME_TOLERANCE, WINDOW_MINIMUM }

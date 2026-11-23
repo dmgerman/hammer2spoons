@@ -90,6 +90,7 @@ asynchronous, and receives one argument with these fields:
 | =skip=        | =skip(reason)= ends the test and reports it as skipped                     |
 | =wait=        | =wait(seconds)= returns a promise that resolves after that many seconds    |
 | =windowsOpen= | =windowsOpen(count)= opens that many test windows, 1 by default, and resolves to their =HSWindow= objects |
+| =windowOpenBorderless= | =windowOpenBorderless([title])= opens one borderless window, which is not standard and has no close button, with the title or with none, and resolves to it. It is closed through its process. |
 | =windowTitleSet= | =windowTitleSet(window, title)= changes a test window's title, through a command file its process reads, and resolves when the window shows it |
 | =cleanup=     | =cleanup(fn)= registers a function to run after the test, also when it fails; the last registered runs first |
 | =windowClose= | =windowClose(window)= closes a test window with its close button, and resolves when it is gone |

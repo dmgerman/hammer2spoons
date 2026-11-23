@@ -95,6 +95,34 @@ module.exports = [
         }
     },
     {
+        name: "events lists the nineteen event names",
+        run: (t) => {
+            const events = t.spoon.events
+            t.assert.equal(events.length, 19, "the number of names")
+            for (const name of ["windowCreated", "windowDestroyed", "windowMoved", "windowResized",
+                "windowTitleChanged", "windowFocused", "windowUnfocused", "windowMinimized",
+                "windowUnminimized", "windowVisible", "windowNotVisible", "windowOnScreen",
+                "windowNotOnScreen", "windowFullscreened", "windowUnfullscreened", "windowHidden",
+                "windowUnhidden", "windowAllowed", "windowRejected"]) {
+                t.assert.ok(events.includes(name), `${name} is missing`)
+            }
+        }
+    },
+    {
+        name: "windows() reads the records while observing, without querying the applications",
+        run: (t) => {
+            const filter = t.spoon.create({})
+            t.cleanup(() => t.spoon.destroy(filter))
+            filter.on("windowCreated", noop)
+            const started = Date.now()
+            const windows = filter.windows()
+            const ms = Date.now() - started
+            t.assert.ok(windows.length > 0, "no window was listed")
+            // Querying the applications takes about 100 ms; reading the records about 1 ms.
+            t.assert.ok(ms < 30, `windows() took ${ms} ms`)
+        }
+    },
+    {
         name: "starting to observe takes less than 1 s",
         run: (t) => {
             const filter = t.spoon.create({})

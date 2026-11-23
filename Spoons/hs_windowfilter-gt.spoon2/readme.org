@@ -64,6 +64,10 @@ This Spoon observes no window until the first handler is registered on any filte
 observing when the last handler is removed. Loading this Spoon without registering a handler
 therefore costs nothing.
 
+Starting to observe reads every application's windows once. With 19 applications and 27 windows
+open, that took 0.3 seconds and registered 219 accessibility notifications, measured on
+2026-11-23. Removing the last handler removes all of them.
+
 * Rules
 
 A filter decides which windows it accepts with a rule set. A rule set is an object, every key
@@ -168,7 +172,7 @@ A handler can be registered for nineteen events. =events= holds all their names,
 This Spoon starts observing windows when the first handler is registered on any filter, and at
 that point it emits =windowCreated= for every window already open. A filter whose first handler
 is registered later does not receive these events. Such a filter lists the windows it already
-matches with =windows()=.
+matches with =windows()=, and from then on receives their events as any other filter does.
 
 A window is /on screen/ when it is visible, is not minimized, and its application is not
 hidden. =windowVisible= and =windowNotVisible=, by contrast, follow only the window's own
@@ -304,15 +308,18 @@ These are called on this Spoon itself, =hs.spoons["hs_windowfilter-gt"]=.
 | =create([rules])=      | Returns a new filter with the given default rules, or with ={}=.    |
 | =destroy(filter)=      | Removes every handler of a filter and discards it. Returns whether the filter existed. |
 | =status()=             | Returns what is being observed. See below.                          |
-| =windowState(window)=  | Returns the record of a window that a handler receives as =state=, or null when the window can no longer be read. |
+| =windowState(window)=  | Returns the record of a window that a handler receives as =state=, read when it is called, or null when the window has closed. |
 | =matches(rule, value)= | Returns whether a value matches a rule, as described under /Matching/. |
+| =stop()=               | Stops observing, and removes every filter and its handlers, =default= included. |
+| =start()=              | Makes =default= available again after =stop()=, without handlers. Loading this Spoon does not require calling it. |
 
 This Spoon also provides =default=, its default filter, and =events=, the names of all events.
 
 ** default
 
 =default= is a filter that accepts visible windows of every application except those in
-=config.skipInDefault=, which are Hammerspoon's own. Its rules can be replaced with
+=config.skipInDefault=, which are Hammerspoon's own. =config.skipInDefault= is read each time a
+window is judged, so a change to it takes effect at once. Its rules can be replaced with
 =setDefaultFilter()=, but that changes them for every other user of =default= too, including
 other Spoons.
 
@@ -337,7 +344,8 @@ hs.spoons["hs_windowfilter-gt"].status()
 
 * Settings
 
-The settings are in =config=, and are changed after this Spoon is loaded:
+The settings are in =config=, and are changed after this Spoon is loaded. Each is read when it is
+used, so a change takes effect at once:
 
 #+begin_src js
 hs.spoons["hs_windowfilter-gt"].config.moveDebounce = 0.2
@@ -348,7 +356,7 @@ hs.spoons["hs_windowfilter-gt"].config.moveDebounce = 0.2
 | =moveDebounce=            | =0.1=              | Seconds without a move or resize before =windowMoved= or =windowResized= is emitted |
 | =titleDebounce=           | =0.1=              | Seconds without a title change before =windowTitleChanged= is emitted |
 | =stateDebounce=           | =0.08=             | Seconds after a minimize, restore, hide or focus change before the window is read |
-| =createdRescanDelay=      | =1.5=              | Seconds after a window appears before its application's windows are read again, to find a window that had no title at first |
+| =createdRescanDelay=      | =1.5=              | Seconds after a window appears, or after an application starts, before the application's windows are read again, to find a window that had no title at first |
 | =applicationRetryDelays=  | =[0.5, 1, 2, 4, 8]= | Seconds between attempts to observe an application that refused, as one that has just started can |
 | =skipApplications=        | a list             | Names of applications that are never observed                    |
 | =untitledNonStandardSkip= | =true=             | Whether to ignore every window that has no title and is not a standard window |
@@ -360,7 +368,9 @@ hs.spoons["hs_windowfilter-gt"].config.moveDebounce = 0.2
 This Spoon does not support Spaces, and it ignores two kinds of window.
 
 1. *Spaces.* There is no =currentSpace= rule, and no =windowInCurrentSpace= or
-   =windowNotInCurrentSpace= event, because Hammerspoon 2 has no module for Spaces.
+   =windowNotInCurrentSpace= event. Hammerspoon 2 had no Spaces functions when this Spoon was
+   written. Newer builds of Hammerspoon 2 add them, such as =HSScreen.currentSpace=, and this
+   Spoon does not use them yet.
 2. *Windows of the applications in =config.skipApplications=.* These are background processes
    such as =universalaccessd= and Safari's web content processes, which have no windows to
    report.

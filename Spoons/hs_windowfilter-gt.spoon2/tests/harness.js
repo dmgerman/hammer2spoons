@@ -94,6 +94,7 @@ async function testRun(file, test, shared, fixtures) {
     const context = Object.assign({}, shared, {
         assert: Object.assign({ frameEqual: fixture.frameEqual }, assert),
         windowsOpen: fixture.windowsOpen,
+        windowOpenBorderless: fixture.windowOpenBorderless,
         windowClose: fixture.windowClose,
         windowTitleSet: fixture.windowTitleSet,
         cleanup: fixture.cleanup,
