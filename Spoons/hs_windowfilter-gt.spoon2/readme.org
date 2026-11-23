@@ -291,6 +291,10 @@ These replace one of the filter's three kinds of rule set, which /Rules for part
 applications/ describes. =setApplicationFilter()= with =null= removes an application's rules,
 and =setOverrideFilter(null)= removes the override rules.
 
+When the filter has a handler, a change of rules emits =windowAllowed= at once for every window
+that the new rules accept and the old ones did not, and =windowRejected= for every window that
+the old rules accepted and the new ones do not.
+
 * Functions of this Spoon
 
 These are called on this Spoon itself, =hs.spoons["hs_windowfilter-gt"]=.

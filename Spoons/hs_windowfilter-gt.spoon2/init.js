@@ -346,8 +346,9 @@ class WindowFilter {
 
     /** Replace the default rule set. */
     setDefaultFilter(rules) {
-        this.defaultRules = rules === undefined ? {} : rules
-        return this
+        return this._rulesChange(() => {
+            this.defaultRules = rules === undefined ? {} : rules
+        })
     }
 
     /**
@@ -357,14 +358,51 @@ class WindowFilter {
      * @param {object|boolean} rules Rules, `true` to always allow, `false` to always reject.
      */
     setApplicationFilter(application, rules) {
-        if (rules === undefined || rules === null) this.applicationRules.delete(application)
-        else this.applicationRules.set(application, rules)
-        return this
+        return this._rulesChange(() => {
+            if (rules === undefined || rules === null) this.applicationRules.delete(application)
+            else this.applicationRules.set(application, rules)
+        })
     }
 
     /** Rules consulted before everything else. Null removes them. */
     setOverrideFilter(rules) {
-        this.overrideRules = rules === undefined ? null : rules
+        return this._rulesChange(() => {
+            this.overrideRules = rules === undefined ? null : rules
+        })
+    }
+
+    /**
+     * Change the rules with `apply`, then emit windowAllowed or windowRejected for every window
+     * whose acceptance the change reversed. Called by the three functions that set rules.
+     *
+     * Without this, a rule change would be reported only at each window's next event. Whether a
+     * window was accepted before is taken from this filter's own record when it has one, and
+     * otherwise from the old rules, so that a window accepted both before and after emits
+     * nothing. The tracker's stored states are used, so no application is queried. Nothing is
+     * done while the filter has no handler or the tracker is not running: there is nobody to
+     * tell, and the next event judges the window afresh.
+     *
+     * @param {function} apply Changes the rules.
+     * @returns {WindowFilter} This filter.
+     */
+    _rulesChange(apply) {
+        if (!tracking || !this.isWatched()) {
+            apply()
+            return this
+        }
+        const before = new Map()
+        for (const [id, record] of tracked) {
+            if (!record.state) continue
+            before.set(id, this.allowed.has(id) ? this.allowed.get(id) === true : this.allows(record.state))
+        }
+        apply()
+        for (const [id, was] of before) {
+            const record = tracked.get(id)
+            if (!record || !record.state) continue
+            const now = this.allows(record.state)
+            this.allowed.set(id, now)
+            if (now !== was) this._deliver(now ? "windowAllowed" : "windowRejected", record.window, record.state)
+        }
         return this
     }
 
