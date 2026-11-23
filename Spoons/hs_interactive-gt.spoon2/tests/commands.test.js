@@ -38,9 +38,14 @@ async function promptOpenWait(t) {
 
 // Sends keys to the copy's chooser, only while the copy reports it open, so that they never
 // reach one of the user's windows.
-function chooserType(t, text) {
-    if (!t.spoon.promptIsOpen()) t.assert.fail(`not typing "${text}": no chooser of the copy is open`)
-    hs.eventtap.keyStrokes(text)
+// One character at a time, checking before each: a chooser does not take the focus from the
+// application behind it, so a key sent after it closed would reach that application.
+async function chooserType(t, text) {
+    for (const character of text) {
+        if (!t.spoon.promptIsOpen()) t.assert.fail(`not typing "${text}": no chooser of the copy is open`)
+        hs.eventtap.keyStrokes(character)
+        await t.wait(0.02)
+    }
 }
 function chooserKey(t, key) {
     if (!t.spoon.promptIsOpen()) t.assert.fail(`not sending ${key}: no chooser of the copy is open`)
@@ -269,7 +274,7 @@ module.exports = [
             t.spoon.define({ name, doc: "chosen in the command chooser", runDelay: 0.5, fn: () => { ran = Date.now() } })
             t.spoon.execute()
             await promptOpenWait(t)
-            chooserType(t, name)
+            await chooserType(t, name)
             await t.wait(0.4)
             const chosen = Date.now()
             chooserKey(t, "return")

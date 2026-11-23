@@ -665,12 +665,16 @@ function define(spec) {
             // as { prompted: entry }, an object, which readerFor() refuses, so such a command
             // never ran (found by the tests on 2026-11-23).
             if (typeof entry === "function") return { name: `arg${index + 1}`, reader: entry }
-            return {
+            // Every field of the entry is kept, so that a reader's options, such as choices or
+            // includeCurrent, reach the reader, as the readme says. Only these four were kept
+            // before, so a defined command lost its reader's options (found by the tests on
+            // 2026-11-23).
+            return Object.assign({}, entry, {
                 name: entry.name || `arg${index + 1}`,
                 reader: entry.reader || {},
                 default: entry.default,
                 optional: entry.optional === true
-            }
+            })
         })
     }
 
