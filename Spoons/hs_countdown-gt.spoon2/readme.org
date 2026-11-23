@@ -171,14 +171,14 @@ hs.spoons["hs_countdown-gt"].countdownStart(25, (event, minutes) => {
 })
 #+end_src
 
-| Event           | =minutes= is                          |
-|-----------------+---------------------------------------|
-| ="started"=     | 0                                     |
-| ="paused"=      | the minutes left                      |
-| ="resumed"=     | the minutes left                      |
-| ="cancelled"=   | the minutes left                      |
-| ="ended"=       | the length of the countdown           |
-| ="setProgress"= | the minutes left after =progressSet()= |
+| Event           | =minutes= is                           |
+|-----------------+----------------------------------------|
+| ="started"=     | 0                                      |
+| ="paused"=      | the minutes left                       |
+| ="resumed"=     | the minutes left                       |
+| ="cancelled"=   | the minutes left                       |
+| ="ended"=       | the length of the countdown            |
+| ="progressSet"= | the minutes left after =progressSet()= |
 
 A cancelled countdown sends ="cancelled"=, and not ="ended"=. The event names are also the values
 of =events=, so =events.end= is ="ended"=. A callback that throws is reported in the console, and

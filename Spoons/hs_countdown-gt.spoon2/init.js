@@ -630,13 +630,15 @@ function progressSet(progress) {
         return module.exports
     }
     const minutesLeft = timerLenMinutes * (1 - progress)
-    endingTime = nowSeconds() + minutesLeft * 60
+    // The end time is kept in whole seconds, as countdownStart() leaves it: a warning is shown
+    // only when the seconds left are an exact number of minutes.
+    endingTime = nowSeconds() + Math.round(minutesLeft * 60)
     // A paused countdown adds the time spent paused to its end when it resumes. The pause is
     // therefore counted from now, so that the new end time is not moved by the time before.
     if (pausedAt !== null) pausedAt = nowSeconds()
     timeLeft = Math.round(minutesLeft * 60)
     messageShow(`Timer reset to ${(progress * 100).toFixed(1)}% (${minutesLeft.toFixed(1)} minutes left)`)
-    callbackFire(events.setProgress, minutesLeft)
+    callbackFire(events.progressSet, minutesLeft)
     return module.exports
 }
 
