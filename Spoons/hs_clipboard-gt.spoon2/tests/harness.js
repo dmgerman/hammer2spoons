@@ -249,7 +249,7 @@ async function runAll(options) {
         lines.push(["interrupted", answer === "no" ? "no" : answer === "yes" ? "yes" : "unknown"].join("\t"))
         // The chooser took the focus, and closing it may not give it back to the window that
         // had it.
-        if (front.focused) frontWindowFocus(front.focused)
+        if (front.focused) await frontWindowFocus(front.focused)
     }
     lines.push(["front", frontWindowsDescribe(front), frontWindowsDescribe(restored)].join("\t"))
     reportWrite(options.reportFile, lines)
@@ -277,21 +277,33 @@ async function finishConfirm(totals) {
 // menu bar agent's and the Finder's desktop, which were measured in front of the user's windows
 // on 2026-11-23.
 //
-// hs.window.orderedWindows() lists every window of the focused application first, and then the
-// windows of each other application, not the order the windows are stacked on screen. So a
-// window of the focused application can be recorded for a screen where another application's
-// window covers it. See "Running the tests" in readme.org.
+// The order comes from the space each screen shows: HSSpace.windowIDs() lists its windows front
+// to back. hs.window.orderedWindows() is not used for it, because it lists every window of the
+// focused application first, and then the windows of each other application. On 2026-11-23 it
+// recorded a Google Chrome window as the laptop's front window, while a Skim window covered it,
+// and the restore then raised the Chrome window over the Skim window. orderedWindows() is used
+// only for a screen whose current space cannot be read.
 function frontWindowsRecord() {
-    const ordered = hs.window.orderedWindows().filter((w) => {
+    const usable = (w) => {
         try {
             return w.isStandard && w.isVisible
         } catch (e) {
             return false
         }
-    })
+    }
+    const ordered = hs.window.orderedWindows().filter(usable)
+    const byId = new Map(ordered.map((w) => [w.id, w]))
     const perScreen = []
     for (const screen of hs.screen.all()) {
-        const window = ordered.find((w) => w.screen && w.screen.id === screen.id)
+        const onScreen = (w) => w && w.screen && w.screen.id === screen.id
+        let window = null
+        try {
+            const space = (screen.spaces || []).find((s) => s.isCurrent)
+            if (space) window = space.windowIDs().map((id) => byId.get(id)).find(onScreen) || null
+        } catch (e) {
+            window = null
+        }
+        if (!window) window = ordered.find(onScreen)
         if (window) perScreen.push(window)
     }
     return { perScreen, focused: hs.window.focusedWindow() }
@@ -304,27 +316,47 @@ function frontWindowsDescribe(front) {
     return `in front: ${front.perScreen.map(name).join(", ")}; focused: ${front.focused ? name(front.focused) : "none"}`
 }
 
-// Focuses a recorded window, if it still exists. Returns whether it did.
-function frontWindowFocus(window) {
-    const id = window.id
-    if (!hs.window.allWindows().some((w) => w.id === id)) return false
-    try {
-        window.focus()
-        return true
-    } catch (e) {
-        return false
+// Whether a recorded window still exists.
+const windowExists = (window) => hs.window.allWindows().some((w) => w.id === window.id)
+
+// Gives the focus back to a recorded window, if it still exists, and resolves once it has it.
+//
+// focus() makes the window main and brings its application to the front, and Hammerspoon 2
+// makes it main again 0.3 s later. Some applications still give main status back to the window
+// they had before: on 2026-11-23, Google Chrome kept the focus on its other window. So the focus
+// is checked after each attempt, and asked for again, a few times.
+async function frontWindowFocus(window) {
+    if (!windowExists(window)) return false
+    for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+            window.focus()
+        } catch (e) {
+            return false
+        }
+        await wait(0.5)
+        const focused = hs.window.focusedWindow()
+        if (focused && focused.id === window.id) return true
     }
+    return false
 }
 
-// Brings back the window that was in front on each screen, then the focused window, so that it
-// ends up with the focus.
+// Brings back the window that was in front on each screen, then gives the focus back to the
+// window that had it.
+//
+// The front windows are raised, not focused. focus() activates the window's application, and
+// activating every application in turn brought their windows forward over the user's, on
+// 2026-11-23. raise() brings only that window forward, without activating its application.
 async function frontWindowsRestore(front) {
     const focusedId = front.focused ? front.focused.id : null
     for (const window of front.perScreen) {
-        if (window.id === focusedId) continue
-        if (frontWindowFocus(window)) await wait(0.3)
+        if (window.id === focusedId || !windowExists(window)) continue
+        try {
+            window.raise()
+        } catch (e) {
+            // A window that cannot be raised stays where it is.
+        }
     }
-    if (front.focused && frontWindowFocus(front.focused)) await wait(0.3)
+    if (front.focused) await frontWindowFocus(front.focused)
 }
 
 module.exports = { run }

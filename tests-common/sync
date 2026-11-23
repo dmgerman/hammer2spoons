@@ -24,6 +24,7 @@ FILES=(
     "selftest/harness.test.js:tests/selftest/harness.test.js"
     "selftest/fixture.test.js:tests/selftest/fixture.test.js"
     "selftest/screens-needed.test.js:tests/selftest/screens-needed.test.js"
+    "selftest/focus.test.js:tests/selftest/focus.test.js"
 )
 
 check=0
