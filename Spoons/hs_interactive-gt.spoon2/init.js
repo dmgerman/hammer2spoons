@@ -1168,7 +1168,8 @@ function use(name, spec) {
 /**
  * Load a plain JavaScript file the same way, for configuration that is not a Spoon.
  *
- * @param {string} path Passed to `require()`, so relative paths resolve from the caller.
+ * @param {string} path Passed to `require()`. A path beginning with ./ or ../ is resolved from
+ *        the configuration directory, hs.appinfo.configDir.
  * @param {object} [spec] `disabled`, `when` and `after` behave as in `use()`.
  * @returns {*} Whatever the file exported, or null if it was skipped or failed.
  */
@@ -1186,7 +1187,12 @@ use.file = function (path, spec) {
     }
 
     try {
-        const contents = require(path)
+        // A relative path is resolved from the configuration directory, where init.js is. Given
+        // to require() as it is, it would be resolved from this Spoon's own init.js, which is
+        // where require() is called, so "./work-only.js" written in init.js was not found
+        // (found by the tests on 2026-11-23). The record keeps the path as written.
+        const resolved = /^\.\.?\//.test(path) ? `${hs.appinfo.configDir}/${path.replace(/^\.\//, "")}` : path
+        const contents = require(resolved)
         if (options.after) options.after(contents)
         record(path, "loaded", Date.now() - started)
         return contents

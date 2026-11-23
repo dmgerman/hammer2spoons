@@ -608,8 +608,9 @@ the configuration. A Spoon kept in another directory can be loaded through a sym
 ** use.file(path, spec)
 
 =use.file(path, spec)= loads a JavaScript file that is not a Spoon, for a configuration split
-across several files. =path= is passed to =require()=, so a relative path is resolved from the
-file that calls it. /spec/ takes =disabled=, =when= and =after=, which mean what they mean for
+across several files. =path= is passed to =require()=. A path that begins with =./= or =../= is
+resolved from the configuration directory, =hs.appinfo.configDir=, where =init.js= is. It is
+resolved from there even when =use.file()= is called from a file in another directory. /spec/ takes =disabled=, =when= and =after=, which mean what they mean for
 =use()=. It returns what the file exports, or null when the file was not loaded.
 
 #+begin_src js
