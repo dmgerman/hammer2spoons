@@ -1,0 +1,62 @@
+// Opens one plain window for each title given, for a Spoon's tests, and keeps them open
+// until the process is terminated. Run with osascript -l JavaScript; tests/fixture.js starts it:
+//
+//   osascript -l JavaScript fixture-windows.jxa --commands=<file> <title> [<title>...]
+//
+// A title written as --borderless:<title> opens a borderless window, which is not a standard
+// window and has no close button, with that title; --borderless: alone opens one without a title.
+//
+// While it runs, it reads <file> every 0.1 s, if it exists, carries out the commands in it, one
+// per line, and deletes it. The only command is
+//
+//   title <n> <new title>     sets the title of the n-th window, counting from 1
+//   close <n>                 closes the n-th window, as its close button would
+//
+// A window's title cannot be changed through the Accessibility API: AXTitle is not settable on
+// these windows, measured on 2026-11-23. Hence the file.
+//
+// The windows belong to this process rather than to Hammerspoon 2, because hs_windowfilter-gt
+// leaves Hammerspoon 2's own windows out of its default filter, which Spoons such as hs_window-gt
+// use. Such a Spoon would then receive no events about them.
+//
+// Shared by every Spoon's tests: edit tests-common/fixture-windows.jxa, not a copy.
+
+ObjC.import("Cocoa")
+
+function run(argv) {
+    const app = $.NSApplication.sharedApplication
+    // A regular application, which shows an icon in the Dock while the tests run.
+    // hs_windowfilter-gt tracks only standard applications, and an accessory application,
+    // which would have no Dock icon, is not one: its windows would produce no events.
+    app.setActivationPolicy($.NSApplicationActivationPolicyRegular)
+    const style = $.NSWindowStyleMaskTitled | $.NSWindowStyleMaskClosable |
+        $.NSWindowStyleMaskResizable | $.NSWindowStyleMaskMiniaturizable
+    const commands = argv[0] && argv[0].startsWith("--commands=") ? argv.shift().slice(11) : null
+    const windows = argv.map((argument, i) => {
+        const borderless = argument.startsWith("--borderless:")
+        const title = borderless ? argument.slice(13) : argument
+        const window = $.NSWindow.alloc.initWithContentRectStyleMaskBackingDefer(
+            $.NSMakeRect(200 + 40 * i, 200 + 40 * i, 400, 300), borderless ? $.NSWindowStyleMaskBorderless : style,
+            $.NSBackingStoreBuffered, false)
+        if (borderless) window.backgroundColor = $.NSColor.systemBlueColor
+        window.title = title
+        window.releasedWhenClosed = false
+        window.makeKeyAndOrderFront(null)
+        return window
+    })
+    if (commands) {
+        const files = $.NSFileManager.defaultManager
+        $.NSTimer.scheduledTimerWithTimeIntervalRepeatsBlock(0.1, true, () => {
+            if (!files.fileExistsAtPath(commands)) return
+            const text = $.NSString.stringWithContentsOfFileEncodingError(commands, $.NSUTF8StringEncoding, null).js
+            files.removeItemAtPathError(commands, null)
+            for (const line of text.split("\n")) {
+                const title = line.match(/^title (\d+) (.*)$/)
+                if (title && windows[Number(title[1]) - 1]) windows[Number(title[1]) - 1].title = title[2]
+                const close = line.match(/^close (\d+)$/)
+                if (close && windows[Number(close[1]) - 1]) windows[Number(close[1]) - 1].close
+            }
+        })
+    }
+    app.run
+}
