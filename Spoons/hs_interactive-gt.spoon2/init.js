@@ -661,7 +661,10 @@ function define(spec) {
         fn: spec.fn,
         runDelay: Number(spec.runDelay) || 0,
         parameters: (spec.interactive || []).map((entry, index) => {
-            if (typeof entry === "function") return { name: `arg${index + 1}`, reader: { prompted: entry } }
+            // A bare function is the argument's reader, as the readme says. It used to be wrapped
+            // as { prompted: entry }, an object, which readerFor() refuses, so such a command
+            // never ran (found by the tests on 2026-11-23).
+            if (typeof entry === "function") return { name: `arg${index + 1}`, reader: entry }
             return {
                 name: entry.name || `arg${index + 1}`,
                 reader: entry.reader || {},
