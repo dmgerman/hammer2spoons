@@ -4,6 +4,12 @@ These are the tests of hs_window-gt. They run inside the running Hammerspoon 2, 
 the Spoon acts on real windows and screens. They are marked =export-ignore=, so users who install
 the Spoon do not download them.
 
+The harness, the runner, the test windows, the makefile and the self-tests are copies of the
+files in =tests-common/= at the top of the repository, which every Spoon's tests share. They are
+never edited here: a change is made in =tests-common/= and copied with =tests-common/sync=.
+=tests-common/readme.org= explains this. The files particular to hs_window-gt are its
+=*.test.js= files, =spoon.js= and this readme.
+
 * Running the tests
 
 The tests are run from the Spoon's directory, with Hammerspoon 2 running and =hs.ipc= started:
@@ -13,15 +19,27 @@ make test                                     # every tests/*.test.js
 make test TESTS="tests/selftest/*.test.js"    # the given files
 #+end_src
 
-Hammerspoon 2 first shows a chooser asking whether to start. The tests move windows and the
-pointer, so the mouse and the keyboard are left alone from the start until a second chooser says
-that the tests have finished, with their totals. That chooser asks whether the run was
+=make= starts the tests at once, shows no chooser, and prints the results when the run
+finishes. =tests/run= run directly, without =--no-confirm=, first shows a chooser in Hammerspoon 2
+asking whether to start; that chooser closes, and the run is cancelled, when another window takes
+the focus. The tests move windows and the pointer, so the mouse and the keyboard are left alone
+from the start until the results are printed, or, with =tests/run=, until a chooser says that the
+tests have finished, with their totals. That chooser asks whether the run was
 uninterrupted. The results are printed once it is closed. When the answer is that the mouse or
 the keyboard was used, =tests/run= says that the results may be wrong, and exits with 1.
 
 Before the first test, the harness records the window in front on each screen, and the focused
 window. After the last test, it focuses each of them again, the focused window last. The order of
 the windows behind them is not restored, because macOS cannot send a window back.
+
+The window recorded for a screen can be the wrong one. The harness takes the first window on each
+screen in =hs.window.orderedWindows()=. That function does not return the windows in the order
+they are stacked on screen, although its documentation says so. It returns every window of the
+focused application first, then the windows of each other application. When the focused
+application has a window on a screen that is covered by another application's window, the
+covered window is recorded and brought forward. On 2026-11-23, with Google Chrome focused, a
+Chrome window was brought forward on one screen instead of the kitty window that had been in
+front of it. The user decided to leave this as it is.
 
 ** Which tests to run
 
@@ -43,9 +61,10 @@ A run has four steps:
    inside Hammerspoon 2.
 2. The harness loads a fresh copy of the Spoon from =../init.js=. =require()= caches a module
    under the path it was given, and the configuration loads the Spoon through its link in
-   =Spoons/=, so this copy has its own state and its own =config=. Its =attachFile= and
-   =screenshotDir= point into a temporary directory, so it never reads or writes the user's
-   attached keys. The harness starts the copy before the tests and stops it afterwards.
+   =Spoons/=, so this copy has its own state and its own =config=. =tests/spoon.js= then
+   points its =attachFile= and =screenshotDir= into a temporary directory, so it never reads or
+   writes the user's attached keys. The harness starts the copy before the tests and stops it
+   afterwards.
 3. Each test runs in turn. A test that takes longer than its timeout fails.
 4. The harness writes a report, and =tests/run= prints it. The temporary directory is removed.
 
@@ -64,7 +83,9 @@ asynchronous, and receives one argument with these fields:
 |---------------+----------------------------------------------------------------------------|
 | =spoon=       | The fresh copy of hs_window-gt                                             |
 | =dir=         | The temporary directory of the run                                         |
+| =spoonName=   | The Spoon's name, from its =spoon.json=                                    |
 | =runId=       | A number unique to the run, which is part of every test window's title     |
+| =titlePrefix= | The text every test window's title starts with, such as ="hs_window-gt test 1795391522729 "= |
 | =assert=      | =ok(value, message)=, =equal(actual, expected, message)=, =fail(message)= and =frameEqual(actual, expected, message)= |
 | =skip=        | =skip(reason)= ends the test and reports it as skipped                     |
 | =wait=        | =wait(seconds)= returns a promise that resolves after that many seconds    |

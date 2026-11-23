@@ -1,0 +1,36 @@
+#+title: How the Spoons' tests share their harness
+
+This records the decision taken in hammer2spoons-atg.1, the first bead of the tests of
+hs_windowfilter-gt (epic hammer2spoons-atg). =tests-common/readme.org= describes the result.
+
+* Decision
+
+The user decided on 2026-11-23:
+
+1. Each Spoon has its own copy of the harness, the runner, the test windows, the makefile and
+   the self-tests, so that its tests can be read and run from its directory alone.
+2. The copies are kept the same at all times.
+3. =make test= shows no chooser: neither the one that asks whether to start, nor the one at the
+   end that asks whether the run was uninterrupted. =tests/run= run directly shows both, unless
+   it is given =--no-confirm=.
+
+* How the copies are kept the same
+
+1. The files are kept once, in =tests-common/=, marked =export-ignore=. A copy is never edited.
+2. =tests-common/sync= copies them into every Spoon with a =tests/= directory, or into the Spoons
+   given. =--check= compares only.
+3. =tests/run= runs =sync --check= on its Spoon and refuses to run when a copy differs.
+4. The pre-commit hook, =.beads/hooks/pre-commit=, runs =sync --check= on every Spoon. The
+   lines are after the section between the beads markers. It is not verified whether beads keeps
+   them when it rewrites the hook.
+
+* What moved out of the shared files
+
+The harness used to name hs_window-gt and set two of its settings. Now:
+
+- the Spoon's name comes from its =spoon.json=, and is shown in the choosers and starts every test
+  window's title. Tests read the title's start as =t.titlePrefix=, and the name as =t.spoonName=;
+- =tests/spoon.js=, when a Spoon has one, exports =setup(spoon, dir)=, which the harness calls
+  before starting the copy. hs_window-gt's sets =attachFile= and =screenshotDir= to the run's
+  directory;
+- the self-test that checked =attachFile= now checks only that the copy is not the loaded Spoon.

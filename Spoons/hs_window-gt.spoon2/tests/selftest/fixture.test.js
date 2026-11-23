@@ -5,25 +5,25 @@
 // The user's windows and their frames when the file started, by window id.
 let userFrames = null
 
-function userWindowFrames(runId) {
+function userWindowFrames(prefix) {
     const frames = new Map()
     for (const window of hs.window.allWindows()) {
-        if ((window.title || "").startsWith(`hs_window-gt test ${runId} `)) continue
+        if ((window.title || "").startsWith(prefix)) continue
         const f = window.frame
         frames.set(window.id, { title: window.title, frame: { x: f.x, y: f.y, w: f.w, h: f.h } })
     }
     return frames
 }
 
-function testWindowsOpen(runId) {
-    return hs.window.allWindows().filter((w) => (w.title || "").startsWith(`hs_window-gt test ${runId} `))
+function testWindowsOpen(prefix) {
+    return hs.window.allWindows().filter((w) => (w.title || "").startsWith(prefix))
 }
 
 module.exports = [
     {
         name: "the user's windows are recorded",
         run: (t) => {
-            userFrames = userWindowFrames(t.runId)
+            userFrames = userWindowFrames(t.titlePrefix)
             t.assert.ok(userFrames.size > 0, "no window of the user's was found")
         }
     },
@@ -85,7 +85,7 @@ module.exports = [
     {
         name: "the windows of the failed tests were closed",
         run: (t) => {
-            const left = testWindowsOpen(t.runId)
+            const left = testWindowsOpen(t.titlePrefix)
             t.assert.equal(left.length, 0, `test windows still open: ${left.map((w) => w.title).join(", ")}`)
         }
     },
@@ -100,7 +100,7 @@ module.exports = [
         name: "the user's windows did not move",
         run: (t) => {
             t.assert.ok(userFrames, "the first test did not record the user's windows")
-            const now = userWindowFrames(t.runId)
+            const now = userWindowFrames(t.titlePrefix)
             const moved = []
             for (const [id, before] of userFrames) {
                 const after = now.get(id)

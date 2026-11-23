@@ -14,6 +14,8 @@
 /.gitattributes export-ignore
 /.gitignore export-ignore
 
-# What only a Spoon's developers need
+# What only a Spoon's developers need. tests-common/ holds the test files every Spoon's
+# tests/ directory receives a copy of; see tests-common/readme.org.
+/tests-common/ export-ignore
 /Spoons/*.spoon2/tests/ export-ignore
 /Spoons/*.spoon2/makefile export-ignore

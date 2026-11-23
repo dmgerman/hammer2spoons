@@ -1,14 +1,32 @@
 #!/bin/bash
-# Runs hs_window-gt's tests in the running Hammerspoon 2 and prints one line per test.
+# Runs a Spoon's tests in the running Hammerspoon 2 and prints one line per test.
 #
-#   tests/run [test files...]
+# Shared by every Spoon's tests: edit tests-common/run, not a copy, and run tests-common/sync.
 #
-# Without arguments it runs every tests/*.test.js. Hammerspoon 2 first asks on screen whether to
-# start. The exit status is 0 when every test passed or was skipped, 1 when a test failed or the
-# run was cancelled, and 2 when the tests could not be run or did not finish in time.
+#   tests/run [--no-confirm] [test files...]
+#
+# Without test files it runs every tests/*.test.js. Hammerspoon 2 asks on screen whether to start,
+# and at the end whether the run was uninterrupted. --no-confirm leaves out both choosers. The
+# makefile gives it: whoever types make test is at the terminal, which prints the results.
+#
+# The exit status is 0 when every test passed or was skipped, 1 when a test failed or the run was
+# cancelled, and 2 when the tests could not be run or did not finish in time.
 
 set -u
 tests_dir=$(cd "$(dirname "$0")" && pwd)
+
+# The shared files must be the same as in tests-common/. A copy that differs was either edited by
+# mistake or is older than tests-common/, and the tests would then not run as they should.
+sync="$(dirname "$(dirname "$(dirname "$tests_dir")")")/tests-common/sync"
+if [ -x "$sync" ] && ! "$sync" --check "$(dirname "$tests_dir")"; then
+    exit 2
+fi
+
+confirm=true
+if [ "${1:-}" = "--no-confirm" ]; then
+    confirm=false
+    shift
+fi
 
 if [ $# -eq 0 ]; then
     shopt -s nullglob
@@ -30,14 +48,18 @@ done
 # Seconds to wait for the report. This includes the time the user takes to start the tests.
 timeout=${HS_WINDOW_TESTS_TIMEOUT:-600}
 
-report_dir=$(mktemp -d -t hs_window-gt-tests)
+report_dir=$(mktemp -d -t hammer2spoons-tests)
 trap 'rm -rf "$report_dir"' EXIT
 report="$report_dir/report.txt"
 files_json=$(printf '%s\n' "${files[@]}" | jq -R . | jq -s -c .)
 harness="$tests_dir/harness.js"
-line="delete require.cache[$(jq -n --arg p "$harness" '$p')]; require($(jq -n --arg p "$harness" '$p')).run({files: $files_json, reportFile: $(jq -n --arg p "$report" '$p')})"
+line="delete require.cache[$(jq -n --arg p "$harness" '$p')]; require($(jq -n --arg p "$harness" '$p')).run({files: $files_json, reportFile: $(jq -n --arg p "$report" '$p'), confirm: $confirm})"
 
-echo "Starting the tests. Confirm the start in Hammerspoon 2."
+if [ "$confirm" = true ]; then
+    echo "Starting the tests. Confirm the start in Hammerspoon 2."
+else
+    echo "Starting the tests. Do not use the mouse or the keyboard until the results are printed."
+fi
 if ! printf '%s\n' "$line" | hs2 --no-prompt >/dev/null; then
     echo "Hammerspoon 2 could not start the tests." >&2
     exit 2

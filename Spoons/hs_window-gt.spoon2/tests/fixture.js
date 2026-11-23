@@ -1,6 +1,8 @@
-// The windows and screens that hs_window-gt's tests act on. The harness creates one fixture
-// for each test and closes it afterwards, also when the test fails or times out, so a test
-// never has to close its own windows. See tests/readme.org.
+// The windows and screens that a Spoon's tests act on. The harness creates one fixture for
+// each test and closes it afterwards, also when the test fails or times out, so a test never
+// has to close its own windows. See tests-common/readme.org.
+//
+// Shared by every Spoon's tests, like harness.js: edit tests-common/fixture.js, not a copy.
 
 const WINDOWS_SCRIPT = `${__dirname}/fixture-windows.jxa`
 
@@ -30,7 +32,7 @@ function frameClose(a, b) {
     return ["x", "y", "w", "h"].every((k) => Math.abs(a[k] - b[k]) <= FRAME_TOLERANCE)
 }
 
-function create(runId, skip) {
+function create(titlePrefix, skip) {
     const tasks = []
     // Every window opened, so that close() can close each one with its close button.
     const windows = []
@@ -40,7 +42,7 @@ function create(runId, skip) {
     // Their titles are unique to this run, so no other window can be mistaken for them.
     async function windowsOpen(count = 1) {
         const titles = []
-        for (let i = 0; i < count; i++) titles.push(`hs_window-gt test ${runId} ${++opened}`)
+        for (let i = 0; i < count; i++) titles.push(`${titlePrefix}${++opened}`)
         const task = hs.task.create("/usr/bin/osascript", ["-l", "JavaScript", WINDOWS_SCRIPT, ...titles],
             null, null, null)
         tasks.push(task)

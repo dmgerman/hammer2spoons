@@ -1,5 +1,10 @@
-// Runs hs_window-gt's tests inside the running Hammerspoon 2. tests/run sends one line through
-// hs2 that calls run(); see tests/readme.org.
+// Runs a Spoon's tests inside the running Hammerspoon 2. tests/run sends one line through hs2
+// that calls run(); see tests-common/readme.org at the top of the repository.
+//
+// This file is shared by every Spoon's tests. The copy in a Spoon's tests/ directory is made by
+// tests-common/sync from tests-common/, and is never edited there: edit tests-common/harness.js
+// and run tests-common/sync. Anything particular to one Spoon goes in that Spoon's
+// tests/spoon.js.
 //
 // hs2 does not wait for a promise, so run() returns at once and the tests continue in
 // Hammerspoon 2. When they have finished, run() writes a report to options.reportFile, and
@@ -10,7 +15,18 @@
 // through its link in Spoons/, so loading init.js from this directory's parent gives a
 // separate copy with its own state and its own config.
 
-const SPOON_FILE = __dirname.replace(/\/tests$/, "") + "/init.js"
+const SPOON_DIR = __dirname.replace(/\/tests$/, "")
+const SPOON_FILE = `${SPOON_DIR}/init.js`
+// The Spoon's name, from its spoon.json, for messages and for the test windows' titles. The file
+// is removed from require.cache after reading, so that a run leaves nothing cached.
+const SPOON_NAME = (() => {
+    const path = `${SPOON_DIR}/spoon.json`
+    try {
+        return require(path).name
+    } finally {
+        delete require.cache[path]
+    }
+})()
 
 // Seconds a test may take before it is reported as failed.
 const TEST_TIMEOUT = 10
@@ -59,7 +75,7 @@ async function startConfirm(count) {
     const interactive = hs.spoons["hs_interactive-gt"]
     if (!interactive) throw new Error("hs_interactive-gt is not loaded")
     const answer = await interactive.readerRun(interactive.readers.choice.prompted, {
-        placeholder: `Run ${count} hs_window-gt test files? Do not use the mouse or keyboard until they finish`,
+        placeholder: `Run ${count} ${SPOON_NAME} test files? Do not use the mouse or keyboard until they finish`,
         choices: [
             { text: "Start the tests", value: "start" },
             { text: "Cancel", value: "cancel" }
@@ -74,7 +90,7 @@ async function startConfirm(count) {
 async function testRun(file, test, shared, fixtures) {
     const started = Date.now()
     const seconds = test.timeout || TEST_TIMEOUT
-    const fixture = fixtures.create(shared.runId, skip)
+    const fixture = fixtures.create(shared.titlePrefix, skip)
     const context = Object.assign({}, shared, {
         assert: Object.assign({ frameEqual: fixture.frameEqual }, assert),
         windowsOpen: fixture.windowsOpen,
@@ -128,7 +144,7 @@ let running = false
 // is written: one line per test, "pass", "fail" or "skip", its file, its name and any message,
 // separated by tabs, followed by a last line "result" with the totals.
 function run(options) {
-    if (running) throw new Error("hs_window-gt's tests are already running")
+    if (running) throw new Error(`${SPOON_NAME}'s tests are already running`)
     running = true
     runAll(options)
         .catch((error) => reportWrite(options.reportFile, [`result\terror\t${error && error.message || error}`]))
@@ -141,13 +157,15 @@ function run(options) {
 }
 
 async function runAll(options) {
-    if (!(await startConfirm(options.files.length))) {
+    // options.confirm is false when the user started the run with make, which needs no
+    // confirmation on screen.
+    if (options.confirm !== false && !(await startConfirm(options.files.length))) {
         reportWrite(options.reportFile, ["result\tcancelled"])
         return
     }
 
     const runId = Date.now()
-    const made = `${hs.fs.tempDirectory()}/hs_window-gt-tests-${runId}`
+    const made = `${hs.fs.tempDirectory()}/${SPOON_NAME}-tests-${runId}`
     hs.fs.mkdir(made)
     // Resolved, so that a test comparing a path the Spoon built from this directory sees the
     // same spelling: the Spoon resolves config.screenshotDir, which turns /var into
@@ -155,9 +173,12 @@ async function runAll(options) {
     const dir = hs.fs.pathToAbsolute(made) || made
     const fixtures = requireFresh(`${__dirname}/fixture.js`)
     const spoon = requireFresh(SPOON_FILE)
-    // The copy writes its attached keys and its screenshots here, never where the user's do.
-    spoon.config.attachFile = `${dir}/window-keys.json`
-    spoon.config.screenshotDir = dir
+    // A Spoon whose copy must not touch the user's files points them into the run's directory
+    // here. tests/spoon.js exports setup(spoon, dir); a Spoon that needs nothing has no such file.
+    const setupFile = `${__dirname}/spoon.js`
+    if (hs.fs.exists(setupFile)) requireFresh(setupFile).setup(spoon, dir)
+    // Every test window's title starts with this, so that no other window is mistaken for one.
+    const titlePrefix = `${SPOON_NAME} test ${runId} `
 
     const front = frontWindowsRecord()
     const results = []
@@ -183,7 +204,8 @@ async function runAll(options) {
                 continue
             }
             for (const test of tests) {
-                results.push(await testRun(file, test, { spoon, dir, runId, skip, wait }, fixtures))
+                results.push(await testRun(file, test,
+                    { spoon, spoonName: SPOON_NAME, dir, runId, titlePrefix, skip, wait }, fixtures))
             }
         }
     } finally {
@@ -197,15 +219,19 @@ async function runAll(options) {
     const lines = results.map((r) => [r.status, r.file.replace(/^.*\//, ""), r.name, r.message || ""].join("\t"))
     const failed = count("fail") + count("fixed")
     lines.push(["result", failed ? "fail" : "pass", count("pass"), failed, count("skip"), count("known")].join("\t"))
-    // The user asked to acknowledge the end of a run, so that they know when the mouse and the
-    // keyboard can be used again, and to say whether they used either during the run, which can
-    // make tests fail. The report is written only after that, whichever choice closes the
-    // chooser.
-    const answer = await finishConfirm(`${count("pass")} passed, ${failed} failed, ${count("skip")} skipped, ${count("known")} known failures`)
-    lines.push(["interrupted", answer === "no" ? "no" : answer === "yes" ? "yes" : "unknown"].join("\t"))
+    // When the run was started on screen, the user asked to acknowledge its end, so that they
+    // know when the mouse and the keyboard can be used again, and to say whether they used
+    // either during the run, which can make tests fail. The report is written only after that,
+    // whichever choice closes the chooser. A run started with make shows no chooser at either
+    // end: the user is at the terminal, which prints the results.
+    if (options.confirm !== false) {
+        const answer = await finishConfirm(`${count("pass")} passed, ${failed} failed, ${count("skip")} skipped, ${count("known")} known failures`)
+        lines.push(["interrupted", answer === "no" ? "no" : answer === "yes" ? "yes" : "unknown"].join("\t"))
+        // The chooser took the focus, and closing it may not give it back to the window that
+        // had it.
+        if (front.focused) frontWindowFocus(front.focused)
+    }
     lines.push(["front", frontWindowsDescribe(front), frontWindowsDescribe(restored)].join("\t"))
-    // The chooser took the focus, and closing it may not give it back to the window that had it.
-    if (front.focused) frontWindowFocus(front.focused)
     reportWrite(options.reportFile, lines)
 }
 
@@ -215,7 +241,7 @@ async function runAll(options) {
 async function finishConfirm(totals) {
     const interactive = hs.spoons["hs_interactive-gt"]
     return interactive.readerRun(interactive.readers.choice.prompted, {
-        placeholder: "The hs_window-gt tests have finished. Did they run without interruption?",
+        placeholder: `The ${SPOON_NAME} tests have finished. Did they run without interruption?`,
         choices: [
             { text: "Yes, I did not use the mouse or the keyboard", subText: totals, value: "no" },
             { text: "No, I used the mouse or the keyboard during the run", subText: totals, value: "yes" }
@@ -230,6 +256,11 @@ async function finishConfirm(totals) {
 // Only standard, visible windows count. hs.window.orderedWindows() also lists windows such as a
 // menu bar agent's and the Finder's desktop, which were measured in front of the user's windows
 // on 2026-11-23.
+//
+// hs.window.orderedWindows() lists every window of the focused application first, and then the
+// windows of each other application, not the order the windows are stacked on screen. So a
+// window of the focused application can be recorded for a screen where another application's
+// window covers it. See "Running the tests" in readme.org.
 function frontWindowsRecord() {
     const ordered = hs.window.orderedWindows().filter((w) => {
         try {

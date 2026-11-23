@@ -1,0 +1,56 @@
+#+title: The test files shared by every Spoon
+
+This directory holds the files that run a Spoon's tests in the running Hammerspoon 2. Every Spoon
+with tests has its own copy of them, made by =sync=. It is marked =export-ignore=, so users who
+install a Spoon do not download it.
+
+* Why each Spoon has a copy
+
+Each Spoon keeps its own copy, so that its tests can be read and run from its directory alone.
+The user decided this on 2026-11-23, and asked that the copies always stay the same. Three things
+keep them the same:
+
+1. A copy is never edited. A change is made here, and =sync= copies it into every Spoon.
+2. =tests/run= runs =sync --check= before it starts, and refuses to run when the Spoon's copy
+   differs from this directory.
+3. The pre-commit hook, =.beads/hooks/pre-commit=, runs =sync --check= too, so a commit cannot
+   leave a copy that differs.
+
+* The files
+
+| File                   | Copied to                    | Holds                                         |
+|------------------------+------------------------------+-----------------------------------------------|
+| =harness.js=           | =tests/harness.js=           | Runs the tests inside Hammerspoon 2           |
+| =run=                  | =tests/run=                  | Starts a run through =hs2= and prints the report |
+| =fixture.js=           | =tests/fixture.js=           | The test windows, and the helpers a test receives |
+| =fixture-windows.jxa=  | =tests/fixture-windows.jxa=  | The process that opens the test windows       |
+| =makefile=             | =makefile=                   | =make test= and =make test-two-screens=       |
+| =selftest/*.test.js=   | =tests/selftest/=            | Tests of the harness and the test windows     |
+
+* Using them in a Spoon
+
+#+begin_src sh
+tests-common/sync Spoons/<name>.spoon2      # the first time, for a Spoon without tests
+tests-common/sync                           # after changing a file here, for every Spoon
+tests-common/sync --check                   # compares only
+#+end_src
+
+Anything particular to one Spoon goes in that Spoon's own files, which =sync= does not touch:
+
+- its tests, in =tests/<area>.test.js=;
+- =tests/spoon.js=, when the copy under test must be set up before it starts. It exports
+  =setup(spoon, dir)=, which the harness calls with the copy and the run's temporary directory.
+  hs_window-gt uses it to point its attachment file and its screenshot directory into that
+  directory;
+- =tests/readme.org=, which describes that Spoon's tests.
+
+=make test= starts the tests at once, shows no chooser at the start or the end, and prints the
+results when the run finishes. =tests/run= run directly asks on screen whether to start, and at
+the end whether the run was uninterrupted, unless it is given =--no-confirm=, which the makefile
+gives.
+
+The harness reads the Spoon's name from its =spoon.json=. The name is shown in the choosers, and
+starts the title of every test window, which tests read as =t.titlePrefix=.
+
+hs_window-gt's =tests/readme.org= describes how a run works and how to write a test, with
+everything a test receives. It applies to every Spoon.

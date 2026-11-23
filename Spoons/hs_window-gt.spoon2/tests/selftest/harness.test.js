@@ -40,8 +40,7 @@ module.exports = [
     {
         name: "the copy of the Spoon is not the one the configuration loaded",
         run: (t) => {
-            t.assert.ok(t.spoon !== hs.spoons["hs_window-gt"], "the tests received the loaded copy")
-            t.assert.ok(t.spoon.config.attachFile.startsWith(t.dir), "attachFile is not in the test directory")
+            t.assert.ok(t.spoon !== hs.spoons[t.spoonName], "the tests received the loaded copy")
         }
     }
 ]

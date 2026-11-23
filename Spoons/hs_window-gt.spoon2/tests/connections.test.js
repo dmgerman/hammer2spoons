@@ -9,7 +9,7 @@ const MODIFIERS = ["ctrl", "alt", "shift"]
 function keySend(t, modifiers, key) {
     const window = hs.window.focusedWindow()
     const title = window ? window.title || "" : ""
-    if (!title.startsWith(`hs_window-gt test ${t.runId} `)) {
+    if (!title.startsWith(t.titlePrefix)) {
         t.assert.fail(`not sending ${key}: the focused window is not a test window ("${title}")`)
     }
     hs.eventtap.keyStroke(modifiers, key, null)

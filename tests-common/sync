@@ -1,0 +1,67 @@
+#!/bin/bash
+# Copies the test files shared by every Spoon from tests-common/ into each Spoon's directory.
+#
+#   tests-common/sync                      copies into every Spoon that has a tests/ directory
+#   tests-common/sync Spoons/<name>.spoon2 copies into that Spoon, creating its tests/ directory
+#   tests-common/sync --check [Spoon...]   copies nothing; exits 1 if any copy differs
+#
+# Each Spoon keeps its own copy, so that its tests can be read and run from its directory alone.
+# The copies are never edited: a change is made in tests-common/ and copied with this script.
+# tests/run and the pre-commit hook run it with --check, so a copy that differs is found before
+# the tests run or a commit is made. See tests-common/readme.org.
+
+set -u
+common=$(cd "$(dirname "$0")" && pwd)
+root=$(dirname "$common")
+
+# Each shared file, and where it goes in a Spoon's directory.
+FILES=(
+    "harness.js:tests/harness.js"
+    "run:tests/run"
+    "fixture.js:tests/fixture.js"
+    "fixture-windows.jxa:tests/fixture-windows.jxa"
+    "makefile:makefile"
+    "selftest/harness.test.js:tests/selftest/harness.test.js"
+    "selftest/fixture.test.js:tests/selftest/fixture.test.js"
+    "selftest/screens-needed.test.js:tests/selftest/screens-needed.test.js"
+)
+
+check=0
+if [ "${1:-}" = "--check" ]; then
+    check=1
+    shift
+fi
+
+spoons=()
+if [ $# -gt 0 ]; then
+    for spoon in "$@"; do spoons+=("$(cd "$spoon" && pwd)"); done
+else
+    for tests in "$root"/Spoons/*.spoon2/tests; do
+        [ -d "$tests" ] && spoons+=("$(dirname "$tests")")
+    done
+fi
+
+differ=0
+for spoon in "${spoons[@]}"; do
+    for entry in "${FILES[@]}"; do
+        source="$common/${entry%%:*}"
+        target="$spoon/${entry#*:}"
+        if cmp -s "$source" "$target"; then
+            continue
+        fi
+        if [ $check -eq 1 ]; then
+            echo "Differs from tests-common/${entry%%:*}: ${target#$root/}" >&2
+            differ=1
+        else
+            mkdir -p "$(dirname "$target")"
+            cp -f "$source" "$target"
+            echo "Copied ${target#$root/}"
+        fi
+    done
+done
+
+if [ $differ -eq 1 ]; then
+    echo "Run tests-common/sync to copy tests-common/ into each Spoon." >&2
+    exit 1
+fi
+exit 0
