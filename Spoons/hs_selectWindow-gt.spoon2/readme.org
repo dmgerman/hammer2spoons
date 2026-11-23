@@ -13,6 +13,8 @@ Its main features are these:
   application's name beneath it, contains the text typed.
 - *Minimized and hidden windows.* A minimized window, or a window of a hidden application, is
   listed too, and marked as such.
+- *Applications without windows.* A running application that has no window, such as one whose
+  last window was closed, is listed after the windows, and choosing it brings it to the front.
 - *A thumbnail of the selected window,* shown beside the chooser and turned on or off with
   =Tab=, for windows whose titles look alike.
 - *Switching within one application,* with a chooser of that application's windows only.
@@ -126,7 +128,12 @@ chooser and focus the window chosen in it, or focus a window directly.
 ** windowSelect()
 
 =windowSelect()= opens a chooser of every window except the focused one, most recently used
-first.
+first. The running applications that have no window follow them, in alphabetical order, each as
+a row /Name (no windows)/ with the application's bundle identifier beneath it. Choosing such a
+row brings the application to the front. Only applications with a Dock icon are listed, once
+each, and not the application in front. An application counts as having windows when any copy
+of it has one, so a second copy of an application, such as a browser started in kiosk mode, is
+not listed beside the first.
 
 ** applicationWindowSelect([application])
 
@@ -146,6 +153,7 @@ The chooser's prompt shows the application's name.
 =applicationSelect()= opens a chooser with one row per application. Each row shows that
 application's most recently used window, and choosing the row focuses that window. The
 application of the focused window is not listed, since its row would be the focused window.
+The running applications that have no window follow, as in =windowSelect()=.
 
 ** windowPreviousSelect()
 

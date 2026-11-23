@@ -198,7 +198,8 @@ module.exports = [
             const order = t.spoon.order()
             const chooser = open(t, () => t.spoon.applicationSelect())
             await openWait(t, chooser)
-            const rows = choosers[0].rows
+            // The windows' rows only: the rows of applications without windows follow them.
+            const rows = choosers[0].rows.filter((r) => r.id !== undefined)
             const applications = rows.map((r) => String(r.subText).split("  ·  ")[0])
             t.assert.equal(choosers[0].placeholder, "Application", "the prompt")
             t.assert.ok(!applications.includes("osascript"), "the focused application is listed")
@@ -206,6 +207,52 @@ module.exports = [
             const notFirst = rows.filter((r, i) => order.find((e) => e.startsWith(`${applications[i]}: `)) !== `${applications[i]}: ${r.text}`)
             t.assert.equal(notFirst.length, 0, "rows that are not their application's most recently used window")
             await key(t, chooser, [], "escape")
+        }
+    },
+    {
+        name: "windowSelect() and applicationSelect() list running applications without windows after the windows, and choosing one activates it",
+        run: async (t) => {
+            const choosers = choosersCapture(t)
+            const [a, b] = await t.windowsOpen(2)
+            await focus(t, a)
+            await focus(t, b)
+            // Made-up applications, added to the real ones: two copies of one application
+            // without windows, an application that is not standard, and an application with the
+            // bundle of the frontmost one. Activating them is recorded, not done.
+            const activated = []
+            const made = (name, bundleID, kind, pid) => ({
+                name, bundleID, kind, pid,
+                activate: (all) => { activated.push([name, pid, all]); return true },
+                setFrontmost: () => true
+            })
+            const frontmost = hs.application.frontmost()
+            const fakes = [
+                made("Zq Windowless", "org.hammer2spoons.test.windowless", "standard", -4101),
+                made("Zq Windowless", "org.hammer2spoons.test.windowless", "standard", -4102),
+                made("Zq Accessory", "org.hammer2spoons.test.accessory", "accessory", -4103),
+                made("Zq Frontmost", frontmost ? frontmost.bundleID : "none", "standard", -4104)
+            ]
+            const original = hs.application.runningApplications
+            const own = Object.prototype.hasOwnProperty.call(hs.application, "runningApplications")
+            hs.application.runningApplications = function () { return original.apply(hs.application, arguments).concat(fakes) }
+            t.cleanup(() => { if (own) hs.application.runningApplications = original; else delete hs.application.runningApplications })
+
+            for (const [fn, n] of [["windowSelect", 0], ["applicationSelect", 1]]) {
+                const chooser = open(t, () => t.spoon[fn]())
+                await openWait(t, chooser)
+                const rows = choosers[n].rows
+                const ours = rows.filter((r) => String(r.text).startsWith("Zq "))
+                t.assert.equal(ours.map((r) => r.text).join(", "), "Zq Windowless (no windows)", `${fn}(): the made-up applications' rows`)
+                t.assert.equal(ours[0].subText, "org.hammer2spoons.test.windowless", `${fn}(): the row's second line`)
+                const firstApplication = rows.findIndex((r) => r.pid !== undefined)
+                const lastWindow = rows.map((r) => r.id !== undefined).lastIndexOf(true)
+                t.assert.ok(firstApplication > lastWindow, `${fn}(): an application's row comes before a window's`)
+                await type(t, chooser, "Zq Windowless")
+                await key(t, chooser, [], "return")
+                await t.wait(0.3)
+                t.assert.equal(JSON.stringify(activated.splice(0)), JSON.stringify([["Zq Windowless", -4101, true]]), `${fn}(): the applications activated`)
+                t.assert.equal(focusedId(), b.id, `${fn}(): the focused window`)
+            }
         }
     },
     {

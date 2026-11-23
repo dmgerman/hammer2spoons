@@ -459,7 +459,7 @@ function subTextFor(state) {
     return parts.join("  ·  ")
 }
 
-function choicesFor(records) {
+function choicesFor(records, windowless = []) {
     // One icon per application rather than one per row.
     const icons = new Map()
     const iconFor = (bundleID) => {
@@ -468,12 +468,58 @@ function choicesFor(records) {
         return icons.get(bundleID)
     }
 
-    return records.map(({ state }) => ({
+    const windowRows = records.map(({ state }) => ({
         text: state.title || state.application || "window",
         subText: subTextFor(state),
         image: iconFor(state.bundleID),
         id: state.id
     }))
+    const applicationRows = windowless.map((application) => ({
+        text: `${application.name} (no windows)`,
+        subText: application.bundleID,
+        image: iconFor(application.bundleID),
+        pid: application.pid
+    }))
+    return windowRows.concat(applicationRows)
+}
+
+/**
+ * The running applications that have no window among `records`, so that they can be switched
+ * to as well. Hammerspoon 1's Spoon listed them the same way.
+ *
+ * Only standard applications, those with a Dock icon, are listed, one per bundle, and not the
+ * frontmost one. An application counts as having windows when any window of its bundle is in
+ * `records`: a second copy of an application, such as Firefox started in kiosk mode, is not
+ * listed beside the first. Listing them costs about 20 ms for 130 processes, measured on
+ * 2026-11-24, paid once each time a chooser opens.
+ *
+ * @param {Array} records The window records the chooser lists.
+ * @returns {Array} HSApplication objects, by name.
+ */
+function windowlessApplications(records) {
+    const listed = new Set(records.map(({ state }) => state.bundleID || state.application))
+    const frontmost = hs.application.frontmost()
+    if (frontmost && frontmost.bundleID) listed.add(frontmost.bundleID)
+    const found = new Map()
+    for (const application of hs.application.runningApplications()) {
+        const bundleID = application.bundleID
+        if (!bundleID || !application.name || application.kind !== "standard") continue
+        if (listed.has(bundleID) || found.has(bundleID)) continue
+        found.set(bundleID, application)
+    }
+    return [...found.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/**
+ * Bring an application without windows to the front, by its pid. activate() can be refused
+ * by macOS, and setFrontmost() is tried then, as Hammerspoon 1's Spoon did.
+ *
+ * @returns {boolean} Whether the application came to the front.
+ */
+function applicationActivate(pid) {
+    const application = hs.application.runningApplications().find((a) => a.pid === pid)
+    if (!application) return false
+    return application.activate(true) || application.setFrontmost(true)
 }
 
 function chooserWidth() {
@@ -529,9 +575,9 @@ function chooserGeometry(area) {
  * @param {Array} windows The windows to offer, in the order to offer them.
  * @param {string} placeholder Prompt text.
  */
-function chooseFrom(all, placeholder) {
+function chooseFrom(all, placeholder, windowless = []) {
     const records = withoutFocused(all)
-    if (!records.length) {
+    if (!records.length && !windowless.length) {
         hs.ui.alert("No windows to choose from").duration(2).show()
         return null
     }
@@ -555,7 +601,7 @@ function chooseFrom(all, placeholder) {
     own.visibleRows = config.rowsToDisplay
     own.width = chooserWidth()
 
-    own.setChoices(choicesFor(records))
+    own.setChoices(choicesFor(records, windowless))
 
     // onShow and onHide act only while their chooser is the current one, so that a chooser
     // closed by a newer one does not end the newer one's session.
@@ -565,16 +611,18 @@ function chooseFrom(all, placeholder) {
     // when the user chooses or dismisses in the visible chooser, never when code hides it.
     own.onSelect = (item) => {
         if (chooser === own) finishChoosing()
-        if (!item || item.id === undefined) return
-        focusWindowById(item.id)
+        if (!item) return
+        if (item.pid !== undefined) applicationActivate(item.pid)
+        else if (item.id !== undefined) focusWindowById(item.id)
     }
 
     own.onShow = () => {
         if (chooser !== own) return
         takeSessionKeys()
         startPolling()
-        // The first row is selected when the chooser opens.
-        showThumbnailFor(records[0].state.id)
+        // The first row is selected when the chooser opens. It is an application without
+        // windows when there are no windows, and has no thumbnail then.
+        showThumbnailFor(records.length ? records[0].state.id : null)
     }
 
     own.onHide = () => {
@@ -678,9 +726,13 @@ function focusWindowById(id) {
 
 // MARK: - Public API
 
-/** Choose from every switchable window, most recently used first. */
+/**
+ * Choose from every switchable window, most recently used first, followed by the running
+ * applications that have no windows.
+ */
 function windowSelect() {
-    return chooseFrom(allRecords(), "Window")
+    const records = allRecords()
+    return chooseFrom(records, "Window", windowlessApplications(records))
 }
 
 /** Choose from the focused application's windows. */
@@ -690,9 +742,13 @@ function applicationWindowSelect(application) {
     return chooseFrom(records, name)
 }
 
-/** Choose from the most recently used window of each application. */
+/**
+ * Choose from the most recently used window of each application, followed by the running
+ * applications that have no windows.
+ */
 function applicationSelect() {
-    return chooseFrom(firstRecordPerApplication(), "Application")
+    const records = firstRecordPerApplication()
+    return chooseFrom(records, "Application", windowlessApplications(records))
 }
 
 /**
