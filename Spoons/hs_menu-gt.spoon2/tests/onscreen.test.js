@@ -371,6 +371,40 @@ module.exports = [
             t.assert.equal(panels(canvases).length, 1, "panels after pop(): the drawn one is reused")
         }
     },
+    // --- the mouse ---
+    {
+        name: "a click on the menu goes to the window beneath it, and the menu does not act on it",
+        run: async (t) => {
+            const [beneath, focused] = await t.windowsOpen(2)
+            const screen = beneath.screen
+            const f = screen.frame
+            const centre = { x: f.x + f.w / 2, y: f.y + f.h / 2 }
+            // One window under the middle of the screen, where the menu is drawn, and the
+            // other in a corner, away from it, with the focus.
+            await t.frameSet(beneath, { x: centre.x - 300, y: centre.y - 200, w: 600, h: 400 })
+            await t.frameSet(focused, { x: f.x + 20, y: f.y + 20, w: 300, h: 200 })
+            focused.focus()
+            await t.wait(0.4)
+
+            settingsSet(t, { showDelay: 0 })
+            const calls = counter()
+            show(t, [{ label: "One", key: "j", fn: calls.fn("one") }, { label: "Two", key: "l", fn: calls.fn("two") }])
+            await t.wait(0.3)
+
+            // Clicks only where a test window is beneath the menu.
+            const b = beneath.frame
+            const inside = centre.x > b.x && centre.x < b.x + b.w && centre.y > b.y && centre.y < b.y + b.h
+            if (!inside) t.assert.fail("not clicking: the test window is not beneath the middle of the screen")
+            if (!t.spoon.onScreenIsShown()) t.assert.fail("not clicking: the menu is not shown")
+            if (hs.window.focusedWindow().id !== focused.id) t.assert.fail("not clicking: the other test window does not have the focus")
+            hs.eventtap.leftClick(centre.x, centre.y)
+            await t.wait(0.5)
+
+            t.assert.equal(hs.window.focusedWindow().id, beneath.id, "the window with the focus after the click")
+            t.assert.ok(t.spoon.onScreenIsShown(), "the menu closed")
+            t.assert.equal(JSON.stringify(calls.calls), "{}", "the actions run")
+        }
+    },
     // --- the on-screen menu's settings ---
     {
         name: "tile, spacing, padding, letterSize and columnsFor set the size of the panel",

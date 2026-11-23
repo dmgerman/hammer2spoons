@@ -103,6 +103,72 @@ module.exports = [
             t.assert.equal(saved(t).length, 0, "pictures saved")
         }
     },
+    {
+        name: "an option with no fields is drawn, and an icon that cannot be loaded is drawn without a label",
+        run: async (t) => {
+            cachesEmpty(t)
+            const errors = consoleErrors(t)
+            t.assert.ok(await draw(t, {}), "the option without fields")
+            t.assert.ok(await draw(t, { icon: "no-such-icon-zq.png" }), "the option with only a missing icon")
+            t.assert.ok(errors.length > 0, "the missing icon was not reported")
+        }
+    },
+    {
+        name: "hideLabel, background, labelColor and symbolColor each identify a different saved picture",
+        run: async (t) => {
+            cachesEmpty(t)
+            const name = label(t)
+            const base = { label: name, icon: "symbol:hammer" }
+            for (const extra of [{}, { hideLabel: true }, { background: "#203040" }, { labelColor: "#405060" }, { symbolColor: "#FF0000" }, { symbolColor: "#00FF00" }]) {
+                await draw(t, Object.assign({}, base, extra))
+            }
+            t.assert.equal(saved(t).length, 6, "pictures saved")
+        }
+    },
+    {
+        name: "an option whose icon is an HSImage is drawn each time and never saved",
+        run: async (t) => {
+            cachesEmpty(t)
+            // Two different images of the same size.
+            const first = await draw(t, { label: label(t) })
+            const second = await draw(t, { label: label(t) })
+            cachesEmpty(t)
+            const name = label(t)
+            const a = await draw(t, { label: name, icon: first })
+            const b = await draw(t, { label: name, icon: second })
+            t.assert.ok(a && b, "an option was not drawn")
+            t.assert.ok(a !== b, "the two options were given the same picture")
+            t.assert.equal(saved(t).length, 0, "pictures saved")
+        }
+    },
+    {
+        name: "a saved picture is used again after tileSize changes, until diskCacheClear()",
+        run: async (t) => {
+            cachesEmpty(t)
+            const option = { label: label(t) }
+            const size = t.spoon.config.tileSize
+            t.cleanup(() => { t.spoon.config.tileSize = size })
+            await draw(t, option)
+            // Read from the saved file, which may report its size in pixels rather than points.
+            t.spoon.imageCacheClear()
+            const before = (await draw(t, option)).size.w
+            t.spoon.config.tileSize = size + 20
+            t.spoon.imageCacheClear()
+            t.assert.equal((await draw(t, option)).size.w, before, "the width before diskCacheClear()")
+            t.spoon.diskCacheClear()
+            t.assert.equal((await draw(t, option)).size.w, size + 20, "the width after diskCacheClear()")
+        }
+    },
+    {
+        name: "a font that is not installed still draws the option",
+        run: async (t) => {
+            cachesEmpty(t)
+            const font = t.spoon.config.font
+            t.cleanup(() => { t.spoon.config.font = font })
+            t.spoon.config.font = "NoSuchFont-zq"
+            t.assert.ok(await draw(t, { label: label(t) }), "no image")
+        }
+    },
     // --- imageProvider ---
     {
         name: "imageProvider receives {session, index, state} and may return option fields",

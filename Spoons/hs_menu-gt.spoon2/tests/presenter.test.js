@@ -97,6 +97,20 @@ module.exports = [
             t.assert.equal(labels(second), "Sub,Plain", "the second session")
         }
     },
+    {
+        name: "an image that is ready after another menu is displayed is not given to the presenter",
+        run: async (t) => {
+            const presenter = presenterMake(true)
+            const late = () => new Promise((resolve) => hs.timer.doAfter(0.4, () => resolve("late")))
+            const session = open(t, [{ label: "Sub", children: [{ label: label(t) }] }, { label: label(t), imageProvider: late }], presenter)
+            session.push(session.buttons()[0])
+            const presentedAt = presenter.calls.length
+            await t.wait(0.7)
+            // The submenu has one option, so an image for index 1 belongs to the root menu.
+            const stale = presenter.calls.slice(presentedAt).filter((c) => c[0] === "setImage" && c[1] === 1)
+            t.assert.equal(stale.length, 0, "images of the root menu given after the submenu was displayed")
+        }
+    },
     // --- buttonImage ---
     {
         name: "buttonImage() resolves to an option's own image without drawing it",

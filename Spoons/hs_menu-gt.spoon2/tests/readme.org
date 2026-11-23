@@ -31,7 +31,9 @@ A test that shows a menu sends its keys only while the copy reports the menu sho
 time, because a key sent after the menu closed would reach the application behind it.
 
 The tests of the on-screen menu, in =tests/onscreen.test.js=, also check that a test window has the
-focus before each key, so that a key the copy does not take reaches that window.
+focus before each key, so that a key the copy does not take reaches that window. The test of the
+mouse clicks only where a test window is beneath the menu, and the fixture puts the pointer back
+at the end of the test.
 
 The tests of prompts, in =tests/onscreen.test.js= and =tests/presenter.test.js=, tell the user's
 hs_interactive-gt that a prompt opened and closed, with =promptOpened()= and =promptClosed()=,
@@ -43,6 +45,29 @@ canvas of its own at (0, 0), which is never shown, while the panel is centred on
 
 * What is not tested
 
-1. =config.screen.level=. A canvas does not report its window level, so the test cannot read it.
-2. Presses with the mouse. The on-screen menu ignores the mouse, and the Stream Deck's presses
-   are hs_streamdeck-gt's, which is not published here.
+Every statement of the Spoon's readme has a test, except the ones below. Each is listed with
+the reason it has none.
+
+1. *The Stream Deck.* Its presenter is in hs_streamdeck-gt, which is not published here. The
+   tests of =navigate= and =keepOpen= on a presenter that cannot hide stand in for it.
+2. *Installing.* =hs.spoons.use()= downloads the Spoon from GitHub. The tests load a copy of the
+   Spoon from this directory instead.
+3. *Options with =fn:=, =app:= or =url:= without hs_interactive-gt.* The tests run in the user's
+   Hammerspoon 2, which has hs_interactive-gt loaded, and the copy reads that one.
+4. *The examples.* "A first menu", "Actions", "Example: a window menu" and the examples of
+   =keepOpen= bind keys or call the user's commands and hs_window-gt. Each field they use has a
+   test of its own.
+5. *A command with a text prompt blocks Hammerspoon 2.* This is how =hs.ui.textPrompt= works,
+   not something this Spoon does. hs_interactive-gt's tests cover its prompts.
+6. *What a picture looks like.* The tests check that an option is drawn, at what size, and
+   whether it is saved. They do not check its pixels, because =HSImage= cannot compare two
+   images. This covers:
+   - the wrapping, shrinking and shortening of a label, with =labelSize= and =labelSizeFloor=;
+   - =iconScale= and =iconScaleAlone=;
+   - the recolouring of an SF Symbol in =symbolColor=;
+   - the question mark drawn for an icon that cannot be loaded and an option without a label;
+   - the image being twice the tile size in pixels.
+7. *The warning about a font that is not installed.* Hammerspoon 2 writes it to its own console,
+   which JavaScript cannot read. The test checks that the option is still drawn.
+8. *=config.screen.level=.* A canvas does not report its window level.
+9. *How long drawing takes.* The readme says a few milliseconds. The tests do not measure time.

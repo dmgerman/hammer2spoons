@@ -355,7 +355,7 @@ The =icon= field names the picture drawn on an option, in one of these forms:
 | ="~/pictures/x.png"=      | An absolute path, or one relative to the home directory. |
 | ="symbol:hammer"=         | An SF Symbol, drawn in =config.symbolColor=.         |
 | ="bundle:com.apple.Mail"= | An application's icon.                               |
-| an =HSImage=              | Drawn as it is.                                      |
+| an =HSImage=              | Drawn as it is. The option is drawn each time it is displayed, and not saved. |
 
 An option with =app= and no =icon= is drawn with that application's icon.
 
@@ -499,8 +499,8 @@ The settings in =config.screen= apply only to the on-screen menu:
 | =backKeys=    | =["delete"]=   | Keys that return to the parent menu.                       |
 | =columnsFor=  | a function     | Given the number of options, returns the number of columns. |
 
-The default =columnsFor= gives at least four columns, and more for a large menu, so that the
-grid is wider than it is tall.
+The default =columnsFor= gives four columns, or one for each option when a menu has fewer than
+four. A large menu gets more columns, so that the grid is wider than it is tall.
 
 =showDelay= sets how long the menu waits, in seconds, before it is drawn. The default is 0.5,
 and 0 draws the menu at once. The letters are bound as soon as the menu opens. A letter pressed
@@ -539,7 +539,11 @@ Three details of the drawing:
 Each finished option is saved in =cacheDir= as a PNG and used again, so it is drawn once rather
 than every time it is displayed. An option that was not drawn as specified, such as one whose
 icon could not be loaded, is displayed but not saved. Its icon is then tried again the next
-time.
+time. Two other kinds of option are never saved:
+
+1. An option with =imageProvider=, whose picture changes.
+2. An option whose =icon= is an =HSImage=. As text, an image gives only its size, which cannot
+   tell two images apart.
 
 Two functions clear the saved pictures:
 
@@ -549,8 +553,8 @@ menu.diskCacheClear()    // delete the saved files as well, and return how many 
 #+end_src
 
 =diskCacheClear()= is required after changing =tileSize=, the colours or the fonts. A saved
-option is identified by its icon, label, background and label colour, not by the settings it was
-drawn with. Without clearing the cache, the picture drawn with the previous settings is used
+option is identified by its icon, label, background, label colour and own =symbolColor=, not by
+the settings it was drawn with. Without clearing the cache, the picture drawn with the previous settings is used
 again.
 
 * Writing a presenter

@@ -409,12 +409,22 @@ function buttonImage(button, options) {
     if (button.imageProvider) return dynamicImage(button, options)
 
     const iconSpec = button.icon || (button.app ? "bundle:" + button.app : null)
-    const key = [
+
+    // An icon given as an HSImage has nothing to identify it by: as text it is only its size,
+    // such as "<HSImage: 150x148>", so two images of one size would share a saved picture.
+    // Such an option is drawn each time and not saved.
+    if (iconSpec && typeof iconSpec !== "string") return buttonDraw(button, iconSpec)
+
+    const parts = [
         iconSpec || "",
         button.hideLabel ? "" : (button.label || ""),
         button.background || "",
         button.labelColor || ""
-    ].join("|")
+    ]
+    // Added only when set, so that the options without one keep the names they were saved
+    // under.
+    if (button.symbolColor) parts.push(button.symbolColor)
+    const key = parts.join("|")
 
     if (tileCache.has(key)) return tileCache.get(key)
 
