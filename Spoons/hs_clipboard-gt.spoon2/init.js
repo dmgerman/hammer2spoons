@@ -172,8 +172,6 @@ const PASSWORD_MOSTLY = 0.70
 function passwordAllowlisted(text) {
     const length = text.length
 
-    if ((text.match(/\n/g) || []).length > config.passwordMaxNewlines) return true
-
     // UUID.
     if (/^[0-9a-fA-F]{1,8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(text)) return true
     // ULID: 26 characters of Crockford Base32.
@@ -240,9 +238,15 @@ function passwordStructured(text) {
 // All three steps. Only a string that clears every one of them is treated as a password.
 function defaultPasswordLike(text) {
     if (typeof text !== "string" || text === "") return false
-    if (passwordAllowlisted(text)) return false
-    if (!passwordStructured(text)) return false
-    return passwordEntropy(text) >= config.passwordEntropyThreshold
+    if ((text.match(/\n/g) || []).length > config.passwordMaxNewlines) return false
+    // The line breaks at the start and the end are left out of the three steps. A password
+    // copied from a terminal often ends with one, and step 2 refuses any whitespace, so without
+    // this no entry with a line break was ever masked (found by the tests on 2026-11-23).
+    const core = text.replace(/^[\r\n]+|[\r\n]+$/g, "")
+    if (core === "") return false
+    if (passwordAllowlisted(core)) return false
+    if (!passwordStructured(core)) return false
+    return passwordEntropy(core) >= config.passwordEntropyThreshold
 }
 
 /**

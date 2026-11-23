@@ -130,6 +130,11 @@ An entry is masked only when it passes three tests:
    case letters, capital letters, digits and symbols.
 3. *It looks random:* its Shannon entropy is at least 3.5 bits per character.
 
+The line breaks at the start and the end of an entry are left out of these tests, so a password
+copied with a line break after it, as from a terminal, is masked. An entry with more line breaks
+than =passwordMaxNewlines=, which is 1 by default, is never masked, and neither is an entry with
+a line break inside it.
+
 Only text entries are tested. An image is always written to disk, even an image of a password,
 such as a screenshot of one.
 
