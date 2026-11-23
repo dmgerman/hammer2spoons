@@ -26,3 +26,21 @@ The copy uses the user's hs_interactive-gt, hs_window-gt and hs_windowfilter-gt,
 configuration has loaded. Its =start()=, which the harness calls, creates a filter on the user's
 hs_windowfilter-gt. Its =stop()=, which the harness calls at the end, closes its chooser,
 destroys that filter and releases its keys.
+
+* The tests of the chooser
+
+The chooser lists the user's windows as well as the test windows. The tests look only at the
+rows of the test windows, found by their titles, and their messages never show the title of one
+of the user's windows. A test that needs the test windows alone restarts the copy with every
+other running application in =skipApplications=, and restores the setting when it ends.
+
+The copy reports its chooser as a prompt of the user's hs_interactive-gt. Keys are sent one at a
+time, each only while the copy's chooser is visible and a prompt is reported open, so that a key
+never reaches the application behind the chooser.
+
+* What is not tested
+
+1. *=applicationByBundleSelect()= switching to and from an application.* The test windows belong
+   to =osascript=, which has no bundle identifier, so they cannot be found by one. The tests
+   cover an application that is not running, and the alerts for a missing identifier and a bad
+   pattern.
