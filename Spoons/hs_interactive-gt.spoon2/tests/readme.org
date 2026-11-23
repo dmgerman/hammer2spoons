@@ -28,9 +28,37 @@ own choosers use.
 
 Three things need care:
 
-1. *Keys.* A test binds keys only with modifiers the user does not bind, as hs_window-gt's tests
-   do, and sends them only while a test window has the focus.
-2. *Loading Spoons.* =use()= loads Spoons. Its tests load test Spoons written into the run's
-   directory, never the user's.
-3. *Prompts.* A test that opens a chooser or a dialog answers or cancels it itself, with
-   =t.promptCancel()= or by sending keys.
+1. *Keys.* A test binds keys only with ctrl-alt-shift and the digits 7, 8 and 9, which the user
+   does not bind, and presses one only after the copy has bound it, so that its hotkey takes the
+   press.
+2. *Loading Spoons.* =use()= loads Spoons with =hs.spoons.load()=. Its tests replace
+   =hs.spoons.load= for the length of a test with a loader of test Spoons made in memory, so
+   that no Spoon of the user's is loaded.
+3. *Prompts.* A test that opens a chooser or a dialog answers or cancels it itself, with keys.
+   It waits on the copy's own =promptIsOpen()=: the fixture's =t.promptCancel()= watches the
+   user's hs_interactive-gt, not the copy. Typed text is sent one character at a time, checking
+   before each key that the prompt is still open, because a key sent after a chooser closed
+   reaches the application behind it. A dialog is answered from a timer set before it opens.
+
+* What the tests do not cover
+
+Every statement of the Spoon's readme has a test, except these, checked on 2026-11-23:
+
+1. *Where Spoons are looked for.* =use()= loads with =hs.spoons.load()=, whose search of the
+   configuration's =Spoons= directory is Hammerspoon 2's behaviour. The tests replace
+   =hs.spoons.load= so that no Spoon of the user's is loaded, and check only that =use()= calls
+   it with the Spoon's name.
+2. *Cancelling a dialog.* Escape does not cancel a dialog (Hammerspoon 2 issue #391), and a test
+   cannot press its Cancel button.
+3. *=keySet()= returning null when macOS refuses a key.* A test cannot make macOS refuse a key.
+4. *A hotkey without a reference being garbage-collected.* This is Hammerspoon 2's behaviour,
+   and depends on when the collector runs.
+5. *0.05 seconds of =runDelay= being enough.* The tests check that a command runs after its
+   =runDelay=, not that 0.05 seconds avoids the focus problem the readme describes, which
+   depends on timing that varies.
+6. *The screenshot of the command chooser, and the dialog for =countdown-start-for=.* These are
+   images.
+
+One difference is not covered by the readme either way: a command's =interactive= entry without
+a =reader= makes the command fail with "was given a reader object", while
+=interactiveFunctionCreate()= passes such an argument on unchanged.

@@ -286,6 +286,49 @@ module.exports = [
         }
     },
     {
+        name: "the command chooser shows each command's name, keys and description, and typing finds a description",
+        timeout: 15,
+        run: async (t) => {
+            // The chooser is recorded by wrapping hs.chooser.create; every call is passed on.
+            const original = hs.chooser.create
+            const rows = []
+            hs.chooser.create = function () {
+                const real = original.apply(hs.chooser, arguments)
+                const proxy = new Proxy(real, {
+                    get(target, property) {
+                        const value = target[property]
+                        if (typeof value !== "function") return value
+                        return (...args) => {
+                            if (property === "setChoices") rows.push(...args[0])
+                            const result = value.apply(target, args)
+                            return result === target ? proxy : result
+                        }
+                    },
+                    set(target, property, value) { target[property] = value; return true }
+                })
+                return proxy
+            }
+            t.cleanup(() => { hs.chooser.create = original })
+            const MODIFIERS = ["ctrl", "alt", "shift"]
+            let ran = false
+            t.spoon.define({ name: "test-execute-row", doc: "a description found only by xylophonic", fn: () => { ran = true } })
+            t.spoon.keySet(MODIFIERS, "9", "test-execute-row")
+            t.cleanup(() => t.spoon.keyUnset(MODIFIERS, "9"))
+            t.spoon.execute()
+            await promptOpenWait(t)
+            const row = rows.find((r) => r.command === "test-execute-row")
+            t.assert.ok(row, "the command has no row")
+            t.assert.equal(row.text, "test-execute-row   ⌃⌥⇧9", "the row's text")
+            t.assert.equal(row.subText, "a description found only by xylophonic", "the row's description")
+            await chooserType(t, "xylophonic")
+            await t.wait(0.4)
+            chooserKey(t, "return")
+            const started = Date.now()
+            while (!ran && Date.now() - started < 3000) await t.wait(0.05)
+            t.assert.ok(ran, "typing a word of the description did not find the command")
+        }
+    },
+    {
         name: "execute()'s chooser closes on Escape without running anything",
         run: async (t) => {
             t.spoon.execute()

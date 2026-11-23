@@ -705,8 +705,10 @@ This Spoon defines five commands of its own:
   dialog would appear but would not accept typing, and macOS would bounce the Dock icon instead. A
   chooser does not require this, because =hs.chooser= uses an =NSPanel= with
   =.nonactivatingPanel=, which accepts keys while its application is in the background.
-- *Dialogs are modal.* =hs.ui.textPrompt= blocks Hammerspoon 2's main thread while it is
-  displayed, and so suspends everything else, timers included.
+- *Dialogs are modal.* The code that opens a dialog waits until it closes: =hs.ui.textPrompt=
+  returns only then. Timers still run while a dialog is displayed, measured on 2026-11-23.
+- *Escape does not cancel a dialog.* Only its *Cancel* button does. This is Hammerspoon 2 issue
+  [[https://github.com/Hammerspoon/Hammerspoon2/issues/391][#391]]. A chooser closes on Escape.
 - *One or two prompted arguments work best.* Hammerspoon 2 has no form with several fields, so
   each argument requires a dialog of its own. A command that requires more than two values is
   better served by one reader that reads a single combined answer.
