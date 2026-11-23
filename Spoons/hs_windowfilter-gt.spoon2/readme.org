@@ -315,6 +315,7 @@ These are called on this Spoon itself, =hs.spoons["hs_windowfilter-gt"]=.
 | =status()=             | Returns what is being observed. See below.                          |
 | =windowState(window)=  | Returns the record of a window that a handler receives as =state=, read when it is called, or null when the window has closed. |
 | =matches(rule, value)= | Returns whether a value matches a rule, as described under /Matching/. |
+| =applicationsAccessibilityDisabled()= | Returns the running applications that have turned the Accessibility API off, whose windows no filter can report. See /What this Spoon does not do/. |
 | =stop()=               | Stops observing, and removes every filter and its handlers, =default= included. |
 | =start()=              | Makes =default= available again after =stop()=, without handlers. Loading this Spoon does not require calling it. |
 
@@ -366,7 +367,7 @@ hs.spoons["hs_windowfilter-gt"].config.moveDebounce = 0.2
 | =skipApplications=        | a list             | Names of applications that are never observed                    |
 | =untitledNonStandardSkip= | =true=             | Whether to ignore every window that has no title and is not a standard window |
 | =skipInDefault=           | Hammerspoon's names | Names of applications that =default= does not accept            |
-| =logLevel=                | ="error"=          | What is written to the console: ="none"=, ="error"= or ="debug"= |
+| =logLevel=                | ="error"=          | What is written to the console: ="none"=, ="error"=, which includes warnings, or ="debug"= |
 
 * What this Spoon does not do
 
@@ -384,6 +385,14 @@ This Spoon does not support Spaces, and it ignores two kinds of window.
    the Finder's desktop, none of which is useful to select. Most of them are Hammerspoon 2's own
    alerts. Observing each of them would register six accessibility observers for a window that
    closes a few seconds later.
+4. *Windows of an application that has turned the Accessibility API off,* such as Firefox
+   started in kiosk mode. Such an application answers nothing, so its windows cannot be read or
+   observed. The Spoon writes one warning to the console that names it, does not try it again
+   until it quits, and lists it in =applicationsAccessibilityDisabled()=, so that another Spoon
+   can still offer to switch to it. Hammerspoon 2 reports this case only in builds that include its issue
+   [[https://github.com/Hammerspoon/Hammerspoon2/issues/437][#437]]. In an older build, the
+   application is tried again after each of =config.applicationRetryDelays=, and then reported as
+   an error.
 
 * Coming from Hammerspoon 1
 

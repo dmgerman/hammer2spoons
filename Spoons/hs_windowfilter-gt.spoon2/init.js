@@ -90,6 +90,7 @@ function log(level, message) {
     if (config.logLevel === "none") return
     if (level === "debug" && config.logLevel !== "debug") return
     if (level === "error") console.error(`[hs_windowfilter-gt] ${message}`)
+    else if (level === "warning") console.warn(`[hs_windowfilter-gt] ${message}`)
     else console.log(`[hs_windowfilter-gt] ${message}`)
 }
 
@@ -617,6 +618,10 @@ let tracking = false
 
 const tracked = new Map()               // window id -> {window, element, state, handler}
 const trackedApps = new Map()           // pid -> {application, element, handler}
+// The applications that have turned the Accessibility API off: pid -> HSApplication. They are not
+// tried again until they quit, and are reported once. applicationsAccessibilityDisabled() lists
+// them, for a Spoon that wants to offer them although their windows cannot be read.
+const axDisabledApplications = new Map()
 // The hs.application listeners currently registered, as [event, listener] pairs, or null
 // when the tracker is stopped. Held because off() matches on function identity.
 let applicationListeners = null
@@ -921,7 +926,7 @@ function forgetWindow(id, destroyed) {
 function trackApplication(application, attempt = 0) {
     if (!worthTracking(application)) return
     const pid = application.pid
-    if (pid === null || pid === undefined || trackedApps.has(pid)) return
+    if (pid === null || pid === undefined || trackedApps.has(pid) || axDisabledApplications.has(pid)) return
 
     const element = application.axElement()
     if (!element) return
@@ -972,6 +977,14 @@ function trackApplication(application, attempt = 0) {
         hs.ax.on(element, notifications, handler)
     } catch (e) {
         const message = e && e.message ? e.message : e
+        // An application can turn the Accessibility API off: on 2026-11-23, a Firefox started in
+        // kiosk mode did. It answers nothing, so trying again cannot help. Hammerspoon 2 gives the
+        // reason in err.code since upstream issue #437.
+        if (e && e.code === "kAXErrorAPIDisabled") {
+            axDisabledApplications.set(pid, application)
+            log("warning", `not watching ${application.name} (pid ${pid}), which has turned the Accessibility API off; its windows are not tracked`)
+            return
+        }
         if (attempt < config.applicationRetryDelays.length) {
             log("debug", `could not watch ${application.name} yet, trying again: ${message}`)
             debounce(pid, `app${pid}:retry`, config.applicationRetryDelays[attempt],
@@ -1011,6 +1024,7 @@ function createdWatch(record, attempt) {
 }
 
 function forgetApplication(pid) {
+    axDisabledApplications.delete(pid)
     // Including a retry for an application that was never watched.
     for (const [key, timer] of [...pending]) {
         if (key.startsWith(`app${pid}:`)) {
@@ -1123,6 +1137,9 @@ function trackerStop() {
     }
     for (const id of [...tracked.keys()]) forgetWindow(id)
     for (const pid of [...trackedApps.keys()]) forgetApplication(pid)
+    // A tracker started again tries every application again, and reports again the ones that
+    // have turned the Accessibility API off.
+    axDisabledApplications.clear()
     for (const [key, timer] of [...pending]) {
         timer.stop()
         pending.delete(key)
@@ -1187,6 +1204,19 @@ const defaultFilter = create({
     rejectApplications: (name) => config.skipInDefault.includes(name)
 })
 
+/**
+ * The running applications that have turned the Accessibility API off, such as Firefox started in
+ * kiosk mode. Their windows cannot be read, so no filter reports them, but the applications exist
+ * and can be activated. The list is the one the Spoon already holds, so reading it costs nothing.
+ * It is empty while the Spoon is not observing, and in a build of Hammerspoon 2 without its issue
+ * #437, which cannot tell these applications apart.
+ *
+ * @returns {Array} HSApplication objects.
+ */
+function applicationsAccessibilityDisabled() {
+    return [...axDisabledApplications.values()]
+}
+
 module.exports = {
     config,
     events: EVENTS,
@@ -1197,6 +1227,7 @@ module.exports = {
     // For callers that want the pieces without a filter.
     windowState: windowStatePublic,
     matches,
+    applicationsAccessibilityDisabled,
     start,
     stop
 }

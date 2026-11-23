@@ -15,6 +15,9 @@ Its main features are these:
   listed too, and marked as such.
 - *Applications without windows.* A running application that has no window, such as one whose
   last window was closed, is listed after the windows, and choosing it brings it to the front.
+- *Applications whose windows are not accessible.* An application that has turned the
+  Accessibility API off, such as Firefox started in kiosk mode, is listed too, marked as such,
+  and can be brought to the front in the same way.
 - *A thumbnail of the selected window,* shown beside the chooser and turned on or off with
   =Tab=, for windows whose titles look alike.
 - *Switching within one application,* with a chooser of that application's windows only.
@@ -132,8 +135,16 @@ first. The running applications that have no window follow them, in alphabetical
 a row /Name (no windows)/ with the application's bundle identifier beneath it. Choosing such a
 row brings the application to the front. Only applications with a Dock icon are listed, once
 each, and not the application in front. An application counts as having windows when any copy
-of it has one, so a second copy of an application, such as a browser started in kiosk mode, is
-not listed beside the first.
+of it has one, so a second copy of an application is not listed beside the first.
+
+An application that has turned the Accessibility API off, such as Firefox started in kiosk mode,
+is listed last, as a row /Name (windows are not accessible)/ with its bundle identifier and
+process id beneath it, even when another copy of the application has windows. Its windows cannot
+be read, so it has no window rows, and choosing its row brings the application to the front.
+hs_windowfilter-gt finds these applications, with =applicationsAccessibilityDisabled()=, from its
+version 0.3.11, in a build of Hammerspoon 2 that includes its issue
+[[https://github.com/Hammerspoon/Hammerspoon2/issues/437][#437]]. With an older version of either,
+these applications are not listed.
 
 ** applicationWindowSelect([application])
 
@@ -153,7 +164,8 @@ The chooser's prompt shows the application's name.
 =applicationSelect()= opens a chooser with one row per application. Each row shows that
 application's most recently used window, and choosing the row focuses that window. The
 application of the focused window is not listed, since its row would be the focused window.
-The running applications that have no window follow, as in =windowSelect()=.
+The running applications that have no window, and those whose windows are not accessible,
+follow, as in =windowSelect()=.
 
 ** windowPreviousSelect()
 

@@ -16,7 +16,8 @@ function testRules(t) {
 
 // Counts the accessibility notifications and application listeners registered and removed
 // until the test ends. hs.ax.on and off, and hs.application.on and off, are wrapped, and pass
-// every call on unchanged.
+// every call on unchanged. A call is counted only once it has returned: one that throws, such as
+// hs.ax.on() for an application that has turned the Accessibility API off, registers nothing.
 function registrationsCount(t) {
     const counts = { axOn: 0, axOff: 0, appOn: 0, appOff: 0 }
     const originals = { axOn: hs.ax.on, axOff: hs.ax.off, appOn: hs.application.on, appOff: hs.application.off }
@@ -29,20 +30,24 @@ function registrationsCount(t) {
         appOn: Object.prototype.hasOwnProperty.call(hs.application, "on"), appOff: Object.prototype.hasOwnProperty.call(hs.application, "off")
     }
     hs.ax.on = function (element, notifications) {
+        const result = originals.axOn.apply(hs.ax, arguments)
         counts.axOn += size(notifications)
-        return originals.axOn.apply(hs.ax, arguments)
+        return result
     }
     hs.ax.off = function (element, notifications) {
+        const result = originals.axOff.apply(hs.ax, arguments)
         counts.axOff += size(notifications)
-        return originals.axOff.apply(hs.ax, arguments)
+        return result
     }
     hs.application.on = function () {
+        const result = originals.appOn.apply(hs.application, arguments)
         counts.appOn += 1
-        return originals.appOn.apply(hs.application, arguments)
+        return result
     }
     hs.application.off = function () {
+        const result = originals.appOff.apply(hs.application, arguments)
         counts.appOff += 1
-        return originals.appOff.apply(hs.application, arguments)
+        return result
     }
     t.cleanup(() => {
         if (own.axOn) hs.ax.on = originals.axOn; else delete hs.ax.on
@@ -138,6 +143,60 @@ module.exports = [
             filter.on("windowCreated", noop)
             const ms = Date.now() - started
             t.assert.ok(ms < 1000, `starting to observe took ${ms} ms`)
+        }
+    },
+    {
+        name: "an application that has turned the Accessibility API off is reported once, as a warning, not tried again, and listed by applicationsAccessibilityDisabled()",
+        timeout: 15,
+        run: async (t) => {
+            t.assert.equal(t.spoon.status().tracking, false, "observing before the test")
+            // A made-up application, which only the copy sees: it is added to
+            // hs.application.runningApplications(), which the copy reads when it starts to observe.
+            // hs.ax.on() throws for it the error Hammerspoon 2 throws for an application such as
+            // Firefox in kiosk mode, and passes every other call on unchanged.
+            const pid = -5101
+            const element = { pid, zqMadeUp: true }
+            const application = { name: "Zq Disabled", bundleID: "org.hammer2spoons.test.disabled", kind: "standard", pid, axElement: () => element }
+            const attempts = []
+            const originals = { running: hs.application.runningApplications, axOn: hs.ax.on, warn: console.warn }
+            const own = {
+                running: Object.prototype.hasOwnProperty.call(hs.application, "runningApplications"),
+                axOn: Object.prototype.hasOwnProperty.call(hs.ax, "on")
+            }
+            hs.application.runningApplications = function () {
+                return originals.running.apply(hs.application, arguments).concat([application])
+            }
+            hs.ax.on = function (target) {
+                if (!target || !target.zqMadeUp) return originals.axOn.apply(hs.ax, arguments)
+                attempts.push(Date.now())
+                const error = new Error("hs.ax.on(): failed to start watcher for 'AXWindowCreated': the Accessibility API is disabled, for Hammerspoon or for this application (kAXErrorAPIDisabled)")
+                error.code = "kAXErrorAPIDisabled"
+                throw error
+            }
+            const warnings = []
+            console.warn = (...args) => {
+                const text = args.join(" ")
+                if (text.includes("Zq Disabled")) warnings.push(text)
+                else originals.warn.apply(console, args)
+            }
+            t.cleanup(() => {
+                if (own.running) hs.application.runningApplications = originals.running; else delete hs.application.runningApplications
+                if (own.axOn) hs.ax.on = originals.axOn; else delete hs.ax.on
+                console.warn = originals.warn
+            })
+
+            const filter = t.spoon.create({})
+            t.cleanup(() => t.spoon.destroy(filter))
+            filter.on("windowCreated", noop)
+            // Longer than the first three of config.applicationRetryDelays together.
+            await t.wait(4)
+            t.assert.equal(attempts.length, 1, "attempts to observe the application")
+            t.assert.equal(warnings.length, 1, `warnings: ${warnings.join(" | ") || "none"}`)
+            t.assert.ok(warnings[0].includes(`pid ${pid}`) && warnings[0].includes("Accessibility API off"), `the warning: ${warnings[0]}`)
+            const listed = t.spoon.applicationsAccessibilityDisabled().filter((a) => a.pid === pid)
+            t.assert.equal(listed.length, 1, "applicationsAccessibilityDisabled() lists the application")
+            filter.off()
+            t.assert.equal(t.spoon.applicationsAccessibilityDisabled().length, 0, "applicationsAccessibilityDisabled() after observing stopped")
         }
     },
     {

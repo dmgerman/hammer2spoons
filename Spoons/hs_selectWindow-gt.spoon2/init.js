@@ -474,9 +474,11 @@ function choicesFor(records, windowless = []) {
         image: iconFor(state.bundleID),
         id: state.id
     }))
-    const applicationRows = windowless.map((application) => ({
-        text: `${application.name} (no windows)`,
-        subText: application.bundleID,
+    const applicationRows = windowless.map(({ application, inaccessible }) => ({
+        text: `${application.name} ${inaccessible ? "(windows are not accessible)" : "(no windows)"}`,
+        // A copy whose windows are not accessible usually shares its bundle with one that is listed, so
+        // its pid tells the two apart.
+        subText: inaccessible ? `${application.bundleID}  ·  pid ${application.pid}` : application.bundleID,
         image: iconFor(application.bundleID),
         pid: application.pid
     }))
@@ -493,21 +495,40 @@ function choicesFor(records, windowless = []) {
  * listed beside the first. Listing them costs about 20 ms for 130 processes, measured on
  * 2026-11-24, paid once each time a chooser opens.
  *
+ * The applications that have turned the Accessibility API off, such as Firefox in kiosk mode,
+ * follow. hs_windowfilter-gt cannot read their windows, so they never have a window row, but they
+ * exist and can be activated. They are listed even when another copy of the application has
+ * windows, as a second Firefox in kiosk mode beside a normal one does. hs_windowfilter-gt already
+ * holds this list, so reading it calls no application.
+ *
  * @param {Array} records The window records the chooser lists.
- * @returns {Array} HSApplication objects, by name.
+ * @returns {Array} `{application, inaccessible}` objects: those without windows by name, then
+ *          those whose windows are not accessible, by name.
  */
 function windowlessApplications(records) {
-    const listed = new Set(records.map(({ state }) => state.bundleID || state.application))
     const frontmost = hs.application.frontmost()
+    const frontmostPid = frontmost ? frontmost.pid : null
+    const windowfilter = spoonRequired("hs_windowfilter-gt")
+    // Older versions of hs_windowfilter-gt do not have the function.
+    const inaccessible = typeof windowfilter.applicationsAccessibilityDisabled === "function"
+        ? windowfilter.applicationsAccessibilityDisabled()
+            .filter((application) => application.name && application.pid !== frontmostPid)
+        : []
+    const inaccessiblePids = new Set(inaccessible.map((application) => application.pid))
+
+    const listed = new Set(records.map(({ state }) => state.bundleID || state.application))
     if (frontmost && frontmost.bundleID) listed.add(frontmost.bundleID)
     const found = new Map()
     for (const application of hs.application.runningApplications()) {
         const bundleID = application.bundleID
         if (!bundleID || !application.name || application.kind !== "standard") continue
-        if (listed.has(bundleID) || found.has(bundleID)) continue
+        // An application whose windows are not accessible has a row of its own, below.
+        if (listed.has(bundleID) || found.has(bundleID) || inaccessiblePids.has(application.pid)) continue
         found.set(bundleID, application)
     }
-    return [...found.values()].sort((a, b) => a.name.localeCompare(b.name))
+    const byName = (a, b) => a.name.localeCompare(b.name)
+    return [...found.values()].sort(byName).map((application) => ({ application, inaccessible: false }))
+        .concat(inaccessible.sort(byName).map((application) => ({ application, inaccessible: true })))
 }
 
 /**

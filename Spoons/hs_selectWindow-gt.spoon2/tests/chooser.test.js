@@ -210,7 +210,7 @@ module.exports = [
         }
     },
     {
-        name: "windowSelect() and applicationSelect() list running applications without windows after the windows, and choosing one activates it",
+        name: "windowSelect() and applicationSelect() list running applications without windows, then those whose windows are not accessible, after the windows, and choosing one activates it",
         run: async (t) => {
             const choosers = choosersCapture(t)
             const [a, b] = await t.windowsOpen(2)
@@ -230,20 +230,29 @@ module.exports = [
                 made("Zq Windowless", "org.hammer2spoons.test.windowless", "standard", -4101),
                 made("Zq Windowless", "org.hammer2spoons.test.windowless", "standard", -4102),
                 made("Zq Accessory", "org.hammer2spoons.test.accessory", "accessory", -4103),
-                made("Zq Frontmost", frontmost ? frontmost.bundleID : "none", "standard", -4104)
+                made("Zq Frontmost", frontmost ? frontmost.bundleID : "none", "standard", -4104),
+                made("Zq Kiosk", "org.hammer2spoons.test.kiosk", "standard", -4105)
             ]
             const original = hs.application.runningApplications
             const own = Object.prototype.hasOwnProperty.call(hs.application, "runningApplications")
             hs.application.runningApplications = function () { return original.apply(hs.application, arguments).concat(fakes) }
             t.cleanup(() => { if (own) hs.application.runningApplications = original; else delete hs.application.runningApplications })
+            // Zq Kiosk stands for an application that has turned the Accessibility API off, which
+            // the user's hs_windowfilter-gt reports, replaced here until the test ends.
+            const windowfilter = hs.spoons["hs_windowfilter-gt"]
+            const filterOriginal = windowfilter.applicationsAccessibilityDisabled
+            const filterOwn = Object.prototype.hasOwnProperty.call(windowfilter, "applicationsAccessibilityDisabled")
+            windowfilter.applicationsAccessibilityDisabled = () => [fakes[4]]
+            t.cleanup(() => { if (filterOwn) windowfilter.applicationsAccessibilityDisabled = filterOriginal; else delete windowfilter.applicationsAccessibilityDisabled })
 
             for (const [fn, n] of [["windowSelect", 0], ["applicationSelect", 1]]) {
                 const chooser = open(t, () => t.spoon[fn]())
                 await openWait(t, chooser)
                 const rows = choosers[n].rows
                 const ours = rows.filter((r) => String(r.text).startsWith("Zq "))
-                t.assert.equal(ours.map((r) => r.text).join(", "), "Zq Windowless (no windows)", `${fn}(): the made-up applications' rows`)
+                t.assert.equal(ours.map((r) => r.text).join(", "), "Zq Windowless (no windows), Zq Kiosk (windows are not accessible)", `${fn}(): the made-up applications' rows`)
                 t.assert.equal(ours[0].subText, "org.hammer2spoons.test.windowless", `${fn}(): the row's second line`)
+                t.assert.equal(ours[1].subText, "org.hammer2spoons.test.kiosk  ·  pid -4105", `${fn}(): the second line of the row whose windows are not accessible`)
                 const firstApplication = rows.findIndex((r) => r.pid !== undefined)
                 const lastWindow = rows.map((r) => r.id !== undefined).lastIndexOf(true)
                 t.assert.ok(firstApplication > lastWindow, `${fn}(): an application's row comes before a window's`)
