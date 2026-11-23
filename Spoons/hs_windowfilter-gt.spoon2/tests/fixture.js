@@ -32,19 +32,26 @@ function frameClose(a, b) {
     return ["x", "y", "w", "h"].every((k) => Math.abs(a[k] - b[k]) <= FRAME_TOLERANCE)
 }
 
-function create(titlePrefix, skip) {
+function create(titlePrefix, skip, dir) {
     const tasks = []
     // Every window opened, so that close() can close each one with its close button.
     const windows = []
+    // Window id -> {file, index}: the command file of its process, and its number in that
+    // process, for windowTitleSet().
+    const commandsOf = new Map()
+    // Functions a test registered with cleanup(), run by close() in reverse order.
+    const cleanups = []
     let opened = 0
+    let processes = 0
 
     // Opens count windows in a new process and resolves to their HSWindow objects, in order.
     // Their titles are unique to this run, so no other window can be mistaken for them.
     async function windowsOpen(count = 1) {
         const titles = []
         for (let i = 0; i < count; i++) titles.push(`${titlePrefix}${++opened}`)
-        const task = hs.task.create("/usr/bin/osascript", ["-l", "JavaScript", WINDOWS_SCRIPT, ...titles],
-            null, null, null)
+        const commands = `${dir}/window-commands-${++processes}`
+        const task = hs.task.create("/usr/bin/osascript",
+            ["-l", "JavaScript", WINDOWS_SCRIPT, `--commands=${commands}`, ...titles], null, null, null)
         tasks.push(task)
         task.start()
 
@@ -54,6 +61,7 @@ function create(titlePrefix, skip) {
             const found = titles.map((title) => all.find((w) => w.title === title))
             if (found.every(Boolean)) {
                 windows.push(...found)
+                found.forEach((window, i) => commandsOf.set(window.id, { file: commands, index: i + 1 }))
                 return found
             }
             await wait(0.1)
@@ -76,6 +84,33 @@ function create(titlePrefix, skip) {
             if (Date.now() - started > OPEN_TIMEOUT * 1000) throw new Error(`window "${window.title}" did not close`)
             await wait(0.1)
         }
+    }
+
+    // Changes a test window's title, through its process's command file, and resolves when the
+    // window shows the new title. The process reads the file every 0.1 s.
+    async function windowTitleSet(window, title) {
+        const commands = commandsOf.get(window.id)
+        if (!commands) throw new Error(`window "${window.title}" was not opened by this test`)
+        const started = Date.now()
+        // A command the process has not read yet is still in the file; wait for it to go.
+        while (hs.fs.exists(commands.file)) {
+            if (Date.now() - started > OPEN_TIMEOUT * 1000) throw new Error("the window process does not read its commands")
+            await wait(0.05)
+        }
+        // Written under another name and then moved, so that the process never reads half a line.
+        hs.fs.write(`${commands.file}.partial`, `title ${commands.index} ${title}\n`, false)
+        hs.fs.move(`${commands.file}.partial`, commands.file)
+        while (window.title !== title) {
+            if (Date.now() - started > OPEN_TIMEOUT * 1000) throw new Error(`the title did not change to "${title}"`)
+            await wait(0.05)
+        }
+    }
+
+    // Registers a function that close() runs after the test, also when it fails or times out.
+    // Functions run in the reverse order of registration. An error in one is logged and does
+    // not stop the others.
+    function cleanup(fn) {
+        cleanups.push(fn)
     }
 
     // Sets a window's frame and waits for it to take effect. A test uses this to put a window
@@ -179,6 +214,13 @@ function create(titlePrefix, skip) {
     // window that did not close. A window left in fullscreen is taken out of it first, because
     // closing it would leave its Space on screen.
     async function close() {
+        for (const fn of cleanups.splice(0).reverse()) {
+            try {
+                await fn()
+            } catch (e) {
+                console.error(`[tests] a cleanup failed: ${e && e.message ? e.message : e}`)
+            }
+        }
         if (alertOriginal) {
             hs.ui.alert = alertOriginal
             alertOriginal = null
@@ -188,11 +230,21 @@ function create(titlePrefix, skip) {
             canvasOriginal = null
         }
         hs.mouse.setAbsolutePosition(pointer.x, pointer.y)
+        // A window must be on screen for its close button to work, and a window left minimized
+        // or hidden after a test that fails would otherwise stay in hs_windowfilter-gt's list.
         for (const window of windows) {
             try {
                 if (window.isFullscreen) {
                     window.toggleFullscreen()
                     await wait(1)
+                }
+                if (window.application && window.application.isHidden) {
+                    window.application.unhide()
+                    await wait(0.3)
+                }
+                if (window.isMinimized) {
+                    window.unminimize()
+                    await wait(0.5)
                 }
             } catch (e) {
                 // Already closed.
@@ -213,7 +265,7 @@ function create(titlePrefix, skip) {
         await wait(0.3)
     }
 
-    return { windowsOpen, windowClose, frameSet, screenFrame, screensNeed, frameEqual, alertsCapture, canvasesCapture, promptCancel, close }
+    return { windowsOpen, windowClose, windowTitleSet, cleanup, frameSet, screenFrame, screensNeed, frameEqual, alertsCapture, canvasesCapture, promptCancel, close }
 }
 
 module.exports = { create, FRAME_TOLERANCE, WINDOW_MINIMUM }

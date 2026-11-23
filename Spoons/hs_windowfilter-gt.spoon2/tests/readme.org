@@ -1,0 +1,56 @@
+#+title: hs_windowfilter-gt's tests
+
+These are the tests of hs_windowfilter-gt. They run inside the running Hammerspoon 2, on a fresh
+copy of the Spoon, and act on test windows the tests open. They are marked =export-ignore=, so
+users who install the Spoon do not download them.
+
+The harness, the runner, the test windows, the makefile and the self-tests are copies of the
+files in =tests-common/= at the top of the repository. They are never edited here.
+=tests-common/readme.org= explains how they are kept the same, and hs_window-gt's
+=tests/readme.org= describes how a run works and everything a test receives.
+
+* Running the tests
+
+#+begin_src sh
+make test                                     # every tests/*.test.js
+make test TESTS="tests/recorder.test.js"      # the given files
+#+end_src
+
+=make= starts the tests at once and shows no chooser. The mouse and the keyboard are left alone
+until the results are printed. Run only the files a change can affect.
+
+* The copy under test
+
+The copy has its own tracker, which observes every standard application beside the user's copy.
+The tracker starts when the first filter of the copy is watched, and stops when none is. Each
+test removes the filters it creates, with =t.cleanup()=.
+
+* Recording events
+
+=tests/recorder.js= records the events of a filter of the copy under test:
+
+#+begin_src js
+const recorders = require("./recorder.js")
+
+const filter = t.spoon.create({ allowTitles: (title) => (title || "").startsWith(t.titlePrefix) })
+t.cleanup(() => t.spoon.destroy(filter))
+const recorder = recorders.create(t, filter)
+
+const [window] = await t.windowsOpen()
+await recorder.waitFor("windowCreated", window)
+#+end_src
+
+| Function                            | Does |
+|-------------------------------------+------|
+| =waitFor(event, window, [seconds])= | Resolves to the first such event for the window, waiting up to 2 s by default. Fails the test, naming the events that did arrive, when it does not come. |
+| =waitForNone(event, window, [seconds])= | Waits, and fails the test if such an event came. |
+| =of([window], [event])=             | The events received, for one window or event or all. |
+| =clear()=                           | Forgets the events received so far. |
+
+Each event is ={event, id, state, at}=, where =at= is the milliseconds since the recorder was
+created or cleared.
+
+A test changes its windows with the helpers of the shared fixture and with Hammerspoon 2:
+=t.frameSet()= to move or resize, =t.windowTitleSet()= to change a title, =focus()=,
+=minimize()= and =unminimize()= on a window, and =hide()= and =unhide()= on its application.
+ai/tests-hs_windowfilter-gt.org records how long each event takes to arrive.

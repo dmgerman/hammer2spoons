@@ -1,5 +1,15 @@
 // Opens one plain window for each title given, for a Spoon's tests, and keeps them open
-// until the process is terminated. Run with osascript -l JavaScript; tests/fixture.js starts it.
+// until the process is terminated. Run with osascript -l JavaScript; tests/fixture.js starts it:
+//
+//   osascript -l JavaScript fixture-windows.jxa --commands=<file> <title> [<title>...]
+//
+// While it runs, it reads <file> every 0.1 s, if it exists, carries out the commands in it, one
+// per line, and deletes it. The only command is
+//
+//   title <n> <new title>     sets the title of the n-th window, counting from 1
+//
+// A window's title cannot be changed through the Accessibility API: AXTitle is not settable on
+// these windows, measured on 2026-11-23. Hence the file.
 //
 // The windows belong to this process rather than to Hammerspoon 2, because hs_windowfilter-gt
 // leaves Hammerspoon 2's own windows out of its default filter, which Spoons such as hs_window-gt
@@ -17,12 +27,26 @@ function run(argv) {
     app.setActivationPolicy($.NSApplicationActivationPolicyRegular)
     const style = $.NSWindowStyleMaskTitled | $.NSWindowStyleMaskClosable |
         $.NSWindowStyleMaskResizable | $.NSWindowStyleMaskMiniaturizable
-    argv.forEach((title, i) => {
+    const commands = argv[0] && argv[0].startsWith("--commands=") ? argv.shift().slice(11) : null
+    const windows = argv.map((title, i) => {
         const window = $.NSWindow.alloc.initWithContentRectStyleMaskBackingDefer(
             $.NSMakeRect(200 + 40 * i, 200 + 40 * i, 400, 300), style, $.NSBackingStoreBuffered, false)
         window.title = title
         window.releasedWhenClosed = false
         window.makeKeyAndOrderFront(null)
+        return window
     })
+    if (commands) {
+        const files = $.NSFileManager.defaultManager
+        $.NSTimer.scheduledTimerWithTimeIntervalRepeatsBlock(0.1, true, () => {
+            if (!files.fileExistsAtPath(commands)) return
+            const text = $.NSString.stringWithContentsOfFileEncodingError(commands, $.NSUTF8StringEncoding, null).js
+            files.removeItemAtPathError(commands, null)
+            for (const line of text.split("\n")) {
+                const title = line.match(/^title (\d+) (.*)$/)
+                if (title && windows[Number(title[1]) - 1]) windows[Number(title[1]) - 1].title = title[2]
+            }
+        })
+    }
     app.run
 }

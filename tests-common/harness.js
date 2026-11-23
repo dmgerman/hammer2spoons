@@ -90,11 +90,13 @@ async function startConfirm(count) {
 async function testRun(file, test, shared, fixtures) {
     const started = Date.now()
     const seconds = test.timeout || TEST_TIMEOUT
-    const fixture = fixtures.create(shared.titlePrefix, skip)
+    const fixture = fixtures.create(shared.titlePrefix, skip, shared.dir)
     const context = Object.assign({}, shared, {
         assert: Object.assign({ frameEqual: fixture.frameEqual }, assert),
         windowsOpen: fixture.windowsOpen,
         windowClose: fixture.windowClose,
+        windowTitleSet: fixture.windowTitleSet,
+        cleanup: fixture.cleanup,
         frameSet: fixture.frameSet,
         screenFrame: fixture.screenFrame,
         screensNeed: fixture.screensNeed,
@@ -150,8 +152,12 @@ function run(options) {
         .catch((error) => reportWrite(options.reportFile, [`result\terror\t${error && error.message || error}`]))
         .finally(() => {
             running = false
-            // tests/run loads this file again for every run, so the cached copy is not needed.
-            delete require.cache[__filename]
+            // tests/run loads this file again for every run, so nothing from the tests/ directory
+            // needs to stay cached: neither this file nor a helper that a test file loaded with
+            // require("./...").
+            for (const path of Object.keys(require.cache)) {
+                if (path.startsWith(`${__dirname}/`)) delete require.cache[path]
+            }
         })
     return `started; the report will be written to ${options.reportFile}`
 }

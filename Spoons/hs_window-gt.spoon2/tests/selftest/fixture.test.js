@@ -83,6 +83,43 @@ module.exports = [
         }
     },
     {
+        name: "a test window's title can be changed",
+        run: async (t) => {
+            const [first, second] = await t.windowsOpen(2)
+            const title = `${t.titlePrefix}renamed`
+            await t.windowTitleSet(second, title)
+            t.assert.equal(second.title, title, "the second window's title")
+            t.assert.ok(first.title !== title, "the first window's title changed too")
+        }
+    },
+    {
+        name: "cleanup functions run after a test that fails (expected)",
+        run: (t) => {
+            globalThis.__fixtureCleanupRan = false
+            t.cleanup(() => { globalThis.__fixtureCleanupRan = true })
+            t.assert.fail("this test fails on purpose")
+        }
+    },
+    {
+        name: "the cleanup function of the failed test ran",
+        run: (t) => {
+            const ran = globalThis.__fixtureCleanupRan
+            delete globalThis.__fixtureCleanupRan
+            t.assert.equal(ran, true, "the cleanup function ran")
+        }
+    },
+    {
+        name: "a test that fails with a window minimized and its application hidden fails (expected)",
+        run: async (t) => {
+            const [first, second] = await t.windowsOpen(2)
+            first.minimize()
+            await t.wait(0.6)
+            second.application.hide()
+            await t.wait(0.3)
+            t.assert.fail("this test fails on purpose")
+        }
+    },
+    {
         name: "the windows of the failed tests were closed",
         run: (t) => {
             const left = testWindowsOpen(t.titlePrefix)

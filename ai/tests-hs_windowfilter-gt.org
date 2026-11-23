@@ -1,0 +1,40 @@
+#+title: Notes for hs_windowfilter-gt's tests
+
+These are the measurements and decisions of the tests of hs_windowfilter-gt, epic
+hammer2spoons-atg. =Spoons/hs_windowfilter-gt.spoon2/tests/readme.org= describes the tests.
+
+* How long each event takes (hammer2spoons-atg.2)
+
+Measured on 2026-11-23 through =hs2=, with one test window from =tests-common/fixture-windows.jxa=
+and a filter of the user's loaded copy that allowed only that window, destroyed afterwards. The
+debounce settings were at their defaults: =moveDebounce= 0.1, =titleDebounce= 0.1,
+=stateDebounce= 0.08. Times are from the call to the event.
+
+| Change                     | Events                                                             | ms      |
+|----------------------------+--------------------------------------------------------------------+---------|
+| window opened              | windowAllowed, windowCreated                                       | 335     |
+| frame changed              | windowMoved, windowResized                                         | 110     |
+| size changed               | windowResized                                                      | 111     |
+| =focus()=                  | windowFocused                                                      | 74      |
+| =minimize()=               | windowNotVisible, windowNotOnScreen, windowMinimized               | 359     |
+| =unminimize()=             | windowVisible, windowOnScreen, windowUnminimized                   | 252     |
+| application =hide()=       | windowNotOnScreen, windowUnfocused, windowHidden, windowNotVisible | 19 to 22 |
+| application =unhide()=     | windowVisible, windowOnScreen, windowUnhidden                      | 7       |
+| close button               | windowDestroyed                                                    | 22      |
+
+The opening time includes the window process starting. The recorder therefore waits up to 2 s
+for an event, which is more than five times the slowest.
+
+* Changing a window's title
+
+A test window's =AXTitle= is not settable: =isAttributeSettable("AXTitle")= returned false, so
+the title cannot be changed through =hs.ax=. The window process now reads a command file every
+0.1 s, through an =NSTimer= block in the JXA script, and =t.windowTitleSet()= writes the command
+=title <n> <text>= into it. A probe changed a title this way within 0.5 s.
+
+* Closing windows a test left hidden or minimized
+
+The shared fixture now unhides the application and unminimizes the windows before closing them
+with their close button. Without it, a test that fails with a window minimized or hidden would
+leave that window to be closed by ending its process, which produces no windowDestroyed, and the
+window would stay in the user's hs_windowfilter-gt's list.
