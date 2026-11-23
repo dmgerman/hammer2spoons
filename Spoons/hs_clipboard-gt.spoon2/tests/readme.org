@@ -61,6 +61,13 @@ open.
 The two /Paste all up to here/ actions type with =hs.eventtap.keyStrokes()=, and paste on select
 pastes with ⌘V. The tests record both instead of sending them, so nothing is typed anywhere.
 
+* The tests of the menu
+
+=menuShow()= shows the menu through the user's hs_menu-gt, and showing it there would change
+where the user's on-screen menu reopens. The tests record that call instead of making it, and
+press the menu's options through a session of the user's hs_menu-gt with a test presenter, which
+shows nothing and does not touch that position.
+
 * What is not tested
 
 1. *A right-click on a row.* The right-click menu needs the position of a row on screen, which

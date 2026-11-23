@@ -90,7 +90,8 @@ function chooserCapture(t) {
                 return true
             }
         })
-        if (!record.chooser) record.chooser = proxy
+        // The latest, since a test that restarts the copy makes a new one.
+        record.chooser = proxy
         return proxy
     }
     t.cleanup(() => { if (own) hs.chooser.create = original; else delete hs.chooser.create })
