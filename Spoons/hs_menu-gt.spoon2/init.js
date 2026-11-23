@@ -699,7 +699,9 @@ function commandRun(name, args) {
  */
 function urlOpen(target, bundleID) {
     if (bundleID) hs.urlevent.openURLWithBundle(target, bundleID)
-    else hs.urlevent.urlOpen(target)
+    // openURL, which hs.urlevent has had since it was added. urlOpen, called here before, never
+    // existed, so every address without a browser named failed (found by the tests on 2026-11-23).
+    else hs.urlevent.openURL(target)
 }
 
 /**

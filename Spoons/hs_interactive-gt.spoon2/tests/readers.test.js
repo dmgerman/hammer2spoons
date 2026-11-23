@@ -12,6 +12,8 @@
 // and assignment on to the real chooser.
 function choosersCapture(t) {
     const original = hs.chooser.create
+    // Taken before the replacement, so that the function is put back as it was.
+    const own = Object.prototype.hasOwnProperty.call(hs.chooser, "create")
     const choosers = []
     hs.chooser.create = function () {
         const real = original.apply(hs.chooser, arguments)
@@ -35,7 +37,7 @@ function choosersCapture(t) {
         })
         return proxy
     }
-    t.cleanup(() => { hs.chooser.create = original })
+    t.cleanup(() => { if (own) hs.chooser.create = original; else delete hs.chooser.create })
     return choosers
 }
 

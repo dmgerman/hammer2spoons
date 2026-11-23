@@ -23,6 +23,8 @@ function consoleCapture(t) {
 let spoons = 0
 function loaderFake(t) {
     const original = hs.spoons.load
+    // Taken before the replacement, so that the function is put back as it was.
+    const own = Object.prototype.hasOwnProperty.call(hs.spoons, "load")
     const loaded = []
     const made = new Map()
     hs.spoons.load = function (name) {
@@ -34,7 +36,7 @@ function loaderFake(t) {
         spoon.events.push("load")
         return spoon
     }
-    t.cleanup(() => { hs.spoons.load = original })
+    t.cleanup(() => { if (own) hs.spoons.load = original; else delete hs.spoons.load })
     function spoonMake(options = {}) {
         const name = `test-spoon-${++spoons}`
         const events = []

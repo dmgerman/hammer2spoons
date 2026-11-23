@@ -21,6 +21,13 @@ function registrationsCount(t) {
     const counts = { axOn: 0, axOff: 0, appOn: 0, appOff: 0 }
     const originals = { axOn: hs.ax.on, axOff: hs.ax.off, appOn: hs.application.on, appOff: hs.application.off }
     const size = (n) => (Array.isArray(n) ? n.length : 1)
+    // Taken before the replacements, so that each function is put back as it was: a function
+    // Hammerspoon 2 provides is not the object's own property, and setting it back would leave a
+    // copy on the object.
+    const own = {
+        axOn: Object.prototype.hasOwnProperty.call(hs.ax, "on"), axOff: Object.prototype.hasOwnProperty.call(hs.ax, "off"),
+        appOn: Object.prototype.hasOwnProperty.call(hs.application, "on"), appOff: Object.prototype.hasOwnProperty.call(hs.application, "off")
+    }
     hs.ax.on = function (element, notifications) {
         counts.axOn += size(notifications)
         return originals.axOn.apply(hs.ax, arguments)
@@ -38,10 +45,10 @@ function registrationsCount(t) {
         return originals.appOff.apply(hs.application, arguments)
     }
     t.cleanup(() => {
-        hs.ax.on = originals.axOn
-        hs.ax.off = originals.axOff
-        hs.application.on = originals.appOn
-        hs.application.off = originals.appOff
+        if (own.axOn) hs.ax.on = originals.axOn; else delete hs.ax.on
+        if (own.axOff) hs.ax.off = originals.axOff; else delete hs.ax.off
+        if (own.appOn) hs.application.on = originals.appOn; else delete hs.application.on
+        if (own.appOff) hs.application.off = originals.appOff; else delete hs.application.off
     })
     return counts
 }

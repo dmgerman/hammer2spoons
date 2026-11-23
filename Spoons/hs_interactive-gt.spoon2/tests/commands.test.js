@@ -291,6 +291,8 @@ module.exports = [
         run: async (t) => {
             // The chooser is recorded by wrapping hs.chooser.create; every call is passed on.
             const original = hs.chooser.create
+            // Taken before the replacement, so that the function is put back as it was.
+            const own = Object.prototype.hasOwnProperty.call(hs.chooser, "create")
             const rows = []
             hs.chooser.create = function () {
                 const real = original.apply(hs.chooser, arguments)
@@ -308,7 +310,7 @@ module.exports = [
                 })
                 return proxy
             }
-            t.cleanup(() => { hs.chooser.create = original })
+    t.cleanup(() => { if (own) hs.chooser.create = original; else delete hs.chooser.create })
             const MODIFIERS = ["ctrl", "alt", "shift"]
             let ran = false
             t.spoon.define({ name: "test-execute-row", doc: "a description found only by xylophonic", fn: () => { ran = true } })

@@ -191,10 +191,12 @@ function create(titlePrefix, skip, dir) {
     // Each alert is returned inside a Proxy that records duration() and passes every call on to
     // the real alert, so that an alert another Spoon shows during the test works as usual.
     let alertOriginal = null
+    let alertOwn = false
     const alerts = []
     alerts.durations = []
     function alertsCapture() {
         if (alertOriginal) return alerts
+        alertOwn = Object.prototype.hasOwnProperty.call(hs.ui, "alert")
         alertOriginal = hs.ui.alert
         const original = alertOriginal
         hs.ui.alert = function (message) {
@@ -221,9 +223,11 @@ function create(titlePrefix, skip, dir) {
     // the list it records into. Each entry holds the frame the canvas was created with and the
     // canvas itself. hs.canvas.create is restored by close().
     let canvasOriginal = null
+    let canvasOwn = false
     const canvases = []
     function canvasesCapture() {
         if (canvasOriginal) return canvases
+        canvasOwn = Object.prototype.hasOwnProperty.call(hs.canvas, "create")
         canvasOriginal = hs.canvas.create
         const original = canvasOriginal
         hs.canvas.create = function (frame) {
@@ -264,11 +268,15 @@ function create(titlePrefix, skip, dir) {
             }
         }
         if (alertOriginal) {
-            hs.ui.alert = alertOriginal
+            // Put back as it was: a function Hammerspoon 2 provides is not the object's own
+            // property, and setting it back would leave a copy on the object.
+            if (alertOwn) hs.ui.alert = alertOriginal
+            else delete hs.ui.alert
             alertOriginal = null
         }
         if (canvasOriginal) {
-            hs.canvas.create = canvasOriginal
+            if (canvasOwn) hs.canvas.create = canvasOriginal
+            else delete hs.canvas.create
             canvasOriginal = null
         }
         hs.mouse.setAbsolutePosition(pointer.x, pointer.y)
