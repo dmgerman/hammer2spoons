@@ -43,6 +43,10 @@ never reaches the application behind the chooser.
 
 * What is not tested
 
+Every statement of the Spoon's readme has a test, except the ones below. Each is listed with the
+reason it has none. =tests/readme-review.test.js= holds the tests added when the readme was read
+as a whole against the others.
+
 1. *=applicationByBundleSelect()= switching to and from an application.* The test windows belong
    to =osascript=, which has no bundle identifier, so they cannot be found by one. The tests
    cover an application that is not running, and the alerts for a missing identifier and a bad
@@ -56,3 +60,11 @@ never reaches the application behind the chooser.
 4. *=fullscreenScreenSkip= with one screen.* The tests of =fullscreenScreenSkip=, in
    =tests/two-screens.test.js=, need at least two screens, and a screen cannot be disconnected
    during a run.
+5. *A chooser without the Screen Recording permission.* The permission cannot be withdrawn
+   during a run; System Settings changes it, and macOS asks for it again afterwards.
+6. *A snapshot kept while the chooser is open.* Selecting a window again draws its kept
+   snapshot, which the tests cannot tell from a new one, for the reason given in 3.
+7. *Installing.* =hs.spoons.use()= downloads the Spoon from GitHub. The tests load a copy of the
+   Spoon from this directory instead.
+8. *The sections that only describe:* "Examples", "Limitations", "Coming from Hammerspoon 1" and
+   "Requirements". Each function and requirement they name has a test of its own.
