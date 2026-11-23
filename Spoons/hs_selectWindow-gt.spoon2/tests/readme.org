@@ -53,3 +53,6 @@ never reaches the application behind the chooser.
 3. *=persistentThumbnailCache=.* It makes a thumbnail appear sooner the next time the chooser
    opens. The tests cannot tell a kept snapshot from a new one, because both are drawn the same
    way, and the time a snapshot takes varies too much to tell them apart by speed.
+4. *=fullscreenScreenSkip= with one screen.* The tests of =fullscreenScreenSkip=, in
+   =tests/two-screens.test.js=, need at least two screens, and a screen cannot be disconnected
+   during a run.
