@@ -63,3 +63,12 @@ doubles the observers for its length, and costs about 0.3 s each time a test sta
 and =start()= =default= received no event. Nothing in the user's configuration stops and
 restarts the Spoon; the test harness does. Version 0.3.6 makes =start()= put =default= back,
 without handlers.
+
+* A filter watched after windows are followed (hammer2spoons-atg.9)
+
+A filter learned that it accepted a window only from an event about that window. A filter whose
+first handler was registered while the tracker already followed a window therefore treated that
+window's first change as concerning a window it never accepted, and emitted nothing: a filter
+limited to one screen received neither windowRejected nor windowMoved when its window moved to
+another screen. Version 0.3.7 records, when such a handler is registered, which followed windows
+the filter's rules accept, without emitting anything.

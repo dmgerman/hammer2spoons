@@ -442,8 +442,27 @@ class WindowFilter {
             if (!this.watchers.has(event)) this.watchers.set(event, new Set())
             this.watchers.get(event).add(handler)
         }
+        const wasTracking = tracking
         trackerStart()
+        if (wasTracking) this._allowedRecord()
         return this
+    }
+
+    /**
+     * Record which of the windows already followed this filter's rules accept, without emitting
+     * anything. Called when a handler is registered while windows are already being followed.
+     *
+     * A filter otherwise learns that it accepts a window only from an event about that window.
+     * A filter watched after a window was already followed would then treat the window's first
+     * change as concerning a window it never accepted, and emit nothing, although the readme says
+     * the change is emitted to every filter that accepted the window before it. When the tracker
+     * starts with this handler, its windowCreated events record the windows instead. The stored
+     * states are used, so no application is queried.
+     */
+    _allowedRecord() {
+        for (const [id, record] of tracked) {
+            if (record.state && !this.allowed.has(id)) this.allowed.set(id, this.allows(record.state))
+        }
     }
 
     /**
