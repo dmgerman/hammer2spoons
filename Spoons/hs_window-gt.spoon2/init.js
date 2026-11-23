@@ -219,22 +219,97 @@ function focused() {
 function _windowFocus(window) {
     if (!window) return false
 
+    const before = screenWindowIdsRecord()
     const accepted = window.focus()
     window.raise()
 
     // Dropped if another window is asked for first, so the assertion cannot undo a newer
     // choice.
-    if (config.focusReassertDelay > 0) {
-        focusReassertFor = window.id
-        hs.timer.doAfter(config.focusReassertDelay, () => {
-            if (focusReassertFor !== window.id) return
-            focusReassertFor = null
+    focusReassertFor = window.id
+    hs.timer.doAfter(Math.max(config.focusReassertDelay, FOCUS_SETTLE_SECONDS), () => {
+        if (focusReassertFor !== window.id) return
+        focusReassertFor = null
+        const after = screenWindowIdsRecord()
+        // A window closed in the meantime is left alone: becomeMain() on it makes Hammerspoon 2
+        // log "Failed to make window main" with AXError -25202, an invalid element (seen during
+        // the tests on 2026-11-23, where a test closes its window soon after focusing it). The
+        // window is looked for in the order just read, which costs nothing more. A window whose
+        // screen could not be read counts as open.
+        const open = after.size < hs.screen.all().length ||
+            [...after.values()].some((ids) => ids.includes(window.id))
+        if (!open) return
+        if (config.focusReassertDelay > 0) {
             window.becomeMain()
             window.raise()
-        })
-    }
+        }
+        coveredFrontWindowsRaise(window, before, after)
+    })
 
     return accepted
+}
+
+// How long an application takes to answer its activation, after which the windows it brought
+// forward are in place. The same 0.3 s as Hammerspoon 2's own focus() waits.
+const FOCUS_SETTLE_SECONDS = 0.3
+
+/**
+ * The ids of the windows on each screen, front to back, by screen id, from the space each screen
+ * shows. Reading them costs about 0.04 s for three screens, against about 0.1 s for
+ * hs.window.allWindows(), so windowFocus() can afford it on every switch.
+ */
+function screenWindowIdsRecord() {
+    const record = new Map()
+    for (const screen of hs.screen.all()) {
+        try {
+            const space = (screen.spaces || []).find((s) => s.isCurrent)
+            if (space) record.set(screen.id, space.windowIDs())
+        } catch (e) {
+            // A screen whose space cannot be read is left out, and is not checked afterwards.
+        }
+    }
+    return record
+}
+
+/**
+ * Raise again the window that was in front on another screen, when the activation of the focused
+ * window's application covered it with another of that application's windows.
+ *
+ * When an application is activated, it brings forward the window it last had as its main window,
+ * even when another of its windows has been asked for. Measured on 2026-11-23 with Google Chrome
+ * windows on two screens and a Skim window in front of one of them: focusing the Chrome window
+ * on the other screen brought the first Chrome window in front of the Skim window, where it
+ * stayed after the focus went to the chosen window (hammer2spoons-ei6.50). raise() brings the
+ * covered window forward again without activating its application, so the focus stays where it
+ * is.
+ *
+ * @param {object} window The window that was focused.
+ * @param {Map} before The record of screenWindowIdsRecord() taken before focusing it.
+ * @param {Map} after The record taken once the application has answered its activation.
+ */
+function coveredFrontWindowsRaise(window, before, after) {
+    const windowScreen = window.screen
+    const changed = []
+    for (const [screenId, ids] of before) {
+        if (windowScreen && screenId === windowScreen.id) continue
+        const now = after.get(screenId)
+        if (!now || ids.length === 0 || now.length === 0 || now[0] === ids[0]) continue
+        changed.push({ previous: ids[0], current: now[0] })
+    }
+    if (changed.length === 0) return
+
+    // Only now are windows looked up, since nothing else needs them.
+    const byId = new Map(hs.window.allWindows().map((w) => [w.id, w]))
+    const pid = window.pid
+    for (const { previous, current } of changed) {
+        const covering = byId.get(current)
+        const covered = byId.get(previous)
+        if (!covering || !covered || covering.id === window.id || covering.pid !== pid || covered.pid === pid) continue
+        try {
+            covered.raise()
+        } catch (e) {
+            // A window that cannot be raised stays where it is.
+        }
+    }
 }
 
 /** Whether two frames describe the same rectangle, within a pixel. */

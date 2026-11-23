@@ -516,3 +516,9 @@ this Spoon's design.
   bring that other window to the front. Hammerspoon 2's =focus()= makes the window main again
   after 0.3 seconds, but does not raise it. This Spoon makes the window main and also raises it
   after =config.focusReassertDelay=.
+- *windowFocus() keeps the other screens as they were.* An application that is activated brings
+  forward the window it last had as its main window, even when another of its windows was asked
+  for. When that window is on another screen, it can cover the window that was in front there,
+  such as a Skim window covered by a Google Chrome window. After the window is focused, this
+  Spoon raises the covered window again, which does not take the focus from the window asked
+  for.
