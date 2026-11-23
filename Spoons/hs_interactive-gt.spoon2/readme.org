@@ -488,7 +488,9 @@ for each option's letter, subscribes to release those hotkeys while a prompt is 
 typed into a chooser then reaches the chooser.
 
 Prompts are counted. A command that reads two arguments shows one prompt after another, and
-=fn= is called once when the first opens and once when the last closes.
+=fn= is called once when the first opens and once when the last closes. =fn(false)= is called 0.1
+seconds after the last prompt closes, and not at all when another prompt opens within that time,
+so that the gap between two prompts is not reported. =promptIsOpen()= has no such delay.
 
 #+begin_src js
 const unsubscribe = interactive.promptChangeOn((open) => {

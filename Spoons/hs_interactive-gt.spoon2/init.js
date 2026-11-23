@@ -71,6 +71,10 @@ let useCount = 0
 // after another. Observers hear about the first opening and the last closing.
 const promptObservers = new Set()
 let promptDepth = 0
+// Seconds after the last prompt closes before promptChangeOn()'s subscribers are told, and the
+// timer that tells them. See promptClosed().
+const PROMPT_CLOSED_DELAY = 0.1
+let promptClosedTimer = null
 
 /**
  * Be told when a prompt appears and when the last one goes away.
@@ -95,14 +99,30 @@ function promptIsOpen() {
  */
 function promptOpened() {
     promptDepth += 1
-    if (promptDepth === 1) notifyPrompt(true)
+    if (promptDepth !== 1) return
+    // A prompt that opens within PROMPT_CLOSED_DELAY of the last one closing continues the same
+    // sequence of prompts: the subscribers were never told it closed.
+    if (promptClosedTimer) {
+        promptClosedTimer.stop()
+        promptClosedTimer = null
+        return
+    }
+    notifyPrompt(true)
 }
 
 /** Report that a prompt reported with promptOpened() has closed. */
 function promptClosed() {
     if (promptDepth === 0) return
     promptDepth -= 1
-    if (promptDepth === 0) notifyPrompt(false)
+    if (promptDepth !== 0) return
+    // The subscribers are told after PROMPT_CLOSED_DELAY, unless another prompt opens first.
+    // A command that reads two arguments closes one chooser and opens the next, and its
+    // subscribers would otherwise be told "closed" and "open" between them (found by the tests
+    // on 2026-11-23). promptIsOpen() is exact meanwhile; only the notice waits.
+    promptClosedTimer = hs.timer.doAfter(PROMPT_CLOSED_DELAY, () => {
+        promptClosedTimer = null
+        if (promptDepth === 0) notifyPrompt(false)
+    })
 }
 
 function notifyPrompt(open) {
@@ -1266,8 +1286,14 @@ function stop() {
     for (const binding of keymap.values()) binding.hotkey.destroy()
     keymap.clear()
 
-    // Whoever was listening is going away with this layer, and a prompt cannot survive it.
-    if (promptDepth > 0) {
+    // Whoever was listening is going away with this layer, and a prompt cannot survive it. A
+    // notice still waiting is given now, so that no timer outlives stop().
+    const pending = promptClosedTimer !== null
+    if (pending) {
+        promptClosedTimer.stop()
+        promptClosedTimer = null
+    }
+    if (promptDepth > 0 || pending) {
         promptDepth = 0
         notifyPrompt(false)
     }
