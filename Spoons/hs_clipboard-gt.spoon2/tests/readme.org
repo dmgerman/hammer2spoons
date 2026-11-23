@@ -50,3 +50,19 @@ Readings fall at the same fractions of a second each time, so waiting cannot mak
 fall within one second. The test of two images copied within one second therefore sends the
 watcher's change event itself, through =hs.pasteboard._watcherEmitter=, which is private to
 Hammerspoon 2 and used in that test only.
+
+* The tests of the chooser
+
+The copy creates its chooser in =start()=, so each test of the chooser restarts the copy with
+=hs.chooser.create= recorded, to reach the chooser, its rows and its right-click handler. Keys
+are sent one at a time, each only while the copy's chooser is visible and a prompt is reported
+open.
+
+The two /Paste all up to here/ actions type with =hs.eventtap.keyStrokes()=, and paste on select
+pastes with ⌘V. The tests record both instead of sending them, so nothing is typed anywhere.
+
+* What is not tested
+
+1. *A right-click on a row.* The right-click menu needs the position of a row on screen, which
+   =hs.chooser= does not report. The tests run each action through the chooser's right-click
+   handler, with the row and the menu item, as the chooser does.
