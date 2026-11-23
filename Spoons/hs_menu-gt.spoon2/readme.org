@@ -589,8 +589,9 @@ A presenter that uses the keyboard implements =keysSuspend= and =keysResume=. Th
 hs_interactive-gt opens a chooser or a text prompt, and when the prompt closes. A hotkey receives
 a key press before a chooser does. Without these two functions, a letter typed into the chooser
 would select an option of the menu instead. While the keys are suspended, =present= must not bind
-them again, even when the menu is redrawn. A presenter without a keyboard, such as a Stream Deck,
-omits both.
+them again, even when the menu is redrawn. A session opened while a prompt is open calls
+=keysSuspend= before its first =present=, so the presenter never binds the keys the prompt is
+using. A presenter without a keyboard, such as a Stream Deck, omits both.
 
 ** The session
 

@@ -31,10 +31,12 @@ A test that shows a menu sends its keys only while the copy reports the menu sho
 time, because a key sent after the menu closed would reach the application behind it.
 
 The tests of the on-screen menu, in =tests/onscreen.test.js=, also check that a test window has the
-focus before each key, so that a key the copy does not take reaches that window. Their tests of
-prompts tell the user's hs_interactive-gt that a prompt opened and closed, with =promptOpened()=
-and =promptClosed()=, because the copy listens to the user's hs_interactive-gt. No prompt is
-shown, and a test that fails still reports the prompt closed.
+focus before each key, so that a key the copy does not take reaches that window.
+
+The tests of prompts, in =tests/onscreen.test.js= and =tests/presenter.test.js=, tell the user's
+hs_interactive-gt that a prompt opened and closed, with =promptOpened()= and =promptClosed()=,
+because the copy listens to the user's hs_interactive-gt. No prompt is shown, and a test that
+fails still reports the prompt closed.
 
 The panel is found among the recorded canvases by its position. The Spoon draws each option in a
 canvas of its own at (0, 0), which is never shown, while the panel is centred on a screen.

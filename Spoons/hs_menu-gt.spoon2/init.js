@@ -938,6 +938,7 @@ function sessionOpen(menu, presenter, options) {
     session.close = () => {
         if (closed) return session
         closed = true
+        keyPresenters.delete(presenter)
         holdsCancel()
         updateTimersStop()
         if (presenter.close) presenter.close()
@@ -1106,6 +1107,16 @@ function sessionOpen(menu, presenter, options) {
         const fallback = menuDefaults(menu).keepOpen
         if (fallback !== undefined) return Boolean(fallback)
         return false
+    }
+
+    // A presenter that uses the keyboard gives up its keys while hs_interactive-gt has a
+    // prompt open. One that opens during a prompt is told before it is first presented, so
+    // that it never binds the keys the prompt is using: a menu opened from the M-x chooser,
+    // by a command that shows one, does this.
+    if (typeof presenter.keysSuspend === "function") {
+        keyPresenters.add(presenter)
+        promptsWatch()
+        if (promptIsOpen()) presenter.keysSuspend()
     }
 
     render()
@@ -1436,8 +1447,9 @@ function screenPresenter() {
 let screenSession = null
 // Where the on-screen menu was when it was last hidden, so it reopens there.
 let screenPath = null
-// The presenter drawing it, kept so its keys can be suspended while a prompt is up.
-let screenKeys = null
+// The presenters of open sessions that use the keyboard, told when a prompt opens and closes.
+// A session adds its presenter when it opens and removes it when it closes.
+const keyPresenters = new Set()
 // Undoes the subscription to hs_interactive-gt's prompts. Null when not subscribed.
 let unwatchPrompts = null
 
@@ -1452,15 +1464,7 @@ let unwatchPrompts = null
  */
 function onScreenShow(menu, options) {
     onScreenHide()
-    promptsWatch()
-
-    const presenter = screenPresenter()
-    screenKeys = presenter
-    screenSession = sessionOpen(menu, presenter, options)
-
-    // A menu opened from inside a prompt — the M-x chooser runs a command that shows one —
-    // must not take the keys the prompt is using.
-    if (promptIsOpen()) presenter.keysSuspend()
+    screenSession = sessionOpen(menu, screenPresenter(), options)
 
     // Reopen where the menu was last left. A Stream Deck keeps its place because being
     // displayed is its whole state; the on-screen menu was starting over at the root only
@@ -1479,16 +1483,16 @@ function onScreenHide() {
         screenSession.close()
         screenSession = null
     }
-    screenKeys = null
     return module.exports
 }
 
 /**
- * Give up the menu's keys while hs_interactive-gt has a prompt on screen, and take them
- * again when it goes away. See the presenter's keysSuspend for why.
+ * Make every presenter that uses the keyboard give up its keys while hs_interactive-gt has a
+ * prompt on screen, and take them again when it goes away. See the on-screen presenter's
+ * keysSuspend for why.
  *
- * Subscribed on the first menu rather than at start(), since hs_interactive-gt loads this
- * Spoon and is not finished being set up when start() runs.
+ * Subscribed by the first session with such a presenter rather than at start(), since
+ * hs_interactive-gt loads this Spoon and is not finished being set up when start() runs.
  */
 function promptsWatch() {
     if (unwatchPrompts) return
@@ -1497,9 +1501,14 @@ function promptsWatch() {
     if (!spoon || !spoon.promptChangeOn) return
 
     unwatchPrompts = spoon.promptChangeOn((open) => {
-        if (!screenKeys) return
-        if (open) screenKeys.keysSuspend()
-        else screenKeys.keysResume()
+        for (const presenter of keyPresenters) {
+            try {
+                if (open) presenter.keysSuspend()
+                else if (typeof presenter.keysResume === "function") presenter.keysResume()
+            } catch (e) {
+                console.error(`[hs_menu-gt] a presenter's ${open ? "keysSuspend" : "keysResume"} failed: ${e.message}`)
+            }
+        }
     })
 }
 
