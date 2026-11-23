@@ -1,0 +1,201 @@
+#+title: What the tests of hs_appleMusic-gt have shown
+
+These notes record what was learned while writing the tests of hs_appleMusic-gt, in epic
+hammer2spoons-8pf.6, on 2026-11-23. Bead hammer2spoons-8pf.6.3, playing albums, is suspended, and
+these notes are what it needs to be resumed.
+
+* Where the work stands
+
+The epic's work is on the branch =music-devel=, as the user asked on 2026-11-23 (bead 8pf.6.7).
+=main= was moved back to =2d691a6=, the commit the configuration points to. Nothing had been
+pushed.
+
+| Bead     | What                                         | State                                      |
+|----------+----------------------------------------------+--------------------------------------------|
+| 8pf.6.1  | Setting up the tests                         | Committed on music-devel, closed           |
+| 8pf.6.2  | The album list                               | Committed on music-devel, closed           |
+| 8pf.6.3  | Playing albums, skipping, auto-play          | Reset to its start, nothing committed      |
+| 8pf.6.4  | Playback, the track playing, the volume      | Committed on music-devel with two failing tests, closed |
+| 8pf.6.8  | Review of the tests so far                   | Open, next                                 |
+| 8pf.6.5  | The menu, start, stop and the configuration  | Not started; depends on 8pf.6.8            |
+| 8pf.6.6  | The readme review                            | Not started                                |
+
+On 2026-11-23 the user had the code of 8pf.6.3 removed, and the bead reset to its start. The
+Spoon is as it was committed in 8pf.6.2, so it again searches for the Play button with
+=hs.ax.findByRole()=. The four-level search and =play.test.js= described below no longer exist,
+and are described here so that they can be written again. The asynchronous =musicAsk()= was
+written again for 8pf.6.4.
+
+* The tests of 8pf.6.4
+
+=tests/playback.test.js= tests playback, the track playing and the volume on whatever Music has
+loaded, opening no album page. Before the run the user's Music was playing /Kind of Blue/, started
+by opening its page, waiting 3 s, and sending =play= from stopped.
+
+1. Music's volume is changed only while Music is paused, so nothing plays loudly, and the output
+   device's volume is only set to the value it already has.
+2. =currentTrackShow()= copies to the clipboard, so its test pauses the user's hs_clipboard-gt and
+   puts the clipboard back, as hs_clipboard-gt's own tests do.
+3. Music reports a track number of 0 for a track streamed from the catalogue, and "track 1 of
+   current playlist" cannot be asked for one. Tracks are therefore told apart by name.
+4. =hs.application.frontmostApplication()= does not exist in Hammerspoon 2; it is
+   =hs.application.frontmost()=.
+
+The last run, with each test timed by a temporary wrapper: 9 passed, 2 failed, 230 s in all.
+
+| Test                                       | Time   | Result |
+|--------------------------------------------+--------+--------|
+| playerState, isPlaying, isRunning          | 15.2 s | pass   |
+| playPauseToggle and play                   | 13.6 s | pass   |
+| trackNext and trackPrevious                | 21.9 s | fail: still on "Freddie Freeloader" 10 s after trackPrevious() |
+| playbackStop, then playing again           | 18.1 s | pass   |
+| focus()                                    | 46.2 s | fail: Chrome stayed in front |
+| Music not running                          | 0.0 s  | pass   |
+| currentTrack, currentArtist, currentAlbum  | 29.9 s | pass   |
+| currentTrackText and currentTrackShow      | 13.3 s | pass   |
+| albumURLResolve for an unknown track       | 0.0 s  | pass   |
+| The volume functions                       | 13.5 s | pass   |
+| systemVolume and systemVolumeSet           | 0.0 s  | pass   |
+
+What the times suggest, not yet measured directly:
+
+1. Every test that asks Music takes 13 to 30 s, and the others take no measurable time, so each
+   question to Music takes several seconds.
+2. =focus()= calls =app.setFrontmost(false)= on Music. The test does only that and waits 1 s, so
+   the call held for about 45 s, which would freeze Hammerspoon 2 in daily use too.
+3. =trackPrevious()= may have failed only because Music answered slowly.
+
+Bead 8pf.6.8 is to measure one question to Music, and how long =focus()= blocks Hammerspoon 2,
+before changing anything.
+
+* The user's agreements
+
+1. The tests may control the user's Music application: play, pause, skip, change the volume,
+   and open album pages. The user said so on 2026-11-23.
+2. The tests must not read or write the user's =albums.txt=. =tests/spoon.js= points the copy's
+   =albumListPath= into the run's directory.
+3. After a test, Music is paused again if it was not playing, and its volume is put back.
+   The track it was on cannot be put back.
+
+* How the Spoon plays an album from the catalogue
+
+The Spoon's =play()=, and Play/Pause in the music menu, send AppleScript =play= or =playpause=.
+They resume whatever Music already has queued.
+
+Choose album, Random album and Auto-play play an album from the list, which is usually not in
+the user's library. Music's AppleScript cannot play a catalogue album, so the Spoon opens the
+album's page in Music and presses the page's own Play button through Accessibility
+(=playButtonPressWhenReady()=).
+
+These were tried by hand on 2026-11-23, to play an album without the button:
+
+| Music before            | After opening the page                          | Result                     |
+|-------------------------+-------------------------------------------------+----------------------------|
+| Stopped, nothing loaded | Kind of Blue; =play= after 6 s                  | Played Kind of Blue        |
+| Playing Kind of Blue    | In Rainbows; =play= after 3 s                   | Kept playing Kind of Blue  |
+| Playing Kind of Blue    | In Rainbows; =stop=, then =play=, after 3 s     | Stopped, nothing loaded    |
+| Stopped, nothing loaded | In Rainbows still showing; =play=               | Stopped, nothing loaded    |
+
+So opening a page does not make its album the one Music plays, and =play= is not a replacement
+for the button. =playpause= would pause a playing Music instead of switching albums.
+
+* The freeze in the Play-button search
+
+The Spoon found the button with =hs.ax.findByRole("AXButton", appElement)=, which walks Music's
+whole Accessibility tree in one synchronous call. A probe on Kind of Blue's page measured each
+call at 12.4 s and 11.7 s. Hammerspoon 2 is blocked for all of that time, and the button was
+found after 24.6 s. The user saw a freeze of about 20 s. This happens in daily use, every time
+Choose album, Random album or Auto-play plays an album, not only in the tests.
+
+=hs.ax= offers no asynchronous search, and no search that can be limited in depth or count.
+
+A probe of Kind of Blue's page, after 8 s of loading, counted 1306 elements: 456 static texts,
+286 buttons, 254 cells, 229 rows, 34 groups, 12 images, 8 scroll areas, and a few others. The
+Play button was at =AXWindow > AXSplitGroup > AXScrollArea > AXButton=, the fourth level from the
+window.
+
+The uncommitted change walks Music's windows itself, breadth first, without the menu bar:
+
+1. no deeper than four levels below the window (=PLAY_SEARCH_DEPTH=);
+2. not into =AXTable=, =AXOutline= or =AXRow= (=PLAY_SEARCH_SKIP=);
+3. for at most 20 ms per timer tick (=PLAY_SEARCH_SLICE_MS=), carrying on at the next tick.
+
+Measured results:
+
+| Search                        | Result                                                                          |
+|-------------------------------+---------------------------------------------------------------------------------|
+| =findByRole=, whole tree      | 12.4 s and 11.7 s blocked per call; found after 24.6 s                          |
+| Whole tree, in 20 ms slices   | Longest block 490 ms (one call); found after 21 s, 1176 elements, past the Spoon's 10 s limit |
+| Top four levels, in slices    | Full run: Kind of Blue played in 2.1 s, longest block 0.22 s, every album found |
+| Top four levels, in slices    | Album-skipping test: Kid A did not play within 20 s, no alert recorded          |
+| Top four levels, in slices    | Album-skipping test: "Music did not offer a Play button for Miles Davis — Kind of Blue" |
+
+The cause of the last two failures is not known. Three explanations have not been checked:
+
+1. Music took longer than =playButtonTimeout=, 10 s, to render the page.
+2. The button was deeper than four levels in that case.
+3. Music was showing another view, such as Now Playing, rather than the album page.
+
+The next step was a probe that opens the page and records, every second for 20 s, whether Play
+is present and at which level, once from stopped and once while another album plays.
+
+* Asking Music from the tests
+
+=hs.osascript.applescriptSync()= blocks all of Hammerspoon 2 until Music answers. Music can take
+minutes while it opens an album page: two questions once took more than two minutes, one of
+them failing. The tests therefore ask with the asynchronous =hs.osascript.applescript()=, with a
+10 s limit per question (=musicAsk()= in =tests/music.js=).
+
+The Spoon itself still asks Music synchronously, in =musicTell()=. That has not been measured in
+daily use.
+
+Music answers slowly while it loads a page. A wait for a player state of 5 s was too short.
+
+* Skipping between albums
+
+Next album and Prev album skip one track at a time until the album changes. A test needs Music
+to have another album queued before or after the one playing.
+
+1. An album played from its page is followed by nothing. Next album reported "No other album
+   within 20 tracks".
+2. =play library playlist 1= with shuffle off took more than 15 s to start, then started in the
+   middle of the following test, and broke two other tests.
+3. Playing one album and then another, to leave the first in Music's history: not yet known.
+   The run was stopped before the test.
+4. The user's suggestion, =albumFinish()= in =tests/music.js=: play a few seconds of each track,
+   move to the last, jump to one second before its end, and let it finish, so that the album is
+   complete in the history. Not yet verified, because the album never started (the Play-button
+   failure above).
+5. The plan when the bead was suspended: a playlist, =testHS2=, which the user created and which
+   is empty. AppleScript can copy only library tracks into a playlist, and Kind of Blue has no
+   tracks in the library, so catalogue albums have to be added with Music's =⋯ → Add to
+   Playlist=. Three short albums from the user's list were suggested: Miles Davis's /In a Silent
+   Way/ (2 tracks), Brian Eno's /Ambient 1: Music for Airports/ (4) and /Kind of Blue/ (5 or 6).
+   A test would then play it with =play playlist "testHS2"=, which needs no search, and could
+   check both directions of skipping, landing on track 1. The playlist would also serve the
+   tests of the track playing and the volume (8pf.6.4). It does not help the tests of Choose
+   album, Random album and Auto-play, which need the Play button.
+
+* Running the tests
+
+1. A run of =play.test.js= takes about four minutes.
+2. Tests already running inside Hammerspoon 2 cannot be stopped from outside. Stopping
+   =tests/run= does not stop them; only a reload of the configuration does, and the harness then
+   does not restore the focus. A reload also drops the password-like entries hs_clipboard-gt
+   holds only in memory.
+3. The harness reports a message only for a failing test. A measurement needed from a passing
+   test was kept in a global variable for one run and read afterwards.
+4. A test that waits for a Spoon to play should record alerts from its start
+   (=t.alertsCapture()= in =needMusic()=), since the Spoon reports its failures only in alerts.
+5. Results of the last complete run of =play.test.js=, with the four-level search: 8 passed, 1
+   skipped (album skipping, nothing queued). The cases passing were playing by link, by name
+   (Kind of Blue, with the alert for several matching releases), at random, an album the
+   catalogue does not have, auto-play turning on, leaving a paused Music paused, and turning
+   itself off with an empty list.
+
+* Readme statements to check in the review
+
+1. "An album starts playing a few seconds after it is chosen". This holds with the four-level
+   search, at 2.1 s, but took 24.6 s with =findByRole=, during which Hammerspoon 2 was frozen.
+2. Skipping "takes about =config.albumSkipInterval= seconds per track". Not measured.
+3. The example list holds every Radiohead studio album: tested, 9 albums.

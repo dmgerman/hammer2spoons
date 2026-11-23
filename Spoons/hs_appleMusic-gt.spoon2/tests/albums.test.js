@@ -170,10 +170,10 @@ module.exports = [
         timeout: 30,
         run: async (t) => {
             if (!musicRunning()) t.skip("Music is not running")
-            musicKeep(t)
-            musicAsk("play")
+            await musicKeep(t)
+            await musicAsk("play")
             await musicStateWait(t, "playing")
-            const track = musicAsk('return (get artist of current track) & "\\t" & (get album of current track)')
+            const track = await musicAsk('return (get artist of current track) & "\\t" & (get album of current track)')
             if (!track) t.skip("Music has no current track to play")
             const [artist, album] = track.split("\t")
             const alerts = t.alertsCapture()
