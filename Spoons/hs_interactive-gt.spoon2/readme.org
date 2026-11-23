@@ -707,8 +707,10 @@ This Spoon defines five commands of its own:
   =.nonactivatingPanel=, which accepts keys while its application is in the background.
 - *Dialogs are modal.* The code that opens a dialog waits until it closes: =hs.ui.textPrompt=
   returns only then. Timers still run while a dialog is displayed, measured on 2026-11-23.
-- *Escape does not cancel a dialog.* Only its *Cancel* button does. This is Hammerspoon 2 issue
-  [[https://github.com/Hammerspoon/Hammerspoon2/issues/391][#391]]. A chooser closes on Escape.
+- *Escape cancels a dialog, as its Cancel button does.* A key binding of Escape in
+  =~/Library/KeyBindings/DefaultKeyBinding.dict=, such as an Emacs-style prefix key, receives the
+  first Escape before the dialog does, and the dialog then closes only at the second. A chooser
+  is not affected, and closes at the first.
 - *One or two prompted arguments work best.* Hammerspoon 2 has no form with several fields, so
   each argument requires a dialog of its own. A command that requires more than two values is
   better served by one reader that reads a single combined answer.

@@ -5,7 +5,7 @@
 // Choosers are recorded by wrapping hs.chooser.create, so that a test can see their rows, and
 // answered with keys sent only while the copy under test reports a prompt open. Dialogs are
 // modal, but timers still run while one is open (measured on 2026-11-23), so a timer set before
-// a dialog opens answers it. A dialog cannot be cancelled with Escape: Hammerspoon 2 issue #391.
+// a dialog opens answers it, and cancels it with Escape.
 
 // Records every chooser created until the test ends: {rows, placeholder}. The chooser is
 // returned inside a Proxy that records setChoices() and the placeholder, and passes every call
@@ -97,6 +97,16 @@ function dialogAnswer(t, text) {
         send([], "return")
     })
     t.cleanup(() => timer.stop())
+}
+
+// Cancels the next dialog of the copy with Escape, from timers, because a dialog blocks until it
+// closes. A second Escape is sent when the dialog is still open after the first: on the machine the
+// tests were written on, ~/Library/KeyBindings/DefaultKeyBinding.dict binds Escape as a prefix
+// key, which receives the first Escape. Every key is sent only while the copy's prompt is open.
+function dialogCancel(t) {
+    const escape = () => { if (t.spoon.promptIsOpen()) hs.eventtap.keyStroke([], "escape", null) }
+    const timers = [hs.timer.doAfter(0.8, escape), hs.timer.doAfter(1.3, escape)]
+    t.cleanup(() => { for (const timer of timers) timer.stop() })
 }
 
 // Runs a reader that shows a dialog, then waits for the focus to go back to the application
@@ -339,6 +349,14 @@ module.exports = [
             t.assert.equal(await dialogRun(t, t.spoon.readers.string.prompted, { name: "text" }), "typed text", "typed")
             dialogAnswer(t)
             t.assert.equal(await dialogRun(t, t.spoon.readers.string.prompted, { name: "text", default: "the default" }), "the default", "the default")
+        }
+    },
+    {
+        name: "Escape cancels a dialog, and the reader gives null",
+        run: async (t) => {
+            dialogCancel(t)
+            t.assert.equal(await dialogRun(t, t.spoon.readers.string.prompted, { name: "text", default: "the default" }), null)
+            t.assert.equal(t.spoon.promptIsOpen(), false, "promptIsOpen() after Escape")
         }
     },
     // --- choice ---

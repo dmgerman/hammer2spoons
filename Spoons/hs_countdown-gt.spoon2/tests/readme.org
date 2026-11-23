@@ -52,7 +52,7 @@ as a whole against the others.
 
 A test cancels a prompt with the fixture's =promptCancel()=, called before the function that
 prompts. A prompt of hs_interactive-gt is modal, and no promise of a test resolves while it is
-open, so =promptCancel()= works from =hs.timer= callbacks. In the user's configuration, closing a
-dialog with Escape takes two presses, so it sends a second Escape when the prompt is still open
-after the first. A prompt that a test answers is answered the same way, from a timer set before it
+open, so =promptCancel()= works from =hs.timer= callbacks. On the machine the tests were written
+on, =~/Library/KeyBindings/DefaultKeyBinding.dict= binds Escape as a prefix key, which receives
+the first Escape, so it sends a second Escape when the prompt is still open after the first. A prompt that a test answers is answered the same way, from a timer set before it
 opens, as =promptAnswer()= in =tests/start.test.js= does.

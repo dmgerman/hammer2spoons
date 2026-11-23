@@ -250,9 +250,9 @@ function create(titlePrefix, skip, dir) {
     //
     // The work is done by hs.timer callbacks, which keep running while a modal prompt, such as
     // hs.ui.textPrompt, is open. A promise of the test does not resolve then, so waiting with
-    // wait() left a modal prompt open (found on 2026-11-23). In the user's configuration, closing
-    // a dialog takes two presses of Escape, so a second is sent when the prompt is still open
-    // after the first. A chooser closes at the first. Each key is sent only while the user's
+    // wait() left a modal prompt open (found on 2026-11-23). On the machine the tests were written
+    // on, ~/Library/KeyBindings/DefaultKeyBinding.dict binds Escape as a prefix key, which receives
+    // the first Escape, so a second is sent when the prompt is still open after the first. A chooser closes at the first. Each key is sent only while the user's
     // hs_interactive-gt reports a prompt open.
     function promptCancel() {
         const interactive = hs.spoons["hs_interactive-gt"]

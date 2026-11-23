@@ -48,15 +48,13 @@ Every statement of the Spoon's readme has a test, except these, checked on 2026-
    configuration's =Spoons= directory is Hammerspoon 2's behaviour. The tests replace
    =hs.spoons.load= so that no Spoon of the user's is loaded, and check only that =use()= calls
    it with the Spoon's name.
-2. *Cancelling a dialog.* Escape does not cancel a dialog (Hammerspoon 2 issue #391), and a test
-   cannot press its Cancel button.
-3. *=keySet()= returning null when macOS refuses a key.* A test cannot make macOS refuse a key.
-4. *A hotkey without a reference being garbage-collected.* This is Hammerspoon 2's behaviour,
+2. *=keySet()= returning null when macOS refuses a key.* A test cannot make macOS refuse a key.
+3. *A hotkey without a reference being garbage-collected.* This is Hammerspoon 2's behaviour,
    and depends on when the collector runs.
-5. *0.05 seconds of =runDelay= being enough.* The tests check that a command runs after its
+4. *0.05 seconds of =runDelay= being enough.* The tests check that a command runs after its
    =runDelay=, not that 0.05 seconds avoids the focus problem the readme describes, which
    depends on timing that varies.
-6. *The screenshot of the command chooser, and the dialog for =countdown-start-for=.* These are
+5. *The screenshot of the command chooser, and the dialog for =countdown-start-for=.* These are
    images.
 
 One difference is not covered by the readme either way: a command's =interactive= entry without
