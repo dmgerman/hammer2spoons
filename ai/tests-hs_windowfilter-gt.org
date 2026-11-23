@@ -38,3 +38,28 @@ The shared fixture now unhides the application and unminimizes the windows befor
 with their close button. Without it, a test that fails with a window minimized or hidden would
 leave that window to be closed by ending its process, which produces no windowDestroyed, and the
 window would stay in the user's hs_windowfilter-gt's list.
+
+* What a fresh copy costs (hammer2spoons-atg.7)
+
+Measured on 2026-11-23 through =hs2=, with a fresh copy loaded through =require.cache= beside the
+user's copy, and with 19 applications and 27 windows open. =hs.ax.on= and =off=, and
+=hs.application.on= and =off=, were wrapped to count calls, and restored afterwards.
+
+| Measure                                        | Value                                  |
+|------------------------------------------------+----------------------------------------|
+| Starting to observe, on the first handler      | 304 ms, during which Hammerspoon 2 is busy |
+| Applications and windows observed              | 19 and 27, the same as the user's copy |
+| Accessibility notifications registered         | 219, in 65 calls of =hs.ax.on=         |
+| Application listeners registered               | 6                                      |
+| =stop()=                                       | 23 ms                                  |
+| Notifications and listeners removed by =stop()= | all 219, in 46 calls, and all 6       |
+
+The status of the user's copy was the same before and after. A run of a test file therefore
+doubles the observers for its length, and costs about 0.3 s each time a test starts observing.
+
+* stop() and start() (hammer2spoons-atg.7)
+
+=stop()= removed every filter, =default= included, and =start()= did nothing, so after =stop()=
+and =start()= =default= received no event. Nothing in the user's configuration stops and
+restarts the Spoon; the test harness does. Version 0.3.6 makes =start()= put =default= back,
+without handlers.

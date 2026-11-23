@@ -1102,6 +1102,9 @@ function status() {
 }
 
 function start() {
+    // stop() removes every filter, default included. default is put back, without handlers,
+    // so that it receives events again once a handler is registered on it.
+    filters.add(defaultFilter)
     return module.exports
 }
 
