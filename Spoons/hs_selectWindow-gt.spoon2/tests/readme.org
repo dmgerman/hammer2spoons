@@ -29,6 +29,9 @@ destroys that filter and releases its keys.
 
 * The tests of the chooser
 
+=tests/chooser.js= holds the helpers that =tests/chooser.test.js= and =tests/settings.test.js=
+share.
+
 The chooser lists the user's windows as well as the test windows. The tests look only at the
 rows of the test windows, found by their titles, and their messages never show the title of one
 of the user's windows. A test that needs the test windows alone restarts the copy with every
@@ -44,3 +47,9 @@ never reaches the application behind the chooser.
    to =osascript=, which has no bundle identifier, so they cannot be found by one. The tests
    cover an application that is not running, and the alerts for a missing identifier and a bad
    pattern.
+2. *=thumbnailTopRatio=.* It places the thumbnail only when the chooser's window cannot be
+   found among Hammerspoon 2's windows, which happens only in the moment before the chooser is
+   shown.
+3. *=persistentThumbnailCache=.* It makes a thumbnail appear sooner the next time the chooser
+   opens. The tests cannot tell a kept snapshot from a new one, because both are drawn the same
+   way, and the time a snapshot takes varies too much to tell them apart by speed.

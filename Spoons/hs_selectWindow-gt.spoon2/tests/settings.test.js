@@ -1,0 +1,256 @@
+// Tests of bindHotkeys(), start(), stop() and the settings, as the readme describes them under
+// "bindHotkeys(mapping)", "start() and stop()" and "Settings".
+//
+// The keys bound are ctrl-alt-shift with 7, 8 or 9, which the user does not bind. A test window
+// has the focus before each key, so a key the copy did not bind reaches that window.
+
+const { choosersCapture, open, interactive, isOpen, openWait, key, focus } = require("./chooser.js")
+
+const MODIFIERS = ["ctrl", "alt", "shift"]
+
+// Presses a test key while a test window has the focus, and resolves to whether the copy's
+// chooser opened. The chooser is closed with Escape.
+async function keyOpens(t, name) {
+    const focused = hs.window.focusedWindow()
+    if (!focused || !String(focused.title).startsWith(t.titlePrefix)) t.assert.fail(`not pressing ${name}: a test window does not have the focus`)
+    hs.eventtap.keyStroke(MODIFIERS, name, null)
+    const started = Date.now()
+    while (Date.now() - started < 1500) {
+        if (interactive().promptIsOpen()) {
+            await t.wait(0.3)
+            if (interactive().promptIsOpen()) hs.eventtap.keyStroke([], "escape", null)
+            await t.wait(0.5)
+            return true
+        }
+        await t.wait(0.05)
+    }
+    return false
+}
+
+// Sets fields of the copy's config until the test ends.
+function settingsSet(t, values) {
+    const config = t.spoon.config
+    const original = {}
+    for (const name of Object.keys(values)) {
+        original[name] = config[name]
+        config[name] = values[name]
+    }
+    t.cleanup(() => Object.assign(config, original))
+}
+
+// Opens two test windows, focusing the first and then the second.
+async function windowsReady(t) {
+    const [a, b] = await t.windowsOpen(2)
+    await focus(t, a)
+    await focus(t, b)
+    return [a, b]
+}
+
+// The thumbnails drawn from now on. A change of focus can make the user's other Spoons draw
+// canvases, so a test records only once its windows have the focus.
+const thumbnails = (t) => t.canvasesCapture()
+
+module.exports = [
+    // --- bindHotkeys ---
+    {
+        name: "bindHotkeys() binds a key to a function, and a second call releases the keys of the first",
+        run: async (t) => {
+            t.cleanup(() => t.spoon.bindHotkeys({}))
+            await windowsReady(t)
+            t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "7"] })
+            t.assert.ok(await keyOpens(t, "7"), "7 did not open the chooser")
+            t.spoon.bindHotkeys({ applicationWindowSelect: [MODIFIERS, "8"] })
+            t.assert.ok(!(await keyOpens(t, "7")), "7 still opens the chooser")
+            t.assert.ok(await keyOpens(t, "8"), "8 did not open the chooser")
+        }
+    },
+    {
+        name: "bindHotkeys() throws for an unknown name or a malformed binding, and binds nothing",
+        run: async (t) => {
+            t.cleanup(() => t.spoon.bindHotkeys({}))
+            await windowsReady(t)
+            let error = null
+            try { t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "7"], noSuchFunction: [MODIFIERS, "8"] }) } catch (e) { error = e }
+            t.assert.ok(error && error.message.includes("noSuchFunction"), `the error: ${error && error.message}`)
+            error = null
+            try { t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "7"], applicationSelect: ["9"] }) } catch (e) { error = e }
+            t.assert.ok(error && error.message.includes("applicationSelect"), `the error: ${error && error.message}`)
+            t.assert.ok(!(await keyOpens(t, "7")), "7 was bound")
+        }
+    },
+    {
+        name: "every function the readme names can be bound",
+        run: (t) => {
+            t.cleanup(() => t.spoon.bindHotkeys({}))
+            const names = ["windowSelect", "applicationWindowSelect", "applicationSelect", "windowPreviousSelect", "applicationWindowPreviousSelect"]
+            const mapping = {}
+            names.forEach((name, i) => { mapping[name] = [MODIFIERS, ["7", "8", "9", "7", "8"][i]] })
+            // Two names share a key here; only whether bindHotkeys() accepts each name matters.
+            for (const name of names) t.spoon.bindHotkeys({ [name]: mapping[name] })
+        }
+    },
+    // --- start and stop ---
+    {
+        name: "stop() releases the keys, closes an open chooser and reports its prompt closed",
+        run: async (t) => {
+            t.cleanup(() => { t.spoon.bindHotkeys({}); t.spoon.start() })
+            await windowsReady(t)
+            t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "7"] })
+            const chooser = t.spoon.windowSelect()
+            await openWait(t, chooser)
+            t.spoon.stop()
+            await t.wait(0.4)
+            t.assert.ok(!isOpen(chooser), "the chooser is still open")
+            t.assert.ok(!interactive().promptIsOpen(), "a prompt is still reported open")
+            t.spoon.start()
+            t.assert.ok(!(await keyOpens(t, "7")), "7 still opens the chooser")
+        }
+    },
+    {
+        name: "start() throws, naming the Spoon, when hs_interactive-gt, hs_windowfilter-gt or hs_window-gt is not loaded",
+        run: (t) => {
+            t.cleanup(() => t.spoon.start())
+            for (const name of ["hs_interactive-gt", "hs_windowfilter-gt", "hs_window-gt"]) {
+                t.spoon.stop()
+                // Taken away and put back within this one synchronous call, so nothing else runs
+                // while the user's Spoon is missing.
+                const descriptor = Object.getOwnPropertyDescriptor(hs.spoons, name)
+                let error = null
+                try {
+                    hs.spoons[name] = undefined
+                    t.spoon.start()
+                } catch (e) {
+                    error = e
+                } finally {
+                    Object.defineProperty(hs.spoons, name, descriptor)
+                }
+                t.assert.ok(error && error.message.includes(name), `${name}: ${error ? error.message : "no error"}`)
+            }
+        }
+    },
+    // --- the settings ---
+    {
+        name: "rowsToDisplay and width are given to the chooser, and wideWidth is used above wideScreenPoints",
+        run: async (t) => {
+            const choosers = choosersCapture(t)
+            await windowsReady(t)
+            settingsSet(t, { rowsToDisplay: 5, width: 0.3, wideWidth: 0.2 })
+            const screen = hs.screen.main() || hs.screen.primary()
+            settingsSet(t, { wideScreenPoints: screen.fullFrame.w + 1 })
+            const narrow = open(t, () => t.spoon.windowSelect())
+            await openWait(t, narrow)
+            await key(t, narrow, [], "escape")
+            settingsSet(t, { wideScreenPoints: screen.fullFrame.w - 1 })
+            const wide = open(t, () => t.spoon.windowSelect())
+            await openWait(t, wide)
+            await key(t, wide, [], "escape")
+            t.assert.equal(choosers[0].assigned.visibleRows, 5, "visibleRows")
+            t.assert.equal(choosers[0].assigned.width, 0.3, "the width on a screen narrower than wideScreenPoints")
+            t.assert.equal(choosers[1].assigned.width, 0.2, "the width on a screen wider than wideScreenPoints")
+        }
+    },
+    {
+        name: "skipApplications, read at start(), leaves an application's windows out",
+        run: async (t) => {
+            const [a] = await windowsReady(t)
+            const original = t.spoon.config.skipApplications
+            t.cleanup(() => { t.spoon.stop(); t.spoon.config.skipApplications = original; t.spoon.start() })
+            t.spoon.config.skipApplications = original.concat(["osascript"])
+            t.assert.ok(t.spoon.order().some((e) => e.endsWith(a.title)), "listed before start()")
+            t.spoon.stop()
+            t.spoon.start()
+            t.assert.ok(!t.spoon.order().some((e) => e.endsWith(a.title)), "listed after start()")
+        }
+    },
+    {
+        name: "thumbnailToggleKey and thumbnailRefreshKey change the keys that show and refresh the thumbnail",
+        run: async (t) => {
+            if (!hs.permissions.checkScreenRecording()) t.skip("needs the Screen Recording permission")
+            await windowsReady(t)
+            // Ordinary keys rather than function keys: a function key sent with keyStroke() may carry the fn
+            // flag, and then does not match a key bound without modifiers.
+            settingsSet(t, { thumbnailToggleKey: "`", thumbnailRefreshKey: "=" })
+            const chooser = open(t, () => t.spoon.windowSelect())
+            await openWait(t, chooser)
+            const canvases = thumbnails(t)
+            await key(t, chooser, [], "`")
+            await t.wait(0.8)
+            const shown = canvases.length
+            t.assert.ok(shown >= 1, "` showed no thumbnail")
+            await key(t, chooser, ["shift"], "=")
+            await t.wait(0.8)
+            t.assert.ok(canvases.length > shown, "shift-= drew no new thumbnail")
+            await key(t, chooser, [], "escape")
+        }
+    },
+    {
+        name: "thumbnailGap is the space between the thumbnail and the chooser",
+        run: async (t) => {
+            if (!hs.permissions.checkScreenRecording()) t.skip("needs the Screen Recording permission")
+            await windowsReady(t)
+            settingsSet(t, { showThumbnail: true, thumbnailGap: 12 })
+            const chooser = open(t, () => t.spoon.windowSelect())
+            const canvases = thumbnails(t)
+            await openWait(t, chooser)
+            await t.wait(0.8)
+            const first = canvases[canvases.length - 1]
+            t.assert.ok(first, "no thumbnail")
+            t.spoon.config.thumbnailGap = 52
+            await key(t, chooser, ["shift"], t.spoon.config.thumbnailRefreshKey)
+            await t.wait(0.8)
+            const second = canvases[canvases.length - 1]
+            t.assert.ok(second !== first, "no new thumbnail")
+            const rightEdge = (c) => c.frame.x + c.frame.w
+            t.assert.ok(Math.abs(rightEdge(first) - rightEdge(second) - 40) <= 1, `the right edge moved by ${rightEdge(first) - rightEdge(second)} points`)
+            await key(t, chooser, [], "escape")
+        }
+    },
+    {
+        name: "thumbnailHeightRatio limits the thumbnail's height",
+        run: async (t) => {
+            if (!hs.permissions.checkScreenRecording()) t.skip("needs the Screen Recording permission")
+            const [a] = await t.windowsOpen(1)
+            const area = a.screen.frame
+            await t.frameSet(a, { x: area.x + 40, y: area.y + 40, w: area.w * 0.5, h: area.h * 0.8 })
+            const [b] = await t.windowsOpen(1)
+            await focus(t, a)
+            await focus(t, b)
+            settingsSet(t, { showThumbnail: true, thumbnailHeightRatio: 0.1 })
+            const canvases = thumbnails(t)
+            const chooser = open(t, () => t.spoon.windowSelect())
+            await openWait(t, chooser)
+            await t.wait(0.8)
+            const thumbnail = canvases[canvases.length - 1]
+            t.assert.ok(thumbnail, "no thumbnail")
+            const screen = (hs.screen.main() || hs.screen.primary()).frame
+            t.assert.ok(thumbnail.frame.h <= screen.h * 0.1 + 1, `the thumbnail is ${thumbnail.frame.h} points high, against ${screen.h * 0.1}`)
+            await key(t, chooser, [], "escape")
+        }
+    },
+    {
+        name: "selectionPollSeconds is how often the selected row is read for the thumbnail",
+        run: async (t) => {
+            if (!hs.permissions.checkScreenRecording()) t.skip("needs the Screen Recording permission")
+            const [a, b] = await t.windowsOpen(2)
+            const [c] = await t.windowsOpen(1)
+            for (const w of [a, b, c]) await focus(t, w)
+            settingsSet(t, { showThumbnail: true, selectionPollSeconds: 3 })
+            const canvases = thumbnails(t)
+            const chooser = open(t, () => t.spoon.windowSelect())
+            // The selected row is first read 3 s after the chooser opens, and every 3 s after
+            // that. openWait() returns about 0.3 s after the chooser is visible.
+            await openWait(t, chooser)
+            const opened = Date.now() - 300
+            const since = () => (Date.now() - opened) / 1000
+            await t.wait(0.4)
+            const shown = canvases.length
+            t.assert.ok(shown >= 1, "no thumbnail when the chooser opened")
+            await key(t, chooser, [], "down")
+            await t.wait(Math.max(0, 2 - since()))
+            t.assert.equal(canvases.length, shown, "thumbnails drawn within 2 s of the chooser opening")
+            await t.wait(Math.max(0, 3.8 - since()))
+            t.assert.ok(canvases.length > shown, "no thumbnail drawn within 3.8 s of the chooser opening")
+            await key(t, chooser, [], "escape")
+        }
+    }
+]
