@@ -39,6 +39,23 @@ function reassertWait(t) {
     return t.wait(t.spoon.config.focusReassertDelay + 0.3)
 }
 
+// Stacks four test windows on one screen, from front to back a1, c, b, a2, where a1 and a2 belong
+// to one application and b and c to another (each fixture process is an application). They
+// overlap, so that each is in front of the next. a1 has the focus, and c had it before. Returns
+// the windows.
+async function twoApplicationsStacked(t) {
+    const [a1, a2] = await t.windowsOpen(2)
+    const [b, c] = await t.windowsOpen(2)
+    const screen = t.screenFrame(a1)
+    const at = (i) => ({ x: screen.x + 100 + 60 * i, y: screen.y + 80 + 40 * i, w: 500, h: 400 })
+    await t.frameSet(a1, at(0))
+    await t.frameSet(c, at(1))
+    await t.frameSet(b, at(2))
+    await t.frameSet(a2, at(3))
+    for (const window of [a2, b, c, a1]) await focus(t, window)
+    return { a1, a2, b, c }
+}
+
 module.exports = [
     {
         name: "windowFocus focuses a window, and it still has the focus after the second assertion",
@@ -152,6 +169,37 @@ module.exports = [
                 if (f.x !== g.x || f.y !== g.y || f.w !== g.w || f.h !== g.h) moved.push(before.title)
             }
             t.assert.equal(moved.length, 0, `windows moved: ${moved.join(", ")}`)
+        }
+    },
+    // --- windows of two applications overlapping ---
+    //
+    // hs.window.orderedWindows() lists every window of the frontmost application first, so these
+    // tests stack a window of another application between two windows of one application.
+    {
+        name: "windowWithPreviousSwap takes the window directly behind, when it belongs to another application",
+        run: async (t) => {
+            const { a1, a2, c } = await twoApplicationsStacked(t)
+            const frames = { a1: copy(a1.frame), a2: copy(a2.frame), c: copy(c.frame) }
+            t.assert.equal(t.spoon.windowWithPreviousSwap(a1), true, "returned")
+            await reassertWait(t)
+            t.assert.frameEqual(a1.frame, frames.c, "this window")
+            t.assert.frameEqual(c.frame, frames.a1, "the window directly behind it, of the other application")
+            t.assert.frameEqual(a2.frame, frames.a2, "the other window of the same application moved")
+        }
+    },
+    {
+        name: "windowPrevious, when the previous window has closed, focuses the window directly behind, of another application",
+        run: async (t) => {
+            const { a1, b, c } = await twoApplicationsStacked(t)
+            // c had the focus just before a1. It is closed while a1 keeps the focus, so the
+            // previous window has gone, and a1, b and a2 are left, front to back. Closing c before
+            // a1 had the focus would give the focus to b, which would then be the previous window.
+            await t.windowClose(c)
+            await t.wait(0.5)
+            t.assert.equal(focusedId(), a1.id, "the focused window after c closed")
+            t.assert.equal(t.spoon.windowPrevious(), true, "returned")
+            await reassertWait(t)
+            t.assert.equal(focusedId(), b.id, "the focused window")
         }
     },
     {

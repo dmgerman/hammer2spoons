@@ -320,8 +320,9 @@ These functions act on two windows at once, or change which window has the focus
 on the same screen or on different screens. When =other= is omitted, a chooser lists the other
 windows, and the function returns a promise.
 
-=windowWithPreviousSwap= exchanges a window with the frontmost of the other windows. When =win=
-is the focused window, that is the window directly behind it.
+=windowWithPreviousSwap= exchanges a window with the frontmost of the other windows on its screen,
+or, when it is alone there, with the frontmost window of another screen. When =win= is the
+focused window, that is the window directly behind it, whichever application it belongs to.
 
 *** windowPrevious()
 
@@ -331,9 +332,9 @@ directly behind the focused window is focused instead.
 
 *** windowToBackSend([win])
 
-=windowToBackSend= puts a window behind all the others. macOS has no operation that lowers a
-window, so this Spoon focuses every other window, in reverse order, which leaves this window
-last.
+=windowToBackSend= puts a window behind all the others on its screen. macOS has no operation that
+lowers a window, so this Spoon focuses every other window on that screen, from back to front,
+which leaves this window last. The windows of the other screens are not touched.
 
 *** windowFocus([win])
 

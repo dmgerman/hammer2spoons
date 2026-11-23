@@ -151,7 +151,7 @@ function alert(message) {
  * hs_windowfilter-gt costs about 1 ms, so anything that runs often uses filterWindows().
  *
  * Ordering is by application rather than front to back, so a caller that needs the order
- * uses hs.window.orderedWindows().
+ * uses windowsStacked().
  */
 function allApplicationWindows() {
     return hs.window.allWindows().filter((window) => {
@@ -1037,12 +1037,53 @@ function _windowWithWindowSwap(other, win) {
     return true
 }
 
+/**
+ * The standard windows on screen, front to back: those of `screen` first, then those of each
+ * other screen, each screen's in its own order.
+ *
+ * The order comes from the Space each screen shows, through HSSpace.windowIDs(), which lists its
+ * windows front to back. hs.window.orderedWindows() is not used, because it lists every window of
+ * the frontmost application first and then those of each other application, so a window of
+ * another application stacked between two of its windows came after both (hammer2spoons-ei6.63).
+ * The windows themselves come from hs_windowfilter-gt's records, which cost about 1 ms and hold
+ * whether each window is standard and on screen, so no application is asked for its windows.
+ *
+ * @param {object} [screen] The screen whose windows come first.
+ * @returns {Array} HSWindow objects.
+ */
+function windowsStacked(screen) {
+    const records = windowFilter ? windowFilter.records() : []
+    const byId = new Map(records
+        .filter((record) => record.state.standard && record.state.onScreen)
+        .map((record) => [record.state.id, record.window]))
+    const screens = hs.screen.all()
+    if (screen) screens.sort((a, b) => (a.id === screen.id ? -1 : b.id === screen.id ? 1 : 0))
+    const stacked = []
+    for (const each of screens) {
+        let ids = []
+        try {
+            const space = (each.spaces || []).find((s) => s.isCurrent)
+            if (space) ids = space.windowIDs()
+        } catch (e) {
+            ids = []
+        }
+        for (const id of ids) {
+            const window = byId.get(id)
+            if (window) {
+                stacked.push(window)
+                byId.delete(id)
+            }
+        }
+    }
+    return stacked
+}
+
 /** Swap this window's position and size with the window behind it. */
 function _windowWithPreviousSwap(win) {
     const window = win || focused()
     if (!window) return false
 
-    const other = hs.window.orderedWindows().find((w) => w.id !== window.id)
+    const other = windowsStacked(screenOfWindow(window)).find((w) => w.id !== window.id)
     if (!other) {
         alert("No other window")
         return false
@@ -1055,7 +1096,7 @@ function _windowWithPreviousSwap(win) {
  *
  * The previous window is the one hs_windowfilter-gt last reported losing the focus, so a
  * change between two windows of one application counts. When none is known yet, or it has
- * closed, the window behind the focused one in hs.window.orderedWindows() is taken instead.
+ * closed, the window directly behind the focused one is taken instead, from windowsStacked().
  */
 function windowPrevious() {
     if (previousFocusedId !== null) {
@@ -1063,20 +1104,30 @@ function windowPrevious() {
         if (still) return _windowFocus(still)
     }
 
-    const ordered = hs.window.orderedWindows()
-    if (ordered.length < 2) {
+    const current = focused()
+    const behind = windowsStacked(screenOfWindow(current)).find((w) => !current || w.id !== current.id)
+    if (!behind) {
         alert("No previous window")
         return false
     }
-    return _windowFocus(ordered[1])
+    return _windowFocus(behind)
 }
 
-/** Send a window behind the others, by focusing the one under it. */
+/**
+ * Send a window behind the others on its screen, by focusing each of them in turn, from back to
+ * front. The windows on other screens are left alone: focusing them does not change what is in
+ * front of this window, and each focus costs time.
+ */
 function _windowToBackSend(win) {
     const window = win || focused()
     if (!window) return false
 
-    const ordered = hs.window.orderedWindows().filter((w) => w.id !== window.id)
+    const screen = screenOfWindow(window)
+    const ordered = windowsStacked(screen).filter((w) => {
+        if (w.id === window.id) return false
+        const other = screenOfWindow(w)
+        return !screen || !other || other.id === screen.id
+    })
     if (!ordered.length) {
         alert("No other window")
         return false
