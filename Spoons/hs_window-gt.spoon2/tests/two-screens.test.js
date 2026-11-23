@@ -98,8 +98,6 @@ const tests = [
     },
     {
         name: "a window returning to a screen takes the frame it last had there",
-        // Fails on the user's screens because of the defect tested directly below.
-        knownIssue: "Hammerspoon/Hammerspoon2#423",
         run: async (t) => {
             const [a, b] = hs.screen.all()
             const window = await windowOn(t, a)
@@ -117,12 +115,11 @@ const tests = [
         }
     },
     {
-        // Hammerspoon 2 itself, without this Spoon: the sequence of frames in issue #423. The
-        // Spoon does not work around the defect; the user decided on 2026-11-23 to wait for the
-        // fix upstream. When this test reports FIXED, the test above should pass too, and both
-        // lose their knownIssue.
+        // Hammerspoon 2 itself, without this Spoon: the sequence of frames in issue #423, which
+        // cut the window at the right edge of the screen it left. Hammerspoon 2 fixed it in pull
+        // request #429 (8e595e8a), and the test is kept so that the defect is noticed if it
+        // returns. The Spoon never worked around it.
         name: "Hammerspoon 2 gives a window the full width of a frame set on another screen",
-        knownIssue: "Hammerspoon/Hammerspoon2#423",
         run: async (t) => {
             const [a, b] = hs.screen.all()
             const target = within(b, 1 / 2, 1 / 2, 1 / 2, 1 / 2)
