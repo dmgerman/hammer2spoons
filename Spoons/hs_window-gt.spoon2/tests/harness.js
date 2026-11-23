@@ -101,6 +101,16 @@ async function testRun(file, test, shared, fixtures) {
         if (timer) timer.stop()
         await fixture.close()
     }
+    // A test that fails because of a known defect elsewhere names it in knownIssue. Its failure
+    // is reported as "known" and does not fail the run. If it passes, the defect may have been
+    // fixed, so it is reported as "fixed", which fails the run until knownIssue is removed.
+    if (test.knownIssue && result.status === "fail") {
+        result.status = "known"
+        result.message = `${test.knownIssue}: ${result.message}`
+    } else if (test.knownIssue && result.status === "pass") {
+        result.status = "fixed"
+        result.message = `${test.knownIssue} may be fixed; remove knownIssue from this test`
+    }
     result.seconds = (Date.now() - started) / 1000
     return result
 }
@@ -167,7 +177,7 @@ async function runAll(options) {
             if (!Array.isArray(loaded) && loaded.screens > connected) {
                 for (const test of tests) {
                     results.push({ file, name: test.name, status: "skip",
-                        message: `needs ${loaded.screens} screens, and ${connected} is connected` })
+                        message: `needs ${loaded.screens} screens, and ${connected} ${connected === 1 ? "is" : "are"} connected` })
                 }
                 continue
             }
@@ -182,11 +192,12 @@ async function runAll(options) {
 
     const count = (status) => results.filter((r) => r.status === status).length
     const lines = results.map((r) => [r.status, r.file.replace(/^.*\//, ""), r.name, r.message || ""].join("\t"))
-    lines.push(["result", count("fail") ? "fail" : "pass", count("pass"), count("fail"), count("skip")].join("\t"))
+    const failed = count("fail") + count("fixed")
+    lines.push(["result", failed ? "fail" : "pass", count("pass"), failed, count("skip"), count("known")].join("\t"))
     // The user asked to acknowledge the end of a run, so that they know when the mouse and the
     // keyboard can be used again. The report is written only after that, whichever choice
     // closes the chooser.
-    await finishConfirm(`${count("pass")} passed, ${count("fail")} failed, ${count("skip")} skipped`)
+    await finishConfirm(`${count("pass")} passed, ${failed} failed, ${count("skip")} skipped, ${count("known")} known failures`)
     reportWrite(options.reportFile, lines)
 }
 

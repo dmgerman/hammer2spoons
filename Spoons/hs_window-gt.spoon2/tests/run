@@ -54,14 +54,15 @@ while [ ! -f "$report" ]; do
 done
 
 status=2
-while IFS=$'\t' read -r kind a b c d; do
+while IFS=$'\t' read -r kind a b c d e; do
     case "$kind" in
-        pass|fail|skip)
-            printf '%-4s  %s: %s%s\n' "$(echo "$kind" | tr a-z A-Z)" "$a" "$b" "${c:+  ($c)}" ;;
+        pass|fail|skip|known|fixed)
+            printf '%-5s  %s: %s%s\n' "$(echo "$kind" | tr a-z A-Z)" "$a" "$b" "${c:+  ($c)}" ;;
         result)
+            totals="$b passed, $c failed, $d skipped, ${e:-0} known failures."
             case "$a" in
-                pass) echo "$b passed, $c failed, $d skipped."; status=0 ;;
-                fail) echo "$b passed, $c failed, $d skipped."; status=1 ;;
+                pass) echo "$totals"; status=0 ;;
+                fail) echo "$totals"; status=1 ;;
                 cancelled) echo "The tests were cancelled."; status=1 ;;
                 *) echo "The tests stopped with an error: $b" >&2; status=2 ;;
             esac ;;

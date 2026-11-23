@@ -94,7 +94,7 @@ function create(runId, skip) {
     // Ends the test as skipped when fewer than count screens are connected.
     function screensNeed(count) {
         const connected = hs.screen.all().length
-        if (connected < count) skip(`needs ${count} screens, and ${connected} is connected`)
+        if (connected < count) skip(`needs ${count} screens, and ${connected} ${connected === 1 ? "is" : "are"} connected`)
     }
 
     function frameEqual(actual, expected, message) {

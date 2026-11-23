@@ -40,7 +40,12 @@ A run has four steps:
 * Writing a test
 
 A test file is named =<area>.test.js= and exports a list of tests. Each test has a =name=, a
-=run= function, and optionally a =timeout= in seconds, which is 10 by default. =run= may be
+=run= function, and optionally a =timeout= in seconds, which is 10 by default.
+
+A test that fails because of a known defect outside this Spoon names it in =knownIssue=, such as
+="Hammerspoon/Hammerspoon2#423"=. Its failure is reported as =KNOWN= and does not fail the run.
+When such a test passes, it is reported as =FIXED=, which fails the run: the defect may have been
+fixed, and =knownIssue= is removed from the test once that is confirmed. =run= may be
 asynchronous, and receives one argument with these fields:
 
 | Field         | Holds                                                                      |

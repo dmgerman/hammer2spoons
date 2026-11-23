@@ -28,6 +28,16 @@ module.exports = [
         run: (t) => t.wait(3)
     },
     {
+        name: "a test with a known issue that fails is reported as known",
+        knownIssue: "example#1",
+        run: (t) => t.assert.fail("fails because of example#1")
+    },
+    {
+        name: "a test with a known issue that passes is reported as fixed (expected)",
+        knownIssue: "example#2",
+        run: () => {}
+    },
+    {
         name: "the copy of the Spoon is not the one the configuration loaded",
         run: (t) => {
             t.assert.ok(t.spoon !== hs.spoons["hs_window-gt"], "the tests received the loaded copy")
