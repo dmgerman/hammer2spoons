@@ -17,22 +17,12 @@ tests/run tests/selftest/harness.test.js           # the given files, asking on 
 
 Run only the files a change can affect.
 
-* WARNING: =tests/start.test.js= crashes Hammerspoon 2
+* =tests/start.test.js= and issue 432
 
-Running =tests/run tests/start.test.js= crashes Hammerspoon 2. On 2026-11-23, with the Spoon at
-4.0.1, it did so in all three of my runs of the whole file, and in the user's own run; one earlier
-run, at 4.0.0, did not crash. The user's run of =make test=, which passes =--no-confirm= and so
-shows no start chooser, did not crash. The crash is in Hammerspoon 2: an uncaught =NSGenericException= ("more Update
-Constraints in Window passes than there are views in the window"), thrown inside a text prompt's
-modal loop (=HSUITextPrompt.swift:155=) while AppKit and SwiftUI lay out the alert stack window. It
-is reported upstream in [[https://github.com/Hammerspoon/Hammerspoon2/issues/432][issue 432]].
-
-The crash needs the file's test 12, "countdownPromptedStart() accepts a time of day", after both
-halves of tests 1 to 10, and the start chooser of =tests/run=. Without test 12 the file passes.
-
-After a crash, Hammerspoon 2 has to be relaunched. Its crash reporter then opens a dialog, which may
-be hidden behind other windows, and the configuration does not load until it is answered. =open -a=
-on the application brings the dialog forward.
+Running =tests/run tests/start.test.js= crashed Hammerspoon 2 until upstream fixed [[https://github.com/Hammerspoon/Hammerspoon2/issues/432][issue 432]],
+in pull request #435. The alerts the file shows stacked taller than the screen, and AppKit threw an
+=NSGenericException= inside a text prompt's modal loop while it laid out the alert stack window.
+On 2026-11-23, with a build that includes the fix, the file passed and Hammerspoon 2 did not crash.
 
 * The copy under test
 

@@ -1,26 +1,7 @@
-// ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
-// │ WARNING: RUNNING THIS FILE CRASHES HAMMERSPOON 2.                                            │
-// └──────────────────────────────────────────────────────────────────────────────────────────────┘
-//
-// On 2026-11-23, with this Spoon at 4.0.1, every run of the whole file crashed Hammerspoon 2 (three
-// out of three), and so did three runs of it with one test added or removed. One earlier run, with
-// the Spoon at 4.0.0, did not crash. The crash is an uncaught NSGenericException: "The window has
-// been marked as needing another Update Constraints in Window pass, but it has already had more
-// Update Constraints in Window passes than there are views in the window." It is thrown inside the
-// modal loop of a text prompt (HSUITextPrompt.swift:155, alert.runModal()), while AppKit and SwiftUI
-// lay out Hammerspoon 2's alert stack window. The crash is Hammerspoon 2's, not this Spoon's, and is
-// reported upstream in https://github.com/Hammerspoon/Hammerspoon2/issues/432.
-//
-// The crash needs test 12 ("countdownPromptedStart() accepts a time of day") after both halves of
-// tests 1 to 10. Without test 12 the file passes, and so does test 12 with only some of the tests
-// before it. It also needs the start chooser of tests/run: the user's run of make test, which
-// passes --no-confirm and shows no chooser, did not crash, while the user's run of
-// tests/run tests/start.test.js did. The chooser is closed before the tests start, and is not in
-// the crash's stack.
-//
-// Before running it, save your work: Hammerspoon 2 has to be relaunched, and its crash reporter
-// then opens a dialog that may be hidden behind other windows, and holds the configuration until it
-// is answered. tests/readme.org says more.
+// Running this file with tests/run crashed Hammerspoon 2 until upstream fixed
+// https://github.com/Hammerspoon/Hammerspoon2/issues/432 in pull request #435 (1e19ae13): the alert
+// stack window grew taller than the screen, and AppKit threw inside the text prompt's modal loop.
+// With that fix the file passes.
 
 // Tests of starting a countdown, as the readme describes it under "Starting a countdown", "Times
 // of day" and "Functions".
