@@ -82,10 +82,12 @@ module.exports = [
         name: "every function the readme names can be bound",
         run: (t) => {
             t.cleanup(() => t.spoon.bindHotkeys({}))
-            const names = ["windowSelect", "applicationWindowSelect", "applicationSelect", "windowPreviousSelect", "applicationWindowPreviousSelect"]
+            const names = ["windowSelect", "applicationWindowSelect", "applicationSelect", "windowPreviousSelect",
+                "applicationWindowPreviousSelect", "windowToCurrentSpaceSelect", "menuShow", "windowSelectCurrentSpace",
+                "applicationWindowSelectCurrentSpace", "windowPreviousSelectCurrentSpace", "applicationWindowPreviousSelectCurrentSpace"]
             const mapping = {}
-            names.forEach((name, i) => { mapping[name] = [MODIFIERS, ["7", "8", "9", "7", "8"][i]] })
-            // Two names share a key here; only whether bindHotkeys() accepts each name matters.
+            names.forEach((name, i) => { mapping[name] = [MODIFIERS, ["7", "8", "9"][i % 3]] })
+            // Names share keys here; only whether bindHotkeys() accepts each name matters.
             for (const name of names) t.spoon.bindHotkeys({ [name]: mapping[name] })
         }
     },
@@ -107,10 +109,10 @@ module.exports = [
         }
     },
     {
-        name: "start() throws, naming the Spoon, when hs_interactive-gt, hs_windowfilter-gt or hs_window-gt is not loaded",
+        name: "start() throws, naming the Spoon, when hs_interactive-gt, hs_windowfilter-gt, hs_window-gt or hs_menu-gt is not loaded",
         run: (t) => {
             t.cleanup(() => t.spoon.start())
-            for (const name of ["hs_interactive-gt", "hs_windowfilter-gt", "hs_window-gt"]) {
+            for (const name of ["hs_interactive-gt", "hs_windowfilter-gt", "hs_window-gt", "hs_menu-gt"]) {
                 t.spoon.stop()
                 // Taken away and put back within this one synchronous call, so nothing else runs
                 // while the user's Spoon is missing.

@@ -57,6 +57,11 @@ const config = {
     subTextSize: 14,
     querySize: 24,
 
+    // Whether a chooser that would list a single window, or a single application, switches to
+    // it at once without being shown, as the Hammerspoon 1 Spoon did. Off by default, so that
+    // the chooser shows where it would go and can be cancelled.
+    singleRowSwitch: false,
+
     // A picture of the selected window, drawn above the chooser. One snapshot costs around
     // 120ms, so it is taken when a window is first selected rather than for the whole list,
     // and kept while the chooser is open. Tab turns it off and on.
@@ -103,6 +108,11 @@ let overlay = null                 // the canvas showing the thumbnail
 let thumbnails = new Map()         // window id -> HSImage
 let showingThumbnail = config.showThumbnail
 let sessionKeys = []               // hotkeys bound only while the chooser is open
+// The key that opened the chooser, as {mods, key}, or null when it was not opened by a key.
+// Pressed again while the chooser is open, it moves the selection down; with Shift, up.
+let sessionOpeningKey = null
+// The key of this Spoon's own bindHotkeys() whose function is running, for keyNow().
+let ownKeyRunning = null
 let lastDrawnId = null
 let pendingSnapshots = new Set()   // window ids whose snapshot has been asked for
 // Window id -> window, for the chooser that is open. Enumerating windows is the most
@@ -445,7 +455,48 @@ function takeSessionKeys() {
         showThumbnailFor(selectedWindowId(), true)
     }, null)
 
-    sessionKeys = [toggle, refresh].filter(Boolean)
+    // The opening key with Shift moves the selection up. When that chord is bound to something
+    // else, such as another command of the user's, hs.hotkey.bind() refuses it, and that other
+    // command runs instead; when it is one of this Spoon's choosers, chooseFrom() moves up.
+    // The opening key itself is always bound already, so it is not bound here: its function
+    // runs again, and chooseFrom() moves the selection down.
+    let up = null
+    if (sessionOpeningKey && !sessionOpeningKey.mods.includes("shift")) {
+        up = hs.hotkey.bind(sessionOpeningKey.mods.concat(["shift"]), sessionOpeningKey.key, () => selectionMove(-1), null)
+    }
+
+    sessionKeys = [toggle, refresh, up].filter(Boolean)
+}
+
+// MARK: - Moving the selection with the opening key
+
+/** The key whose function is running, from this Spoon's bindHotkeys() or hs_interactive-gt. */
+function keyNow() {
+    if (ownKeyRunning) return ownKeyRunning
+    const interactive = hs.spoons["hs_interactive-gt"]
+    return interactive && typeof interactive.keyRunning === "function" ? interactive.keyRunning() : null
+}
+
+const modifiersOf = (key) => key.mods.map((m) => String(m).toLowerCase()).sort().join("+")
+
+/** Whether two keys are the same chord, `b` with Shift added when `shifted` is true. */
+function sameKey(a, b, shifted) {
+    if (!a || !b || String(a.key).toLowerCase() !== String(b.key).toLowerCase()) return false
+    const wanted = shifted ? { mods: b.mods.concat(["shift"]) } : b
+    return modifiersOf(a) === modifiersOf(wanted)
+}
+
+/**
+ * Move the open chooser's selection by one row, down for 1 and up for -1, wrapping round at
+ * either end. The chooser keeps selectedRow within the rows that match what was typed.
+ */
+function selectionMove(delta) {
+    if (!chooser || !chooser.isVisible) return
+    const row = chooser.selectedRow
+    const next = row + delta
+    if (delta > 0) chooser.selectedRow = chooser.selectedRowContents(next) ? next : 0
+    else if (next < 0) chooser.selectedRow = Number.MAX_SAFE_INTEGER
+    else chooser.selectedRow = next
 }
 
 function releaseSessionKeys() {
@@ -649,9 +700,30 @@ function chooserGeometry(area) {
  * @param {string} placeholder Prompt text.
  */
 function chooseFrom(all, placeholder, windowless = [], choose = focusWindowById) {
+    // The key that opened the open chooser, pressed again, moves its selection instead of
+    // opening another chooser: down, or up with Shift. Hammerspoon 1's Spoon did the same.
+    const key = keyNow()
+    if (chooser && chooser.isVisible && sessionOpeningKey && key) {
+        if (sameKey(key, sessionOpeningKey, false)) {
+            selectionMove(1)
+            return chooser
+        }
+        if (sameKey(key, sessionOpeningKey, true)) {
+            selectionMove(-1)
+            return chooser
+        }
+    }
+
     const records = withoutFocused(all)
     if (!records.length && !windowless.length) {
         hs.ui.alert("No windows to choose from").duration(2).show()
+        return null
+    }
+
+    // With one row, config.singleRowSwitch switches to it without showing a chooser.
+    if (config.singleRowSwitch && records.length + windowless.length === 1) {
+        if (records.length) choose(records[0].state.id)
+        else applicationActivate(windowless[0].application.pid)
         return null
     }
 
@@ -660,6 +732,7 @@ function chooseFrom(all, placeholder, windowless = [], choose = focusWindowById)
     // A chooser already open is closed first. Its own callbacks then find that it is no longer
     // the current chooser, and do not report the new one's prompt as closed.
     chooserClose()
+    sessionOpeningKey = key
 
     sessionWindows = new Map(records.map((r) => [r.state.id, r.window]))
     if (!config.persistentThumbnailCache) thumbnails = new Map()
@@ -730,6 +803,7 @@ function finishChoosing() {
     }
     stopPolling()
     releaseSessionKeys()
+    sessionOpeningKey = null
     hideThumbnail()
     if (!config.persistentThumbnailCache) thumbnails = new Map()
     pendingSnapshots = new Set()
@@ -1169,6 +1243,112 @@ function order() {
 let hotkeys = []
 
 // The functions a key can run, as hs_window-gt does it: the names are the functions' own.
+// MARK: - The menu
+//
+// The menu hs_menu-gt displays for this Spoon. Every option opens a chooser, which needs the
+// keyboard, or switches at once, so the menu closes after each.
+
+/**
+ * The window-switching menu, for hs_menu-gt: menuShow() displays it, and a menu of your own can
+ * include it as a submenu with `children: hs.spoons["hs_selectWindow-gt"].menu`.
+ */
+const menu = {
+    keepOpen: false,
+    buttons: [
+        { label: "All windows", icon: "symbol:macwindow.on.rectangle", key: "b", fn: () => module.exports.windowSelect() },
+        { label: "Windows here", icon: "symbol:rectangle.stack", key: "s", fn: () => module.exports.windowSelect({ currentSpace: true }) },
+        { label: "App windows", icon: "symbol:square.stack", key: "a", fn: () => module.exports.applicationWindowSelect() },
+        { label: "App windows here", icon: "symbol:square.stack.fill", key: "h",
+          fn: () => module.exports.applicationWindowSelect(undefined, { currentSpace: true }) },
+        { label: "Applications", icon: "symbol:square.grid.2x2", key: "t", fn: () => module.exports.applicationSelect() },
+        { label: "Previous", icon: "symbol:arrow.uturn.backward", key: "p", fn: () => module.exports.windowPreviousSelect() },
+        { label: "Previous here", icon: "symbol:arrow.uturn.backward.circle", key: "o",
+          fn: () => module.exports.windowPreviousSelect({ currentSpace: true }) },
+        { label: "App previous", icon: "symbol:arrow.left.arrow.right", key: "n", fn: () => module.exports.applicationWindowPreviousSelect() },
+        { label: "Bring here", icon: "symbol:arrow.down.to.line", key: "m", fn: () => module.exports.windowToCurrentSpaceSelect() },
+        { label: "Fullscreen", icon: "symbol:arrow.up.left.and.arrow.down.right", key: "f", fn: () => module.exports.fullscreenWindowNextSelect() },
+        { label: "Bindings", icon: "symbol:keyboard", key: "k", fn: () => module.exports.bindingsShow() }
+    ]
+}
+
+/** Display the window-switching menu on screen, with hs_menu-gt. */
+function menuShow() {
+    spoonRequired("hs_menu-gt").onScreenShow(menu, { name: "Switch window" })
+    return module.exports
+}
+
+// The keys bound with bindHotkeys(), as {name, mods, key}, for bindingsShow().
+let ownBindings = []
+
+// The canvas bindingsShow() draws, and the timer that removes it.
+let bindingsCanvas = null
+let bindingsTimer = null
+const BINDINGS_SECONDS = 8
+const BINDINGS_TEXT = { textFont: "Menlo", textSize: 15, textColor: { red: 1, green: 1, blue: 1, alpha: 1 } }
+const BINDINGS_PADDING = 18
+
+/**
+ * Show the keys that run this Spoon's functions, in a rectangle in the middle of the screen
+ * that has the focus, for BINDINGS_SECONDS: those bound with bindHotkeys(), and those bound to
+ * the commands defined for this Spoon in the configuration through hs_interactive-gt's use().
+ * Commands without a key are left out.
+ *
+ * It is drawn on a canvas, not with hs.ui.alert, whose shape is a rounded pill that cannot be
+ * changed; the user asked for a rectangle on 2026-11-24.
+ *
+ * @returns {string[]} The lines shown.
+ */
+function bindingsShow() {
+    const interactive = hs.spoons["hs_interactive-gt"]
+    const label = (binding) => interactive ? interactive.keyLabel(binding) : `${binding.mods.join("-")}-${binding.key}`
+    const lines = ownBindings.map((binding) => `${label(binding)}  ${binding.name}`)
+    if (interactive && typeof interactive.commandsOfSpoon === "function") {
+        for (const command of interactive.commandsOfSpoon(SPOON_NAME)) {
+            if (command.keys.length) lines.push(`${command.keys.join(", ")}  ${command.name}`)
+        }
+    }
+    const text = lines.length ? lines.join("\n") : "No keys run this Spoon's functions"
+
+    bindingsHide()
+    const screen = hs.screen.main() || hs.screen.primary()
+    const primary = hs.screen.primary() || screen
+    const area = screen.frame
+    const canvas = hs.canvas.create({ x: area.x, y: 0, w: 10, h: 10 })
+    const size = canvas.minimumTextSize(BINDINGS_TEXT, text)
+    const w = Math.ceil(size.w) + BINDINGS_PADDING * 2
+    const h = Math.ceil(size.h) + BINDINGS_PADDING * 2
+    const top = area.y + (area.h - h) / 2
+    // hs.screen measures y downwards from the top of the primary display, and a canvas upwards
+    // from its bottom.
+    canvas.setFrame({
+        x: area.x + (area.w - w) / 2,
+        y: (primary.fullFrame.y + primary.fullFrame.h) - (top + h),
+        w,
+        h
+    })
+    canvas.level("popUpMenu").ignoreMouseEvents(true).behaviorList(["canJoinAllSpaces", "stationary"])
+    canvas.appendElements([
+        { type: "rectangle", action: "fill", fillColor: { red: 0.1, green: 0.1, blue: 0.1, alpha: 0.9 }, frame: { x: 0, y: 0, w, h } },
+        Object.assign({ type: "text", text, frame: { x: BINDINGS_PADDING, y: BINDINGS_PADDING, w: w - BINDINGS_PADDING * 2, h: h - BINDINGS_PADDING * 2 } }, BINDINGS_TEXT)
+    ])
+    canvas.show()
+    bindingsCanvas = canvas
+    bindingsTimer = hs.timer.doAfter(BINDINGS_SECONDS, bindingsHide)
+    return lines
+}
+
+/** Remove what bindingsShow() drew, and stop its timer. */
+function bindingsHide() {
+    if (bindingsTimer) {
+        bindingsTimer.stop()
+        bindingsTimer = null
+    }
+    if (bindingsCanvas) {
+        bindingsCanvas.destroy()
+        bindingsCanvas = null
+    }
+}
+
 // What each name bindHotkeys() accepts runs. The names ending in CurrentSpace run a function
 // with { currentSpace: true }.
 const HOTKEY_FUNCTIONS = {
@@ -1181,7 +1361,8 @@ const HOTKEY_FUNCTIONS = {
     windowSelectCurrentSpace: () => module.exports.windowSelect({ currentSpace: true }),
     applicationWindowSelectCurrentSpace: () => module.exports.applicationWindowSelect(undefined, { currentSpace: true }),
     windowPreviousSelectCurrentSpace: () => module.exports.windowPreviousSelect({ currentSpace: true }),
-    applicationWindowPreviousSelectCurrentSpace: () => module.exports.applicationWindowPreviousSelect({ currentSpace: true })
+    applicationWindowPreviousSelectCurrentSpace: () => module.exports.applicationWindowPreviousSelect({ currentSpace: true }),
+    menuShow: () => module.exports.menuShow()
 }
 
 function hotkeysRelease() {
@@ -1189,6 +1370,7 @@ function hotkeysRelease() {
         if (key) key.destroy()
     }
     hotkeys = []
+    ownBindings = []
 }
 
 /**
@@ -1212,19 +1394,34 @@ function bindHotkeys(mapping) {
     }
 
     hotkeysRelease()
+    ownBindings = []
     for (const [name, [mods, key]] of entries) {
-        const hotkey = hs.hotkey.bind(mods, key, HOTKEY_FUNCTIONS[name], null)
-        if (hotkey) hotkeys.push(hotkey)
+        const binding = { mods: mods.slice(), key }
+        const hotkey = hs.hotkey.bind(mods, key, () => {
+            // keyNow() reports this key while the function runs, as hs_interactive-gt's
+            // keyRunning() does for its keys.
+            ownKeyRunning = binding
+            try {
+                HOTKEY_FUNCTIONS[name]()
+            } finally {
+                ownKeyRunning = null
+            }
+        }, null)
+        if (hotkey) {
+            hotkeys.push(hotkey)
+            ownBindings.push({ name, mods: mods.slice(), key })
+        }
         else console.error(`[${SPOON_NAME}] could not bind ${mods.join("-")} ${key} to ${name}`)
     }
     return module.exports
 }
 
 function start() {
-    // All three are required. Checked here, so that a missing one is reported when the Spoon
+    // All four are required. Checked here, so that a missing one is reported when the Spoon
     // starts rather than the first time it is needed.
     spoonRequired("hs_interactive-gt")
     spoonRequired("hs_window-gt")
+    spoonRequired("hs_menu-gt")
     startTrackingFocus()
     return module.exports
 }
@@ -1242,6 +1439,7 @@ function stop() {
     pendingSnapshots = new Set()
 
     hotkeysRelease()
+    bindingsHide()
     return module.exports
 }
 
@@ -1258,6 +1456,9 @@ module.exports = {
     applicationByNameSelect,
     applicationWindowByTitleSelect,
     fullscreenWindowNextSelect,
+    menu,
+    menuShow,
+    bindingsShow,
     applicationByBundleSelect,
     order,
     bindHotkeys,

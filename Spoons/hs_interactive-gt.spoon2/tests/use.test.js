@@ -92,6 +92,28 @@ module.exports = [
         }
     },
     {
+        name: "commandsOfSpoon() lists the commands use() defined for a Spoon, with their keys, and not those defined elsewhere",
+        run: (t) => {
+            const { spoonMake } = loaderFake(t)
+            const spoon = spoonMake()
+            t.spoon.use(spoon.name, {
+                commands: (interactive) => {
+                    interactive.define({ name: `${spoon.name}-keyed`, doc: "With a key.", fn: () => {} })
+                    interactive.define({ name: `${spoon.name}-unkeyed`, doc: "Without one.", fn: () => {} })
+                },
+                keys: [[MODIFIERS, "9", `${spoon.name}-keyed`]]
+            })
+            t.cleanup(() => t.spoon.keyUnset(MODIFIERS, "9"))
+            t.spoon.define({ name: `${spoon.name}-elsewhere`, fn: () => {} })
+            const listed = t.spoon.commandsOfSpoon(spoon.name)
+            t.assert.equal(listed.map((c) => c.name).join(", "), `${spoon.name}-keyed, ${spoon.name}-unkeyed`, "the commands")
+            t.assert.equal(listed[0].doc, "With a key.", "the first command's doc")
+            t.assert.equal(JSON.stringify(listed[0].keys), JSON.stringify([t.spoon.keyLabel({ mods: MODIFIERS, key: "9" })]), "the first command's keys")
+            t.assert.equal(listed[1].keys.length, 0, "the second command's keys")
+            t.assert.equal(t.spoon.commandsOfSpoon("test-spoon-none").length, 0, "a Spoon without commands")
+        }
+    },
+    {
         name: "use() with disabled does not load the Spoon, returns null and records it as disabled",
         run: (t) => {
             const { loaded, spoonMake } = loaderFake(t)

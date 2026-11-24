@@ -7,8 +7,9 @@
 // hs_interactive-gt reports a prompt open, which the copy reports for its chooser. A key sent
 // after the chooser closed would reach the application behind it.
 
-// Records every chooser created until the test ends: {rows, placeholder, assigned}, where
-// assigned holds every property set on the chooser, such as visibleRows and width.
+// Records every chooser created until the test ends: {rows, placeholder, assigned, chooser},
+// where assigned holds every property set on the chooser, such as visibleRows and width, and
+// chooser is the chooser itself, for reading its state.
 function choosersCapture(t) {
     const original = hs.chooser.create
     // Taken before the replacement, so that the function is put back as it was.
@@ -16,7 +17,7 @@ function choosersCapture(t) {
     const choosers = []
     hs.chooser.create = function () {
         const real = original.apply(hs.chooser, arguments)
-        const record = { rows: [], placeholder: null, assigned: {} }
+        const record = { rows: [], placeholder: null, assigned: {}, chooser: real }
         choosers.push(record)
         const proxy = new Proxy(real, {
             get(target, property) {

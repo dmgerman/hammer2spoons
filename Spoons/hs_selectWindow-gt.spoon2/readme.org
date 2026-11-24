@@ -33,18 +33,18 @@ the selected window to its left:
 
 * Installing
 
-This Spoon requires three other Spoons from this repository, which must be loaded before it:
+This Spoon requires four other Spoons from this repository, which must be loaded before it:
 
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]] is told when the chooser opens and closes. Other
   Spoons that bind keys, such as hs_menu-gt, then release those keys while the chooser is open,
   so that the text typed reaches the chooser.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] keeps a record of the open windows and reports which one receives the
   focus. This Spoon takes its list of windows, and their order, from hs_windowfilter-gt.
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]] focuses the chosen window and moves it between screens. It requires
-  [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] in turn.
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]] focuses the chosen window and moves it between screens.
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]] displays this Spoon's menu, described under /The menu/.
 
 The following configuration installs all five Spoons. It binds ⌥B to the chooser of every
-window, and ⌥` to the previously used window:
+window, ⌥` to the previously used window, and ⌃⌥⌘B to the menu:
 
 #+begin_src js
 hs.spoons.use("hs_interactive-gt", { source: "dmgerman/hammer2spoons" })
@@ -54,7 +54,11 @@ hs.spoons.use("hs_window-gt", { source: "dmgerman/hammer2spoons", start: true })
 hs.spoons.use("hs_selectWindow-gt", {
     source: "dmgerman/hammer2spoons",
     start: true,
-    hotkeys: { windowSelect: [["alt"], "b"], windowPreviousSelect: [["alt"], "`"] }
+    hotkeys: {
+        windowSelect: [["alt"], "b"],
+        windowPreviousSelect: [["alt"], "`"],
+        menuShow: [["ctrl", "alt", "cmd"], "b"]
+    }
 })
 #+end_src
 
@@ -94,6 +98,14 @@ The chooser lists one row per window. Each row shows the window's title. Beneath
 shows the application, the screen the window is on, and the words "minimized" or "hidden" when
 they apply.
 
+The key that opened the chooser moves the selection while the chooser is open: pressed again,
+it moves down one row, and with Shift, up one row, going round at either end. Holding its
+modifier and pressing the key repeatedly therefore steps through the windows, and Return
+switches. This works for a key bound with =bindHotkeys()=, and for a key bound to a command with
+hs_interactive-gt's =keysSet()=. With Shift, the key moves up when Shift and the key are bound to
+nothing else, or to another of this Spoon's choosers; a chord bound to something else runs that
+instead.
+
 When the window is on a Space that its screen is not showing, the Space follows the screen: the
 desktop's number, such as /Desktop 2/, or /fullscreen/ for a window in fullscreen, whose Space
 holds that window alone. A window on a Space being shown has nothing added.
@@ -126,6 +138,35 @@ snapshot smaller than that is drawn at its own size, and is not enlarged.
 
 Taking a snapshot requires the Screen Recording permission. Without it, the chooser works and
 shows no thumbnails.
+
+* The menu
+
+=menuShow()= displays a menu of this Spoon's actions, for when their keys are not remembered.
+Each option has a letter beneath it, and pressing that letter selects the option. The menu
+closes after each option.
+
+| Letter | Option           | Action                                                        |
+|--------+------------------+---------------------------------------------------------------|
+| b      | All windows      | =windowSelect()=                                              |
+| s      | Windows here     | =windowSelect({ currentSpace: true })=                        |
+| a      | App windows      | =applicationWindowSelect()=                                   |
+| h      | App windows here | =applicationWindowSelect(undefined, { currentSpace: true })=  |
+| t      | Applications     | =applicationSelect()=                                         |
+| p      | Previous         | =windowPreviousSelect()=                                      |
+| o      | Previous here    | =windowPreviousSelect({ currentSpace: true })=                |
+| n      | App previous     | =applicationWindowPreviousSelect()=                           |
+| m      | Bring here       | =windowToCurrentSpaceSelect()=                                |
+| f      | Fullscreen       | =fullscreenWindowNextSelect()=                                |
+| k      | Bindings         | =bindingsShow()=                                              |
+
+/Bindings/ shows the keys that run this Spoon's functions, in a rectangle in the middle of the
+screen, for 8 seconds. It lists the keys
+bound with =bindHotkeys()=, and the keys bound to the commands that the configuration defines
+for this Spoon with hs_interactive-gt's =use()=, through its =commandsOfSpoon()=. Commands without
+a key are left out.
+
+The menu is exported as =menu=, so a menu defined in the configuration can include it as a
+submenu, with =children: hs.spoons["hs_selectWindow-gt"].menu=.
 
 * Functions
 
@@ -293,9 +334,10 @@ chooser. The first is the window =windowPreviousSelect()= focuses.
 
 =bindHotkeys()= binds keys to this Spoon's functions. =hs.spoons.use()= calls it with its
 =hotkeys= option. Each property of =mapping= is the name of a function, and its value is
-=[modifiers, key]=. Six functions can be bound: =windowSelect=, =applicationWindowSelect=,
-=applicationSelect=, =windowPreviousSelect=, =applicationWindowPreviousSelect= and
-=windowToCurrentSpaceSelect=. Four more names bind a function with ={ currentSpace: true }=:
+=[modifiers, key]=. Seven functions can be bound: =windowSelect=, =applicationWindowSelect=,
+=applicationSelect=, =windowPreviousSelect=, =applicationWindowPreviousSelect=,
+=windowToCurrentSpaceSelect= and =menuShow=. Four more names bind a function with
+={ currentSpace: true }=:
 =windowSelectCurrentSpace=, =applicationWindowSelectCurrentSpace=,
 =windowPreviousSelectCurrentSpace= and =applicationWindowPreviousSelectCurrentSpace=.
 
@@ -328,6 +370,7 @@ settings are read each time they are used.
 | =textSize=                 |      17 | Size of a row's title, in points; null keeps the chooser's own, 14 |
 | =subTextSize=              |      14 | Size of the line beneath the title, in points; null keeps the chooser's own, 12 |
 | =querySize=                |      24 | Size of the search field's text, in points; null keeps the chooser's own, 20 |
+| =singleRowSwitch=          |   false | Whether a chooser with a single row switches to it at once, without being shown |
 | =showThumbnail=            |   false | Whether the thumbnail is shown when the chooser opens    |
 | =thumbnailHeightRatio=     |     0.4 | Largest height of the thumbnail, as a fraction of the screen |
 | =thumbnailTopRatio=        |    0.12 | The thumbnail's top, as a fraction of the screen, when the chooser's position cannot be read |
@@ -399,5 +442,5 @@ about 20% larger than the chooser's own sizes.
 
 This Spoon requires the following:
 
-- hs_interactive-gt, hs_windowfilter-gt and hs_window-gt, loaded before this Spoon.
+- hs_interactive-gt, hs_windowfilter-gt, hs_window-gt and hs_menu-gt, loaded before this Spoon.
 - The Screen Recording permission, for the thumbnails only.

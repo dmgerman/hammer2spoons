@@ -675,6 +675,8 @@ These functions bind and remove one key, and report the bindings:
 | =keySet(mods, key, name)= | Binds one key, replacing any binding it has. Returns the binding, or null when macOS refuses the key. |
 | =keyUnset(mods, key)=     | Removes a binding. Returns whether there was one.          |
 | =keysOfCommand(name)=     | The keys bound to a command, as ={mods, key}= objects.     |
+| =commandsOfSpoon(name)=   | The commands defined for a Spoon by the =commands= option of =use()=, as ={name, doc, keys}= objects, =keys= holding labels such as ="⌥B"=. |
+| =keyRunning()=            | The key that started the command now running, as ={mods, key}=, or null. A command's function reads it before it returns or first waits. |
 | =keyLabels(name)=         | The same keys as macOS writes them, such as ="⌃⌥⌘X"=.      |
 | =keyLabel(binding)=       | One binding, as macOS writes it.                           |
 | =keyDescribe(mods, key)=  | The command bound to a key, as ={mods, key, command, doc}=, or null. |

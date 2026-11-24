@@ -679,6 +679,8 @@ function define(spec) {
         name: spec.name,
         doc: spec.doc || "",
         fn: spec.fn,
+        // The Spoon whose commands use() was defining, for commandsOfSpoon(), or null.
+        spoon: definingSpoon,
         runDelay: Number(spec.runDelay) || 0,
         parameters: (spec.interactive || []).map((entry, index) => {
             // A bare function is the argument's reader, as the readme says. It used to be wrapped
@@ -809,8 +811,8 @@ function contextFor(command, values, sources, current) {
  * @param {string} name The command name.
  * @param {object} [options] `args` already supplied, `snapshot` if one was taken before
  *        this call — as `execute()` does before opening its chooser — and `via`, which
- *        is `"key"` when a hotkey triggered this. Only invocations by name count towards
- *        the recently-used order.
+ *        is `"key"` when a hotkey triggered this, with `key`, the `{mods, key}` pressed.
+ *        Only invocations by name count towards the recently-used order.
  * @returns {Promise<*>} Whatever the command returned, or undefined if cancelled.
  */
 async function callInteractively(name, options) {
@@ -878,11 +880,48 @@ async function callInteractively(name, options) {
     // the way Emacs records extended-command-history for M-x but not for a binding.
     if (!options || options.via !== "key") noteUse(command.name)
 
+    // keyRunning() reports the key while the function runs, so that a function can bind
+    // the key that started it again, as hs_selectWindow-gt does to move through its chooser.
+    keyRunningBinding = options && options.via === "key" && options.key ? options.key : null
     try {
         return command.fn(...args)
     } catch (e) {
         console.error(`[hs_interactive-gt] ${command.name} threw: ${e.message}`)
+    } finally {
+        keyRunningBinding = null
     }
+}
+
+// The key whose command is running, for keyRunning().
+let keyRunningBinding = null
+
+// The Spoon whose commands use() is defining, which define() records on each command.
+let definingSpoon = null
+
+/**
+ * The commands defined for a Spoon by the `commands` option of use(), with the keys bound to
+ * each, so that the Spoon can show them, as hs_selectWindow-gt's menu does.
+ *
+ * @param {string} name The Spoon's name, as given to use().
+ * @returns {Array} `{name, doc, keys}` objects, in the order they were defined; `keys` holds the
+ *          labels keyLabel() gives, such as "⌥B".
+ */
+function commandsOfSpoon(name) {
+    return [...registry.values()]
+        .filter((command) => command.spoon === name)
+        .map((command) => ({ name: command.name, doc: command.doc, keys: keyLabels(command.name) }))
+}
+
+/**
+ * The key that started the command now running, as `{mods, key}`, or null when no command runs
+ * or it was not started by a key. A command's function reads it while it runs, before it
+ * returns or first waits: it is cleared when the function returns, which for an async function
+ * is at its first await.
+ *
+ * @returns {?object} `{mods, key}`, with the modifiers in the order keySet() keeps them.
+ */
+function keyRunning() {
+    return keyRunningBinding ? { mods: keyRunningBinding.mods.slice(), key: keyRunningBinding.key } : null
 }
 
 /** Show the command chooser — the M-x equivalent. */
@@ -992,7 +1031,9 @@ function keySet(mods, key, name) {
     const id = chordId(normalized, keyName)
     keyUnset(normalized, keyName)
 
-    const hotkey = hs.hotkey.bind(normalized, keyName, () => { callInteractively(name, { via: "key" }) }, null)
+    const hotkey = hs.hotkey.bind(normalized, keyName, () => {
+        callInteractively(name, { via: "key", key: { mods: normalized, key: keyName } })
+    }, null)
     if (!hotkey) {
         console.error(`[hs_interactive-gt] could not bind ${keyLabel({ mods: normalized, key: keyName })} — already taken by another application?`)
         return null
@@ -1152,7 +1193,15 @@ function use(name, spec) {
 
         if (options.config && spoon.config) Object.assign(spoon.config, options.config)
         if (options.after) options.after(spoon)
-        if (options.commands) options.commands(module.exports, spoon)
+        if (options.commands) {
+            // define() stamps each command defined now with this Spoon's name.
+            definingSpoon = name
+            try {
+                options.commands(module.exports, spoon)
+            } finally {
+                definingSpoon = null
+            }
+        }
         if (options.keys) keysSet(options.keys)
         if (options.start !== false && typeof spoon.start === "function") spoon.start()
 
@@ -1331,6 +1380,8 @@ module.exports = {
     keysSet,
     keyUnset,
     keysOfCommand,
+    keyRunning,
+    commandsOfSpoon,
     keyLabel,
     keyLabels,
     keyDescribe,

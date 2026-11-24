@@ -65,6 +65,22 @@ function dialogAnswer(t, text) {
 
 module.exports = [
     {
+        name: "keyRunning() gives the key that started the running command, and null when it was run by name or after it returned",
+        run: async (t) => {
+            keysRelease(t)
+            const seen = []
+            t.spoon.define({ name: "test-keys-running", fn: () => { seen.push(t.spoon.keyRunning()) } })
+            t.spoon.keySet(MODIFIERS, "8", "test-keys-running")
+            await keyPress(t, "8")
+            t.assert.equal(seen.length, 1, "the command ran from its key")
+            const key = seen[0]
+            t.assert.ok(key && key.key === "8" && [...key.mods].sort().join(",") === "alt,ctrl,shift", `keyRunning() while it ran: ${JSON.stringify(key)}`)
+            t.assert.equal(t.spoon.keyRunning(), null, "keyRunning() after it returned")
+            await t.spoon.callInteractively("test-keys-running")
+            t.assert.equal(seen[1], null, "keyRunning() when run by name")
+        }
+    },
+    {
         name: "a key bound before its command is defined runs the command once it is defined",
         run: async (t) => {
             keysRelease(t)
