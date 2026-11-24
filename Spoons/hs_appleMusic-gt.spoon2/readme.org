@@ -4,6 +4,9 @@ hs_appleMusic-gt controls Apple Music from the keyboard, through a menu in which
 each option. It also plays albums from a list kept in a text file, including albums that are not
 in the Apple Music library.
 
+This Spoon is experimental. Its tests are not finished, and its functions and settings may change
+from one version to the next.
+
 Its most important features are:
 
 - A menu, opened with one key, whose options play and pause Apple Music, skip tracks and albums,
