@@ -290,6 +290,46 @@ screenshot:
 
 @@html:<img src="./images/window-menu.png" alt="A window menu of thirty options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an SF Symbol and its letter">@@
 
+* Adding to a Spoon's menu
+
+A Spoon that offers a menu of its actions exports it as =menu=, and displays it with its
+=menuShow()=. hs_window-gt, hs_selectWindow-gt, hs_clipboard-gt, hs_countdown-gt and
+hs_appleMusic-gt do. A configuration can build its own menu from such a menu, adding, removing or
+reordering options, without changing the Spoon. Four rules apply:
+
+1. *A Spoon's menu is in one of the forms of /Menus/.* It is an array of options, as
+   hs_appleMusic-gt's is, or an object whose options are its =buttons=, as hs_window-gt's is. The
+   object also holds settings for all its options, such as =keepOpen=, which are kept by copying
+   the object and replacing only its =buttons=.
+2. *The new menu is a function,* so that it is built each time it opens. The Spoon may then be
+   loaded after the file that defines the menu, and an option the Spoon adds later appears too.
+3. *The Spoon's menu is copied, not changed.* Adding to the Spoon's own array would also change
+   what the Spoon's =menuShow()= displays.
+4. *An added option uses a letter that the Spoon's options do not use.* When two options in one
+   menu have the same letter, the first takes the key, and the console reports that the key of
+   the other could not be bound.
+
+For example, the following adds an option to hs_appleMusic-gt's menu, whose letters do not
+include =w=, and leaves out its option with the letter =r=. The second menu adds an option to
+hs_window-gt's menu, and keeps its =keepOpen= setting:
+
+#+begin_src js
+const music = hs.spoons["hs_appleMusic-gt"]
+const musicMenu = () => [
+    ...music.menu.filter((option) => option.key !== "r"),
+    { label: "Amps", key: "w", fn: () => hs.urlevent.openURL("http://amps.local") }
+]
+
+const win = hs.spoons["hs_window-gt"]
+const windowMenu = Object.assign({}, win.menu, {
+    buttons: () => [...win.menu.buttons, { label: "Kitty", key: "K", app: "net.kovidgoyal.kitty" }]
+})
+
+hs.spoons["hs_menu-gt"].onScreenShow(musicMenu, { name: "Music" })
+#+end_src
+
+Either menu can also be a submenu of a larger one, as the =children= of an option.
+
 * Options whose picture changes
 
 The picture of an option with =imageProvider= is drawn again each time the information it shows

@@ -168,6 +168,22 @@ module.exports = [
         }
     },
     {
+        name: "when two options have the same letter, the first takes the key, and the console reports the other",
+        run: async (t) => {
+            await windowFocused(t)
+            const errors = []
+            const original = console.error
+            console.error = (...args) => { errors.push(args.join(" ")); original.apply(console, args) }
+            t.cleanup(() => { console.error = original })
+            const calls = counter()
+            show(t, [{ label: "First", key: "j", fn: calls.fn("first") }, { label: "Second", key: "j", fn: calls.fn("second") }])
+            await t.wait(0.3)
+            t.assert.ok(errors.some((e) => e.includes("could not bind j")), `errors: ${errors.join(" | ") || "none"}`)
+            await keyPress(t, [], "j")
+            t.assert.equal(JSON.stringify(calls.calls), '{"first":1}', "the actions run")
+        }
+    },
+    {
         name: "a letter opens a submenu, Delete returns to the parent menu, and Escape closes the menu",
         run: async (t) => {
             await windowFocused(t)
