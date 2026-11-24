@@ -1,0 +1,21 @@
+#+TITLE: Changelog
+
+Each release of the collection is a tag of this repository. Each Spoon also has its own version,
+in its =spoon.json=, and =hs.spoons.update()= reinstalls a Spoon only when that version changes.
+Every release lists the version of each Spoon in it, and what changed in each Spoon since the
+previous release.
+
+* v1.0.0 — 2026-11-24
+
+The first release. It requires Hammerspoon 2 1.0.0 Beta 2 or later.
+
+| Spoon              | Version | What it does                                                                                                                                                                                      |
+|--------------------+---------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| hs_selectWindow-gt |  0.3.15 | Switches to any window by typing part of its title or application, most recently used first, with a preview of the window.                                                                        |
+| hs_window-gt       |   2.4.8 | Places, moves and resizes windows with keys, across screens, undoes each change, and attaches windows to number keys that switch to them.                                                         |
+| hs_clipboard-gt    |   2.0.6 | Keeps a history of the text and images copied to the clipboard, and copies an entry selected in a chooser back to the clipboard.                                                                  |
+| hs_countdown-gt    |   4.0.6 | Runs a countdown timer, shown as a progress bar along the bottom edge of every screen and as the time left in the menu bar, with warnings as the end approaches and an alert when the time is up. |
+| hs_appleMusic-gt   |   2.1.5 | Experimental. Controls Apple Music: playback, volume, track information, and playing albums from a curated list, including albums held only in the Apple Music catalogue.                         |
+| hs_interactive-gt  |  0.5.15 | Defines named commands, binds keys to them by name, and runs any of them from a chooser, as Emacs's M-x does, asking for any argument a command needs.                                            |
+| hs_menu-gt         |  0.3.12 | Shows menus of commands on screen, where a letter beneath each option selects it, with submenus.                                                                                                  |
+| hs_windowfilter-gt |  0.3.14 | Reports when windows are created, closed, focused, moved or changed, for the windows that match given rules, as Hammerspoon 1's hs.window.filter did.                                             |

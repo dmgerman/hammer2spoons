@@ -174,6 +174,11 @@ rather than settle for a screenshot that does not show the feature.
 `hs.spoons.update()` reinstalls a Spoon only when the `version` in its `spoon.json` has changed.
 Every change to a Spoon therefore raises its version, or users who update will not receive it.
 
+A release of the collection is a tag of the repository, `v<major>.<minor>.<patch>`, made by the
+user. Each release has a section in `CHANGELOG.org` that lists every Spoon's version and what
+changed in it since the previous release. Changes made between releases are listed under an
+`Unreleased` section at the top, as each one is committed.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:46cd31e7 -->
 ## Beads Issue Tracker
 

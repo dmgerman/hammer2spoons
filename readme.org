@@ -67,10 +67,12 @@ hs.spoons.use("hs_window-gt", {
 })
 #+end_src
 
-The =ref= option of =hs.spoons.use()= installs a Spoon from a particular tag or commit of the
-repository instead of its main branch. =hs.spoons.update(name)= downloads a Spoon again from
-the same source and ref, and reinstalls it when the version in its =spoon.json= has changed. A
-Spoon installed from a tag or a commit is therefore never changed by an update.
+Each release of the collection is tagged, such as =v1.0.0=, and [[./CHANGELOG.org][CHANGELOG.org]] lists the
+version of every Spoon in it and what changed. The =ref= option of =hs.spoons.use()= installs a
+Spoon from a particular tag or commit of the repository instead of its main branch.
+=hs.spoons.update(name)= downloads a Spoon again from the same source and ref, and reinstalls it
+when the version in its =spoon.json= has changed. A Spoon installed from a tag or a commit is
+therefore never changed by an update.
 
 The =config= option of =hs.spoons.use()= sets a Spoon's settings, and its =hotkeys= option binds
 keys to the Spoon's functions, as each Spoon's readme lists them:
@@ -88,10 +90,9 @@ The readme of each Spoon documents its installation and configuration in full.
 
 * Requirements
 
-The Spoons require a build of Hammerspoon 2 from its main branch on 2026-11-02 or later.
-Release 0.0.16 and earlier cannot install Spoons from a repository, and do not have
-=hs.spoons.load()=. The Spoons are tested with a build of the main branch of 2026-11-24, at
-commit =c7908c01=. A Spoon that needs a later change to Hammerspoon 2 says so in its readme.
+The Spoons require Hammerspoon 2 1.0.0 Beta 2 or later. They are tested with a build of its main
+branch at commit =c7908c01=, which that release includes. A Spoon that needs a later change to
+Hammerspoon 2 says so in its readme.
 
 * License
 
