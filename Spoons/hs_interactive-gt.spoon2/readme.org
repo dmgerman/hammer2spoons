@@ -701,12 +701,11 @@ This Spoon defines five commands of its own:
 
 * Notes
 
-- *A prompt brings Hammerspoon 2 to the front.* A dialog makes Hammerspoon 2 the frontmost
-  application before it opens, and makes the previous application frontmost again when it closes.
-  =hs.ui.textPrompt= shows a plain =NSWindow=, and a plain window cannot take the keyboard focus
-  while its application is in the background. If Hammerspoon 2 were not brought to the front, the
-  dialog would appear but would not accept typing, and macOS would bounce the Dock icon instead. A
-  chooser does not require this, because =hs.chooser= uses an =NSPanel= with
+- *A dialog brings Hammerspoon 2 to the front.* This Spoon makes Hammerspoon 2 the frontmost
+  application before a dialog opens, and makes the previous application frontmost again when the
+  dialog closes. A window cannot take the keyboard while its application is in the background, and
+  =hs.ui.textPrompt= does not seem to always bring Hammerspoon 2 to the front by itself. A chooser does
+  not change the frontmost application, because =hs.chooser= uses an =NSPanel= with
   =.nonactivatingPanel=, which accepts keys while its application is in the background.
 - *Dialogs are modal.* The code that opens a dialog waits until it closes: =hs.ui.textPrompt=
   returns only then. Timers still run while a dialog is displayed, measured on 2026-11-23.

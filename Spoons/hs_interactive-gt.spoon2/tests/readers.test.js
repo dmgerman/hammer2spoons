@@ -382,6 +382,19 @@ module.exports = [
         }
     },
     {
+        name: "with another application in front, a dialog takes the text typed, and that application is in front again afterwards",
+        run: async (t) => {
+            const [window] = await t.windowsOpen()
+            window.focus()
+            await t.wait(0.5)
+            const pid = window.application.pid
+            t.assert.equal(hs.application.frontmost().pid, pid, "the test window's application is in front before the dialog")
+            dialogAnswer(t, "typed text")
+            t.assert.equal(await dialogRun(t, t.spoon.readers.string.prompted, { name: "text" }), "typed text", "the text typed")
+            t.assert.equal(hs.application.frontmost().pid, pid, "the test window's application is in front after the dialog")
+        }
+    },
+    {
         name: "Escape cancels a dialog, and the reader gives null",
         run: async (t) => {
             dialogCancel(t)

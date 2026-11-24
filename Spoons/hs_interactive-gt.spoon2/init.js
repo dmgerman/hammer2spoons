@@ -187,23 +187,19 @@ function ask(options) {
     const labels = options.optional ? ["OK", "Skip", "Cancel"] : ["OK", "Cancel"]
     let result = { action: "cancel", text: "" }
 
-    // Hammerspoon is brought forward first, and the application that was in front is put
-    // back afterwards.
+    // Hammerspoon 2 is brought forward first, and the application that was in front is put
+    // back after the prompt closes.
     //
-    // Without it the prompt appears and cannot be typed into. hs.ui.textPrompt is a plain
-    // NSWindow, styled [.titled, .closable], and a plain window cannot take keyboard focus
-    // while its application is in the background: it becomes key within Hammerspoon, which
-    // is not frontmost when a command runs from a key or from the command chooser, and
-    // macOS signals that by bouncing the dock icon instead of giving it focus.
+    // hs.ui.textPrompt shows an NSAlert with runModal(). On 2026-11-24, with this call
+    // removed, a dialog opened behind other windows and Hammerspoon 2 did not come to the
+    // front. A window cannot take the keyboard while its application is in the background.
+    // hs.chooser does not need this, because ChooserPanel is an NSPanel with
+    // .nonactivatingPanel, which accepts keys while its application is in the background.
     //
-    // hs.chooser does not have the problem because ChooserPanel is an NSPanel with
-    // .nonactivatingPanel in its style mask, which is exactly what lets a background
-    // application's panel accept keys. Dialogs getting the same treatment upstream would
-    // make this unnecessary.
-    //
-    // launchOrFocus for Hammerspoon itself: the prompt window does not exist yet, so there
-    // is nothing for setFrontmost to bring forward as the main window. Restoring afterwards
-    // does use setFrontmost, which leaves the restored application's other windows alone.
+    // launchOrFocus for Hammerspoon 2 itself: the prompt window does not exist yet, so there
+    // is no main window for setFrontmost to bring forward. When the prompt closes, Hammerspoon
+    // 2 stays in front. setFrontmost(false) then brings back only the previous application's
+    // front window, and leaves its other windows where they are.
     const previous = hs.application.frontmost()
     const restoreTo = previous && previous.bundleID !== OWN_BUNDLE_ID ? previous : null
     hs.application.launchOrFocus(OWN_BUNDLE_ID)
