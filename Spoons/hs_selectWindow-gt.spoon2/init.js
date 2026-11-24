@@ -1041,6 +1041,126 @@ function applicationWindowPreviousSelect(options) {
     return focusWindowById(records[1].state.id)
 }
 
+// MARK: - Finding windows for other scripts
+//
+// Ported from the Hammerspoon 1 Spoon's findByTitle, focusByTitle, focusByApp, focusByAppAndTitle
+// and nextFullScreen. Each looks through the windows this Spoon tracks, most recently used first,
+// so "the first window that matches" is the most recently used one, and each Select function
+// switches to it through hs_window-gt, as the chooser does. Lua's string.find took a pattern; a
+// title or name here is a RegExp, or a string compiled with new RegExp().
+
+/**
+ * A RegExp from a string or a RegExp, or null with an alert when it is missing or not valid.
+ *
+ * @param {RegExp|string} pattern The pattern.
+ * @param {string} what What it is matched against, for the alert.
+ */
+function patternCompile(pattern, what) {
+    if (pattern === undefined || pattern === null || pattern === "") {
+        hs.ui.alert(`No ${what} given`).duration(2).show()
+        return null
+    }
+    try {
+        return pattern instanceof RegExp ? pattern : new RegExp(pattern)
+    } catch (e) {
+        hs.ui.alert(`Bad ${what} pattern ${pattern}\n${e.message}`).duration(3).show()
+        return null
+    }
+}
+
+const matches = (text, regex) => (text || "").search(regex) !== -1
+
+/** Focuses a record's window, and returns the window. */
+function recordSelect(record) {
+    focusWindowById(record.state.id)
+    return record.window
+}
+
+/**
+ * The most recently used window whose title matches `pattern`, without focusing it.
+ *
+ * @param {RegExp|string} pattern Matched against the title with String.prototype.search.
+ * @returns {?object} The HSWindow, or null when none matches. An alert says why when the
+ *          pattern is missing or not valid.
+ */
+function windowByTitleFind(pattern) {
+    const regex = patternCompile(pattern, "title")
+    if (!regex) return null
+    const record = allRecords().find((r) => matches(r.state.title, regex))
+    return record ? record.window : null
+}
+
+/**
+ * Focus the most recently used window whose title matches `pattern`.
+ *
+ * @param {RegExp|string} pattern Matched against the title with String.prototype.search.
+ * @returns {?object} The window focused, or null, with an alert, when none matches.
+ */
+function windowByTitleSelect(pattern) {
+    const regex = patternCompile(pattern, "title")
+    if (!regex) return null
+    const record = allRecords().find((r) => matches(r.state.title, regex))
+    if (!record) {
+        hs.ui.alert(`No window's title matches ${regex}`).duration(2).show()
+        return null
+    }
+    return recordSelect(record)
+}
+
+/**
+ * Focus the most recently used window of an application whose name matches `pattern`.
+ *
+ * @param {RegExp|string} pattern Matched against the application's name.
+ * @returns {?object} The window focused, or null, with an alert, when no application matches.
+ */
+function applicationByNameSelect(pattern) {
+    const regex = patternCompile(pattern, "application name")
+    if (!regex) return null
+    const record = allRecords().find((r) => matches(r.state.application, regex))
+    if (!record) {
+        hs.ui.alert(`No application's name matches ${regex}`).duration(2).show()
+        return null
+    }
+    return recordSelect(record)
+}
+
+/**
+ * Focus the most recently used window of the application named exactly `name` whose title
+ * matches `pattern`.
+ *
+ * @param {string} name The application's name, as it appears beneath a row's title.
+ * @param {RegExp|string} pattern Matched against the title.
+ * @returns {?object} The window focused, or null, with an alert, when none matches.
+ */
+function applicationWindowByTitleSelect(name, pattern) {
+    if (!name) {
+        hs.ui.alert("No application name given").duration(2).show()
+        return null
+    }
+    const regex = patternCompile(pattern, "title")
+    if (!regex) return null
+    const record = allRecords().find((r) => r.state.application === name && matches(r.state.title, regex))
+    if (!record) {
+        hs.ui.alert(`No ${name} window's title matches ${regex}`).duration(2).show()
+        return null
+    }
+    return recordSelect(record)
+}
+
+/**
+ * Focus the most recently used window in fullscreen, other than the focused one.
+ *
+ * @returns {?object} The window focused, or null, with an alert, when there is none.
+ */
+function fullscreenWindowNextSelect() {
+    const record = withoutFocused(allRecords()).find((r) => r.state.fullscreen)
+    if (!record) {
+        hs.ui.alert("No other window is in fullscreen").duration(2).show()
+        return null
+    }
+    return recordSelect(record)
+}
+
 /** The windows windowSelect() offers, in its order, as titles. For looking at the ordering. */
 function order() {
     return withoutFocused(allRecords()).map(({ state }) => `${state.application}: ${state.title}`)
@@ -1133,6 +1253,11 @@ module.exports = {
     windowPreviousSelect,
     applicationWindowPreviousSelect,
     windowToCurrentSpaceSelect,
+    windowByTitleFind,
+    windowByTitleSelect,
+    applicationByNameSelect,
+    applicationWindowByTitleSelect,
+    fullscreenWindowNextSelect,
     applicationByBundleSelect,
     order,
     bindHotkeys,

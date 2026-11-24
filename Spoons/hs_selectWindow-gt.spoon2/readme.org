@@ -248,6 +248,33 @@ title changes with its tab, while a terminal window that has been given a name k
 
 The function returns whether it switched to anything.
 
+** Finding and focusing windows from other scripts
+
+Five functions let other scripts reach a window without a chooser, by its title or by its
+application. Each looks through the windows this Spoon tracks, most recently used first, so the
+window used is the most recently used one that matches. A title or a name is matched with a
+RegExp, or with a string, which is compiled with =new RegExp()=: =mail= matches anywhere, and
+=^Inbox= only at the start. A missing or invalid pattern is reported in an alert.
+
+| Function                                         | Does                                              |
+|--------------------------------------------------+---------------------------------------------------|
+| =windowByTitleFind(pattern)=                     | Returns the window whose title matches, without focusing it, or null. |
+| =windowByTitleSelect(pattern)=                   | Focuses the window whose title matches.            |
+| =applicationByNameSelect(pattern)=               | Focuses a window of the application whose name matches. |
+| =applicationWindowByTitleSelect(name, pattern)=  | Focuses the window of the application named exactly =name= whose title matches. |
+| =fullscreenWindowNextSelect()=                   | Focuses a window in fullscreen other than the focused one. |
+
+The functions ending in =Select= return the window they focused. When no window matches, they
+show an alert and return null.
+
+#+begin_src js
+const sw = hs.spoons["hs_selectWindow-gt"]
+sw.windowByTitleSelect("Inbox")                  // the window whose title contains Inbox
+sw.applicationByNameSelect(/^Google Chrome$/)    // Chrome's most recently used window
+sw.applicationWindowByTitleSelect("Emacs", "\\.org")  // an Emacs window editing an Org file
+if (sw.windowByTitleFind("Zoom Meeting")) console.log("a meeting is open")
+#+end_src
+
 ** order()
 
 =order()= shows the order in which the chooser lists the windows, without opening it. It is
@@ -353,6 +380,17 @@ The following table gives the function that replaces each binding of the Hammers
 | =previous_window_ws=     | =windowPreviousSelect({ currentSpace: true })= |
 | =previous_app_window_ws= | =applicationWindowPreviousSelect({ currentSpace: true })= |
 | =all_windows_move_to_current_workspace= | =windowToCurrentSpaceSelect()=, which refuses a window in fullscreen |
+
+Its functions for other scripts are named differently, and take a RegExp or a string where they
+took a Lua pattern:
+
+| Hammerspoon 1                        | Here                                    |
+|--------------------------------------+-----------------------------------------|
+| =findByTitle(t)=                     | =windowByTitleFind(pattern)=            |
+| =focusByTitle(t)=                    | =windowByTitleSelect(pattern)=          |
+| =focusByApp(appName)=                | =applicationByNameSelect(pattern)=      |
+| =focusByAppAndTitle(appName, title)= | =applicationWindowByTitleSelect(name, pattern)= |
+| =nextFullScreen()=                   | =fullscreenWindowNextSelect()=          |
 
 The setting =fontSize= is replaced by =textSize=, =subTextSize= and =querySize=. Their defaults are
 about 20% larger than the chooser's own sizes.
