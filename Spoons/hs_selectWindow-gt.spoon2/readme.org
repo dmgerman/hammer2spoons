@@ -94,6 +94,10 @@ The chooser lists one row per window. Each row shows the window's title. Beneath
 shows the application, the screen the window is on, and the words "minimized" or "hidden" when
 they apply.
 
+When the window is on a Space that its screen is not showing, the Space follows the screen: the
+desktop's number, such as /Desktop 2/, or /fullscreen/ for a window in fullscreen, whose Space
+holds that window alone. A window on a Space being shown has nothing added.
+
 Typing narrows the rows. A row is listed when its title, or the line beneath it, contains the
 text typed. The text is matched as a whole, so =mail= finds a window whose title contains "mail",
 and =chrome= finds every Chrome window, but =mail chrome= finds neither. Return focuses the
@@ -308,8 +312,8 @@ window stays where it is. The window is instead focused where it is in three cas
 
 * Limitations
 
-This Spoon cannot restrict a chooser to the current Space, or move a window to the current
-Space, because Hammerspoon 2 has no module for Spaces.
+This Spoon does not yet restrict a chooser to the current Space, or move a window to the current
+Space. Hammerspoon 2 now has the functions for both, and they are planned.
 
 * Coming from Hammerspoon 1
 

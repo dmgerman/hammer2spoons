@@ -450,10 +450,12 @@ function releaseSessionKeys() {
 
 // MARK: - The chooser
 
-// Built from the tracker's state rather than by reading the window again.
-function subTextFor(state) {
+// Built from the tracker's state rather than by reading the window again, except for `space`,
+// which spaceLabel() reads.
+function subTextFor(state, space) {
     const parts = [state.application || "?"]
     if (state.screenName) parts.push(state.screenName)
+    if (space) parts.push(space)
     if (state.minimized) parts.push("minimized")
     if (state.hidden) parts.push("hidden")
     return parts.join("  ·  ")
@@ -468,9 +470,10 @@ function choicesFor(records, windowless = []) {
         return icons.get(bundleID)
     }
 
-    const windowRows = records.map(({ state }) => ({
+    const current = currentSpaceIds()
+    const windowRows = records.map(({ window, state }) => ({
         text: state.title || state.application || "window",
-        subText: subTextFor(state),
+        subText: subTextFor(state, spaceLabel(window, current)),
         image: iconFor(state.bundleID),
         id: state.id
     }))
@@ -483,6 +486,48 @@ function choicesFor(records, windowless = []) {
         pid: application.pid
     }))
     return windowRows.concat(applicationRows)
+}
+
+/** The ids of the Spaces the screens are showing. */
+function currentSpaceIds() {
+    const current = new Set()
+    for (const screen of hs.screen.all()) {
+        try {
+            for (const space of screen.spaces || []) if (space.isCurrent) current.add(space.id)
+        } catch (e) {
+            // A screen whose Spaces cannot be read adds none.
+        }
+    }
+    return current
+}
+
+/**
+ * Where a window is when its screen is not showing it: "Desktop 2" for a window on another
+ * desktop, or "fullscreen" for a window in fullscreen on a Space that is not being shown, which
+ * holds that one window. Null for a window on a Space being shown, and when the window's Spaces
+ * cannot be read.
+ *
+ * window.spaces is answered by the window server (SLSCopySpacesForWindows), not by the
+ * application, so an application that does not answer cannot slow it down. It took about 1 ms
+ * per window on 2026-11-24, so it is read for every row when a chooser opens. isVisible cannot be
+ * used instead: a window on another desktop reported it true.
+ *
+ * @param {object} window The window.
+ * @param {Set} current The ids of the Spaces being shown, from currentSpaceIds().
+ * @returns {?string} The label, or null.
+ */
+function spaceLabel(window, current) {
+    let spaces
+    try {
+        spaces = window.spaces
+    } catch (e) {
+        return null
+    }
+    if (!spaces || spaces.length === 0 || spaces.some((space) => current.has(space.id))) return null
+    const space = spaces[0]
+    if (space.type === "fullscreen") return "fullscreen"
+    const number = space.desktopNumber
+    return number ? `Desktop ${number}` : null
 }
 
 /**
