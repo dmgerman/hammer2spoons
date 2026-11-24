@@ -323,9 +323,29 @@ function snapshot() {
 //
 // Every variant is called as (context, parameter, snapshot).
 
+/**
+ * The snapshot's window, when a command may act on it: a standard window, or any window when the
+ * parameter has includeNonStandard, as window.prompted offers. Null otherwise.
+ *
+ * With the desktop clicked, hs.window.focusedWindow() returns Finder's desktop, an element of
+ * role AXScrollArea and subrole AXDesktop that is not a standard window, rather than null
+ * (measured on 2026-11-24). A command such as hs_window-gt's maximize then acted on it and did
+ * nothing, with no chooser and no alert.
+ */
+function snapshotWindow(parameter, snap) {
+    const window = snap ? snap.window : null
+    if (!window) return null
+    if (parameter && parameter.includeNonStandard) return window
+    try {
+        return window.isStandard ? window : null
+    } catch (e) {
+        return null
+    }
+}
+
 const readers = {
     window: {
-        implicit: (context, parameter, snap) => snap.window,
+        implicit: (context, parameter, snap) => snapshotWindow(parameter, snap),
 
         /**
          * The focused window, or a chooser when there is none. An application that
@@ -335,7 +355,8 @@ const readers = {
          * failing.
          */
         auto: (context, parameter, snap) => {
-            if (snap.window) return snap.window
+            const window = snapshotWindow(parameter, snap)
+            if (window) return window
             if (snap.application) {
                 alertAtChooser(`${snap.application.name} reports no visible window`)
             }

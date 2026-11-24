@@ -563,8 +563,9 @@ be deleted.
 
 An option is drawn with =hs.canvas=, as a background rectangle, the icon as an =image= element
 and the label as one =text= element. It is exported with =imageFromCanvas()=. The image is twice
-the tile size in pixels, so a 96 point tile is a 192 pixel image. Drawing one takes a few
-milliseconds.
+the tile size in pixels, so a 96 point tile is a 192 pixel image. An option is drawn only once
+and then cached, and the on-screen menu appears after =showDelay=, 0.5 seconds by default, so
+drawing the options of a menu does not delay it.
 
 Three details of the drawing:
 

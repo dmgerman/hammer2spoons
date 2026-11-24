@@ -165,19 +165,16 @@ find every command that acts on a window.
 
 ** Commands that open a chooser
 
-A command that opens a chooser of its own requires =runDelay= when it is run from the command
-chooser.
+=runDelay= is the number of seconds to wait before running a command from the command chooser,
+which gives the command chooser time to close. It applies only when the command is run from the
+command chooser; a key runs the command without delay. The default is 0.
 
 The command chooser runs the selected command from its =onSelect= callback, which is called
-while the command chooser is still closing. A chooser that the command opens at that moment
-does not become the key window reliably. Another window takes the key window instead, and the
-new chooser closes as soon as it has opened. The same command run from a key works, because no
-other chooser is closing then.
-
-=runDelay= is the number of seconds to wait before running the command, which gives the
-command chooser time to close. 0.05 seconds is enough. It applies only when the command is run
-from the command chooser; a key runs the command without delay. The default is 0, and a command
-that opens no chooser does not require it.
+while the command chooser is still closing. In earlier builds of Hammerspoon 2, a chooser that
+the command opened at that moment did not become the key window reliably, and closed as soon as
+it had opened, so such a command required a =runDelay= of 0.05 seconds. With the build of
+2026-11-24, a chooser opened from the command chooser received the keys typed in three tries out
+of three, with or without =runDelay=, so the setting is kept only for older builds.
 
 #+begin_src js
 interactive.define({
@@ -227,6 +224,12 @@ typing either part of it finds the window. When =readers.window.auto= finds no f
 but the frontmost application is known, it also shows an alert saying that the application
 reports no visible window. That alert explains why a chooser appears instead of the command
 acting at once.
+
+The focused window counts only when it is a standard window, or when =includeNonStandard= is
+true, for =readers.window.auto= and =readers.window.implicit= alike. With the desktop clicked,
+macOS reports Finder's desktop as the focused window, which is not a standard window, so
+=readers.window.auto= then asks for the window in a chooser, and =readers.window.implicit= gives
+null.
 
 A number typed into a dialog that is not a number is reported in an alert, and the command is
 cancelled.

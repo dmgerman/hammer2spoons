@@ -161,6 +161,36 @@ module.exports = [
         }
     },
     {
+        name: "a focused window that is not standard counts as none: window.auto shows the alert and a chooser, and window.implicit gives null",
+        run: async (t) => {
+            const choosers = choosersCapture(t)
+            const shown = alerts(t)
+            // Stands for Finder's desktop, which macOS reports as the focused window when the
+            // desktop is clicked, and which is not a standard window either.
+            const window = await t.windowOpenBorderless()
+            t.assert.equal(window.isStandard, false, "the test window is standard")
+            const snap = { window, application: window.application, screen: window.screen }
+            t.assert.equal(await run(t, t.spoon.readers.window.implicit, {}, snap), null, "window.implicit")
+            const reading = run(t, t.spoon.readers.window.auto, {}, snap)
+            await chooserAnswer(t, null)
+            t.assert.equal(await reading, null, "window.auto after Escape")
+            t.assert.equal(choosers.length, 1, "choosers shown")
+            t.assert.ok(shown.includes("osascript reports no visible window"), `alerts: ${shown.join(" | ")}`)
+        }
+    },
+    {
+        name: "with includeNonStandard, window.auto and window.implicit take a focused window that is not standard",
+        run: async (t) => {
+            const choosers = choosersCapture(t)
+            const window = await t.windowOpenBorderless()
+            const snap = { window, application: window.application, screen: window.screen }
+            const parameter = { includeNonStandard: true }
+            t.assert.equal((await run(t, t.spoon.readers.window.implicit, parameter, snap)).id, window.id, "window.implicit")
+            t.assert.equal((await run(t, t.spoon.readers.window.auto, parameter, snap)).id, window.id, "window.auto")
+            t.assert.equal(choosers.length, 0, "choosers shown")
+        }
+    },
+    {
         name: "window.prompted lists standard windows as Application — Title, under the placeholder Window",
         run: async (t) => {
             const choosers = choosersCapture(t)
