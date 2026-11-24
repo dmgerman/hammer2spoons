@@ -27,6 +27,9 @@ keep them the same:
 | =makefile=             | =makefile=                   | =make test= and =make test-two-screens=       |
 | =selftest/*.test.js=   | =tests/selftest/=            | Tests of the harness and the test windows     |
 
+=install-test/= is not copied into the Spoons. It holds the configuration of the install test,
+which checks the published Spoons as a user installs them from GitHub, and a readme of its steps.
+
 * Using them in a Spoon
 
 #+begin_src sh

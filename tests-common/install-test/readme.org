@@ -1,0 +1,30 @@
+#+title: The install test
+
+The install test checks the published Spoons the way a user gets them: from GitHub, with nothing
+else installed. It is run by hand, after a push, before a release, and when a Spoon is added to
+the repository. =init.js= beside this file is its configuration. Every file a Spoon writes goes to
+=/tmp/hs2-install-test=, so that the user's files are not touched.
+
+* Steps
+
+1. Check that the commit to test is pushed, and record what the configuration loads:
+   =hs.spoons["hs_interactive-gt"].use.status()=, through =hs2=.
+2. Run =hs.spoons.available("dmgerman/hammer2spoons")=. Every published Spoon must be listed, with
+   the description and version of its =spoon.json=.
+3. In the configuration directory, rename =init.js= and =Spoons/= with the suffix
+   =.install-test-aside=, create an empty =Spoons/=, and copy this =init.js= there. Copy
+   =albums.txt= to =/tmp/hs2-install-test/albums.txt=.
+4. Reload. The configuration then records what happened in =globalThis.installTest=, which =hs2=
+   reads: hs_countdown-gt installed alone must refuse to start, with an error that names
+   hs_interactive-gt, and every Spoon must load at the version listed in step 2. Each installed
+   Spoon is a copy, not a link, with a =.hs-source.json= naming the commit.
+5. The user tries the keys this configuration binds: ⌥W, the window menu; ⌥B, the window chooser;
+   ⌃⌥⌘T, the countdown menu; and ⌃⌥⌘X, the command chooser.
+6. Set the version in the installed =Spoons/hs_countdown-gt/spoon.json= to an earlier one, and run
+   =hs.spoons.update("hs_countdown-gt")=. It must return true, and the Spoon's version must be the
+   repository's again.
+7. Delete the test =init.js= and =Spoons/=, rename the two that were set aside back, reload, and
+   check that the configuration loads the same Spoons as in step 1. Delete
+   =/tmp/hs2-install-test=.
+
+The first runs are recorded in the notes of the bead hammer2spoons-ei6.27.
