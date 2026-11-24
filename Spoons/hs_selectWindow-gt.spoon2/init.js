@@ -641,7 +641,7 @@ function chooserGeometry(area) {
  * @param {Array} windows The windows to offer, in the order to offer them.
  * @param {string} placeholder Prompt text.
  */
-function chooseFrom(all, placeholder, windowless = []) {
+function chooseFrom(all, placeholder, windowless = [], choose = focusWindowById) {
     const records = withoutFocused(all)
     if (!records.length && !windowless.length) {
         hs.ui.alert("No windows to choose from").duration(2).show()
@@ -679,7 +679,7 @@ function chooseFrom(all, placeholder, windowless = []) {
         if (chooser === own) finishChoosing()
         if (!item) return
         if (item.pid !== undefined) applicationActivate(item.pid)
-        else if (item.id !== undefined) focusWindowById(item.id)
+        else if (item.id !== undefined) choose(item.id)
     }
 
     own.onShow = () => {
@@ -792,21 +792,115 @@ function focusWindowById(id) {
 
 // MARK: - Public API
 
+// MARK: - The current Space
+//
+// The current Space is the one shown on the screen that has the focus, as in the Hammerspoon 1
+// Spoon's _ws bindings. A window is on it when any of its Spaces is that one, so a window shown on
+// every Space counts. window.spaces is answered by the window server, about 1 ms per window.
+
+/** The Space shown on the screen that has the focus, or null when it cannot be read. */
+function currentSpace() {
+    try {
+        return hs.screen.focusedSpace()
+    } catch (e) {
+        return null
+    }
+}
+
+/** Whether a window is on a Space, by the Space's id. */
+function onSpace(window, spaceId) {
+    try {
+        return window.spaces.some((space) => space.id === spaceId)
+    } catch (e) {
+        return false
+    }
+}
+
+/**
+ * The records whose windows are on the current Space, or every record when `options.currentSpace`
+ * is not true. Every record is kept, too, when the current Space cannot be read.
+ */
+function recordsForSpace(records, options) {
+    if (!options || !options.currentSpace) return records
+    const space = currentSpace()
+    if (!space) return records
+    return records.filter(({ window }) => onSpace(window, space.id))
+}
+
 /**
  * Choose from every switchable window, most recently used first, followed by the running
  * applications that have no windows.
+ *
+ * @param {object} [options] `{ currentSpace: true }` lists only the windows on the current Space,
+ *        and no applications, since an application without windows is on no Space.
  */
-function windowSelect() {
-    const records = allRecords()
-    return chooseFrom(records, "Window", windowlessApplications(records))
+function windowSelect(options) {
+    const records = recordsForSpace(allRecords(), options)
+    const windowless = options && options.currentSpace ? [] : windowlessApplications(records)
+    return chooseFrom(records, "Window", windowless)
 }
 
-/** Choose from the focused application's windows. */
-function applicationWindowSelect(application) {
-    const records = applicationRecords(application)
+/**
+ * Choose from the focused application's windows.
+ *
+ * @param {string} [application] The application's name. Defaults to the focused one.
+ * @param {object} [options] `{ currentSpace: true }` lists only its windows on the current Space.
+ */
+function applicationWindowSelect(application, options) {
+    const records = recordsForSpace(applicationRecords(application), options)
     const name = records.length ? records[0].state.application : "Application"
     return chooseFrom(records, name)
 }
+
+/**
+ * Choose a window, bring it to the current Space and to the screen that has the focus, and focus
+ * it. The chooser lists every window, as windowSelect() does, without the applications.
+ */
+function windowToCurrentSpaceSelect() {
+    const here = hs.window.focusedWindow()
+    const screen = here && here.screen ? here.screen : hs.screen.main()
+    const space = currentSpace()
+    return chooseFrom(allRecords(), "Window to bring here", [], (id) => {
+        windowToCurrentSpaceBring(id, screen, space)
+    })
+}
+
+/**
+ * Bring a window to a Space and a screen, and focus it, as the Hammerspoon 1 Spoon's
+ * all_windows_move_to_current_workspace did. A minimized window is restored. hs_window-gt moves
+ * the window between screens, keeping its place within the screen.
+ *
+ * A window in fullscreen is refused, with an alert: it has a Space of its own, and Hammerspoon 1
+ * took it out of fullscreen first. The user decided on 2026-11-24 to refuse it for the time being.
+ *
+ * @returns {Promise<boolean>} Whether the window was brought and focused.
+ */
+async function windowToCurrentSpaceBring(id, screen, space) {
+    const window = sessionWindows.get(id) || switchable().find((w) => w.id === id)
+    // A window that closed while the chooser was open can still be in the tracker's list for a
+    // moment, so it is read again: windowState() returns null for a window that has closed.
+    if (!window || !spoonRequired("hs_windowfilter-gt").windowState(window)) {
+        hs.ui.alert("The window is no longer open").duration(3).show()
+        return false
+    }
+    if (window.isFullscreen) {
+        hs.ui.alert("The window is in fullscreen, and cannot be brought here").duration(3).show()
+        return false
+    }
+    try {
+        if (window.isMinimized) window.unminimize()
+        if (space && !onSpace(window, space.id)) await window.moveToSpace(space)
+        const windowScreen = window.screen
+        if (screen && windowScreen && windowScreen.id !== screen.id) {
+            await spoonRequired("hs_window-gt").windowToScreenMove(screen, window)
+        }
+    } catch (e) {
+        hs.ui.alert(`Could not bring the window here: ${e && e.message ? e.message : e}`).duration(3).show()
+        return false
+    }
+    return spoonRequired("hs_window-gt").windowFocus(window)
+}
+
 
 /**
  * Choose from the most recently used window of each application, followed by the running
@@ -821,9 +915,12 @@ function applicationSelect() {
  * Go straight to the previously used window, with no chooser.
  *
  * The first entry in the order is the window in front now, so the second is the one before.
+ *
+ * @param {object} [options] `{ currentSpace: true }` takes the previous window on the current
+ *        Space.
  */
-function windowPreviousSelect() {
-    const records = allRecords()
+function windowPreviousSelect(options) {
+    const records = recordsForSpace(allRecords(), options)
     if (records.length < 2) {
         hs.ui.alert("No previous window").duration(2).show()
         return false
@@ -919,9 +1016,14 @@ function applicationByBundleSelect(bundleID, titlePattern) {
     return focusWindowById(wanted[0].state.id)
 }
 
-/** Go straight to the previously used window of the focused application. */
-function applicationWindowPreviousSelect() {
-    const records = applicationRecords()
+/**
+ * Go straight to the previously used window of the focused application.
+ *
+ * @param {object} [options] `{ currentSpace: true }` takes its previous window on the current
+ *        Space.
+ */
+function applicationWindowPreviousSelect(options) {
+    const records = recordsForSpace(applicationRecords(), options)
     if (records.length < 2) {
         hs.ui.alert("No previous window in this application").duration(2).show()
         return false
@@ -937,10 +1039,20 @@ function order() {
 let hotkeys = []
 
 // The functions a key can run, as hs_window-gt does it: the names are the functions' own.
-const HOTKEY_FUNCTIONS = [
-    "windowSelect", "applicationWindowSelect", "applicationSelect",
-    "windowPreviousSelect", "applicationWindowPreviousSelect"
-]
+// What each name bindHotkeys() accepts runs. The names ending in CurrentSpace run a function
+// with { currentSpace: true }.
+const HOTKEY_FUNCTIONS = {
+    windowSelect: () => module.exports.windowSelect(),
+    applicationWindowSelect: () => module.exports.applicationWindowSelect(),
+    applicationSelect: () => module.exports.applicationSelect(),
+    windowPreviousSelect: () => module.exports.windowPreviousSelect(),
+    applicationWindowPreviousSelect: () => module.exports.applicationWindowPreviousSelect(),
+    windowToCurrentSpaceSelect: () => module.exports.windowToCurrentSpaceSelect(),
+    windowSelectCurrentSpace: () => module.exports.windowSelect({ currentSpace: true }),
+    applicationWindowSelectCurrentSpace: () => module.exports.applicationWindowSelect(undefined, { currentSpace: true }),
+    windowPreviousSelectCurrentSpace: () => module.exports.windowPreviousSelect({ currentSpace: true }),
+    applicationWindowPreviousSelectCurrentSpace: () => module.exports.applicationWindowPreviousSelect({ currentSpace: true })
+}
 
 function hotkeysRelease() {
     for (const key of hotkeys) {
@@ -961,7 +1073,7 @@ function hotkeysRelease() {
 function bindHotkeys(mapping) {
     const entries = Object.entries(mapping || {})
     for (const [name, binding] of entries) {
-        if (!HOTKEY_FUNCTIONS.includes(name)) {
+        if (!Object.prototype.hasOwnProperty.call(HOTKEY_FUNCTIONS, name)) {
             throw new Error(`${SPOON_NAME}: bindHotkeys(): ${name} is not a function a key can run`)
         }
         if (!Array.isArray(binding) || !Array.isArray(binding[0]) || typeof binding[1] !== "string") {
@@ -971,7 +1083,7 @@ function bindHotkeys(mapping) {
 
     hotkeysRelease()
     for (const [name, [mods, key]] of entries) {
-        const hotkey = hs.hotkey.bind(mods, key, () => module.exports[name](), null)
+        const hotkey = hs.hotkey.bind(mods, key, HOTKEY_FUNCTIONS[name], null)
         if (hotkey) hotkeys.push(hotkey)
         else console.error(`[${SPOON_NAME}] could not bind ${mods.join("-")} ${key} to ${name}`)
     }
@@ -1010,6 +1122,7 @@ module.exports = {
     applicationSelect,
     windowPreviousSelect,
     applicationWindowPreviousSelect,
+    windowToCurrentSpaceSelect,
     applicationByBundleSelect,
     order,
     bindHotkeys,

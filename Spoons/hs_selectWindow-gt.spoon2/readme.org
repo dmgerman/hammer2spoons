@@ -132,6 +132,16 @@ shows no thumbnails.
 This Spoon exports the following functions. Those whose name ends in =Select= either open a
 chooser and focus the window chosen in it, or focus a window directly.
 
+Four of them take an option ={ currentSpace: true }=, which considers only the windows on the
+current Space: the Space shown on the screen that has the focus. A window shown on every Space
+is on it. The four are =windowSelect()=, =applicationWindowSelect()=, =windowPreviousSelect()= and
+=applicationWindowPreviousSelect()=:
+
+#+begin_src js
+sw.windowSelect({ currentSpace: true })                       // the windows on this Space
+sw.applicationWindowSelect(undefined, { currentSpace: true }) // this application's, on this Space
+#+end_src
+
 ** windowSelect()
 
 =windowSelect()= opens a chooser of every window except the focused one, most recently used
@@ -170,6 +180,17 @@ application's most recently used window, and choosing the row focuses that windo
 application of the focused window is not listed, since its row would be the focused window.
 The running applications that have no window, and those whose windows are not accessible,
 follow, as in =windowSelect()=.
+
+** windowToCurrentSpaceSelect()
+
+=windowToCurrentSpaceSelect()= opens a chooser of every window except the focused one, as
+=windowSelect()= does but without the applications that have no windows. The window chosen is
+brought to the current Space and to the screen that has the focus, and focused. A minimized
+window is restored first. hs_window-gt moves the window between screens, keeping its place within
+the screen.
+
+A window in fullscreen is not brought, and an alert says so, because it has a Space of its own.
+An alert also says so when the chosen window has closed while the chooser was open.
 
 ** windowPreviousSelect()
 
@@ -245,8 +266,11 @@ chooser. The first is the window =windowPreviousSelect()= focuses.
 
 =bindHotkeys()= binds keys to this Spoon's functions. =hs.spoons.use()= calls it with its
 =hotkeys= option. Each property of =mapping= is the name of a function, and its value is
-=[modifiers, key]=. Five functions can be bound: =windowSelect=, =applicationWindowSelect=,
-=applicationSelect=, =windowPreviousSelect= and =applicationWindowPreviousSelect=.
+=[modifiers, key]=. Six functions can be bound: =windowSelect=, =applicationWindowSelect=,
+=applicationSelect=, =windowPreviousSelect=, =applicationWindowPreviousSelect= and
+=windowToCurrentSpaceSelect=. Four more names bind a function with ={ currentSpace: true }=:
+=windowSelectCurrentSpace=, =applicationWindowSelectCurrentSpace=,
+=windowPreviousSelectCurrentSpace= and =applicationWindowPreviousSelectCurrentSpace=.
 
 Any other name, or a binding that is not =[modifiers, key]=, is an error, and then no key is
 bound. A second call releases the keys of the first. =stop()= releases them as well.
@@ -310,11 +334,6 @@ window stays where it is. The window is instead focused where it is in three cas
 2. There is only one screen.
 3. The chosen window is itself fullscreen or minimized.
 
-* Limitations
-
-This Spoon does not yet restrict a chooser to the current Space, or move a window to the current
-Space. Hammerspoon 2 now has the functions for both, and they are planned.
-
 * Coming from Hammerspoon 1
 
 The following table gives the function that replaces each binding of the Hammerspoon 1 Spoon:
@@ -326,7 +345,11 @@ The following table gives the function that replaces each binding of the Hammers
 | =first_window_per_app=   | =applicationSelect()=                 |
 | =previous_window=        | =windowPreviousSelect()=              |
 | =previous_app_window=    | =applicationWindowPreviousSelect()=   |
-| the bindings ending in =_ws=, and =all_windows_move_to_current_workspace= | not ported; see /Limitations/ |
+| =all_windows_ws=         | =windowSelect({ currentSpace: true })= |
+| =app_windows_ws=         | =applicationWindowSelect(undefined, { currentSpace: true })= |
+| =previous_window_ws=     | =windowPreviousSelect({ currentSpace: true })= |
+| =previous_app_window_ws= | =applicationWindowPreviousSelect({ currentSpace: true })= |
+| =all_windows_move_to_current_workspace= | =windowToCurrentSpaceSelect()=, which refuses a window in fullscreen |
 
 The setting =fontSize= is not ported, because the Hammerspoon 2 chooser has no font setting.
 
