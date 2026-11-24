@@ -724,3 +724,8 @@ This Spoon defines five commands of its own:
   use its record of the open windows. That is faster than asking every running application.
 - The Accessibility permission, which the window and screen readers require to read the open
   windows.
+
+* License
+
+This Spoon is released under the MIT License. Copyright (c) 2026 Daniel M German. The full text
+is in the file =LICENSE= at the top of the [[https://github.com/dmgerman/hammer2spoons][hammer2spoons]] repository.

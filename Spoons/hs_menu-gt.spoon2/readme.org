@@ -638,3 +638,15 @@ These are behaviours that are easy to overlook:
 - *Only a frontmost application is hidden.* An =app= option starts an application that is not
   running, but a long press hides the application only when it is frontmost. Otherwise a long
   press brings it forward.
+
+* Credits
+
+The on-screen menu, with a letter beneath each option, was inspired by /MenuHammer/, a Hammerspoon 1
+Spoon by FryJay (Darin Fry), released under the MIT License at
+[[https://github.com/FryJay/MenuHammer][github.com/FryJay/MenuHammer]]. MenuHammer was itself inspired by Spacemacs. No code was
+taken from it.
+
+* License
+
+This Spoon is released under the MIT License. Copyright (c) 2026 Daniel M German. The full text
+is in the file =LICENSE= at the top of the [[https://github.com/dmgerman/hammer2spoons][hammer2spoons]] repository.

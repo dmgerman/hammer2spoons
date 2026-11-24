@@ -217,7 +217,7 @@ hs.spoons["hs_countdown-gt"].config.defaultLenMinutes = 50
 * Credits
 
 This Spoon is a port to Hammerspoon 2 of the Hammerspoon 1 Spoon /hs_countdown_timer/, by
-ashfinal, Daniel Marques and Omar El-Domeiri.
+ashfinal, Daniel Marques, Omar El-Domeiri and Daniel M German, released under the MIT License.
 
 * Requirements
 
@@ -226,3 +226,12 @@ This Spoon requires the following:
 - hs_interactive-gt and hs_menu-gt, loaded before this Spoon.
 - The Notifications permission, for the notification when the time is up. Without it, the sound,
   the alert and the dialog still appear.
+
+* License
+
+This Spoon is released under the MIT License. Copyright (c) 2026 Daniel M German. The full text
+is in the file =LICENSE= at the top of the [[https://github.com/dmgerman/hammer2spoons][hammer2spoons]] repository.
+
+It is a port of /hs_countdown_timer/, which is Copyright (c) ashfinal, Daniel Marques, Omar
+El-Domeiri and Daniel M German and released under the MIT License; its notice is kept here, as that
+licence requires.

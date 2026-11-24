@@ -1,6 +1,7 @@
 {
     "name": "hs_menu-gt",
     "author": "Daniel German <dmg@turingmachine.org>",
-    "version": "0.3.6",
+    "license": "MIT - https://opensource.org/licenses/MIT",
+    "version": "0.3.7",
     "description": "Hierarchical menus of named commands, independent of the device that displays them, with a keyboard-driven on-screen presenter."
 }

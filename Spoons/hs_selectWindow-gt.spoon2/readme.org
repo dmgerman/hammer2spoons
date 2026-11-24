@@ -438,9 +438,19 @@ took a Lua pattern:
 The setting =fontSize= is replaced by =textSize=, =subTextSize= and =querySize=. Their defaults are
 about 20% larger than the chooser's own sizes.
 
+* Credits
+
+This Spoon is a port to Hammerspoon 2 of the Hammerspoon 1 Spoon /hs_select_window/, by Daniel M
+German, released under the MIT License.
+
 * Requirements
 
 This Spoon requires the following:
 
 - hs_interactive-gt, hs_windowfilter-gt, hs_window-gt and hs_menu-gt, loaded before this Spoon.
 - The Screen Recording permission, for the thumbnails only.
+
+* License
+
+This Spoon is released under the MIT License. Copyright (c) 2026 Daniel M German. The full text
+is in the file =LICENSE= at the top of the [[https://github.com/dmgerman/hammer2spoons][hammer2spoons]] repository.

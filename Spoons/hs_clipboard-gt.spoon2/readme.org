@@ -288,3 +288,11 @@ This Spoon requires the following:
 
 - hs_interactive-gt and hs_menu-gt, loaded before this Spoon.
 - A build of Hammerspoon 2 that includes upstream pull request #377, for the right-click menu.
+
+* License
+
+This Spoon is released under the MIT License. Copyright (c) 2026 Daniel M German. The full text
+is in the file =LICENSE= at the top of the [[https://github.com/dmgerman/hammer2spoons][hammer2spoons]] repository.
+
+It is a port of /ClipboardTool/, which is Copyright (c) Alfred Schilken and released under the MIT
+License; its notice is kept here, as that licence requires.

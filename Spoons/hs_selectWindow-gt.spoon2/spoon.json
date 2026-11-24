@@ -1,6 +1,6 @@
 {
     "name": "hs_selectWindow-gt",
-    "version": "0.3.11",
+    "version": "0.3.12",
     "author": "Daniel German <dmg@turingmachine.org>",
     "license": "MIT - https://opensource.org/licenses/MIT",
     "description": "Switch windows by typing part of a title, with a preview. A port of hs_select_window."

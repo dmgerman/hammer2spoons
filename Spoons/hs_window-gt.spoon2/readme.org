@@ -523,3 +523,14 @@ this Spoon's design.
   such as a Skim window covered by a Google Chrome window. After the window is focused, this
   Spoon raises the covered window again, which does not take the focus from the window asked
   for.
+
+* Credits
+
+This Spoon is a port to Hammerspoon 2 of the Hammerspoon 1 Spoon /hs_windows/, and of window
+functions from Daniel M German's Hammerspoon 1 configuration, such as the attaching of windows to
+number keys.
+
+* License
+
+This Spoon is released under the MIT License. Copyright (c) 2026 Daniel M German. The full text
+is in the file =LICENSE= at the top of the [[https://github.com/dmgerman/hammer2spoons][hammer2spoons]] repository.

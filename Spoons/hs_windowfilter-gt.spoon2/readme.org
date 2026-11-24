@@ -416,7 +416,18 @@ and =hs.ax= use the same names. Unlike those modules, =on= and =off= here also a
 of event names, because registering one handler for several of the nineteen events is
 common.
 
+* Credits
+
+This Spoon was written anew for Hammerspoon 2, but its rules and events follow Hammerspoon 1's
+=hs.window.filter= module, part of Hammerspoon, which is released under the MIT License. Their names
+and meanings are kept, as /Coming from Hammerspoon 1/ describes.
+
 * Requirements
 
 This Spoon requires the Accessibility permission, without which macOS posts no window
 notifications to Hammerspoon 2.
+
+* License
+
+This Spoon is released under the MIT License. Copyright (c) 2026 Daniel M German. The full text
+is in the file =LICENSE= at the top of the [[https://github.com/dmgerman/hammer2spoons][hammer2spoons]] repository.

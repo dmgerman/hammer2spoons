@@ -352,6 +352,11 @@ to.
   an album by its number, so Apple Music is expected to open the same album for an account in
   another country. This has been tested only with a Canadian account.
 
+* Credits
+
+This Spoon is a port to Hammerspoon 2 of the Hammerspoon 1 Spoon /hs_music/, by Daniel M
+German, released under the MIT License.
+
 * Requirements
 
 This Spoon requires the following:
@@ -362,3 +367,8 @@ This Spoon requires the following:
   [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]],
   loaded before this Spoon.
 - The Accessibility permission, which pressing the Play button on an album's page requires.
+
+* License
+
+This Spoon is released under the MIT License. Copyright (c) 2026 Daniel M German. The full text
+is in the file =LICENSE= at the top of the [[https://github.com/dmgerman/hammer2spoons][hammer2spoons]] repository.

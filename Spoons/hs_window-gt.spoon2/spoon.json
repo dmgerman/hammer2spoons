@@ -1,6 +1,7 @@
 {
     "name": "hs_window-gt",
     "author": "Daniel German <dmg@turingmachine.org>",
-    "version": "2.4.4",
+    "license": "MIT - https://opensource.org/licenses/MIT",
+    "version": "2.4.5",
     "description": "Window placement, movement and resizing, with an undo history of where each window has been."
 }
