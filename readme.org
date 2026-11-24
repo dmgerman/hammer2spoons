@@ -12,8 +12,7 @@ manage windows and applications from the keyboard.
 - Apple Music is controlled from a menu, and albums are played from a list kept in a text file.
 - Every Spoon is installed and updated from this repository with =hs.spoons.use()=.
 
-#+ATTR_HTML: :alt The window menu of hs_window-gt: thirty-four options, each with an icon and the letter that selects it
-[[./Spoons/hs_window-gt.spoon2/images/window-menu.png]]
+@@html:<img src="./Spoons/hs_window-gt.spoon2/images/window-menu.png" alt="The window menu of hs_window-gt: thirty-four options, each with an icon and the letter that selects it">@@
 
 The window menu of [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]].
 

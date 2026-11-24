@@ -153,7 +153,11 @@ Spoon at a time, in that Spoon's own bead.
    looks the same as the full image, at about a third of the size.
 4. Store it as `Spoons/<name>.spoon2/images/<what-it-shows>.png`. Images stay in the download,
    so that an installed Spoon's readme shows them too.
-5. Give every image in a readme alt text that says what it shows.
+5. Give every image in a readme alt text that says what it shows, as an Org export snippet:
+   `@@html:<img src="./images/<what-it-shows>.png" alt="What it shows">@@`. GitHub renders Org
+   with org-ruby, which ignores `#+ATTR_HTML` and gives an image linked as `[[./images/x.png]]`
+   its path as alt text; it passes an `@@html:` snippet through as HTML. Emacs then shows the
+   snippet as text instead of the image.
 
 Before capturing, set up neutral content: sample text, generic window titles, and no real file
 names, messages, accounts or clipboard contents.

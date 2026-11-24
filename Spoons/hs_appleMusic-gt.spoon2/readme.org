@@ -49,8 +49,7 @@ example and when it is copied.
 
 The music menu holds an option for each action of this Spoon:
 
-#+ATTR_HTML: :alt The music menu: sixteen options for playback, volume and albums, each with an icon and the letter that selects it
-[[./images/music-menu.png]]
+@@html:<img src="./images/music-menu.png" alt="The music menu: sixteen options for playback, volume and albums, each with an icon and the letter that selects it">@@
 
 Each option has a letter beneath it, and pressing that letter selects the option. The menu
 accepts keyboard input only; it does not respond to the mouse. The options are:

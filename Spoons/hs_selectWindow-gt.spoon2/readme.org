@@ -28,8 +28,7 @@ Its main features are these:
 The following screenshot shows the chooser limited to Chrome's windows, with the thumbnail of
 the selected window to its left:
 
-#+ATTR_HTML: :alt The window chooser listing two Google Chrome windows, with a thumbnail of the selected one, an EmacsWiki page, to its left
-[[./images/window-chooser.png]]
+@@html:<img src="./images/window-chooser.png" alt="The window chooser listing two Google Chrome windows, with a thumbnail of the selected one, an EmacsWiki page, to its left">@@
 
 * Installing
 

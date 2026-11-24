@@ -17,14 +17,12 @@ Its main features are these:
 
 The menu bar item while a countdown runs, with its menu open:
 
-#+ATTR_HTML: :alt The countdown's menu bar item showing 24:46 left, with its menu open on the entries Stop and Pause
-[[./images/countdown-menu.png]]
+@@html:<img src="./images/countdown-menu.png" alt="The countdown's menu bar item showing 24:46 left, with its menu open on the entries Stop and Pause">@@
 
 The bottom edge of a screen during a countdown that is 40% through: the passed part of the bar is
 green, and the part still to pass is red.
 
-#+ATTR_HTML: :alt The bottom edge of a screen, with a thin progress bar green on its left two fifths and red on the rest
-[[./images/countdown-bar.png]]
+@@html:<img src="./images/countdown-bar.png" alt="The bottom edge of a screen, with a thin progress bar green on its left two fifths and red on the rest">@@
 
 * Installing
 

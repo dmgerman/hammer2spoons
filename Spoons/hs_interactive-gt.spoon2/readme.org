@@ -31,8 +31,7 @@ Its main features are these:
 
 The command chooser, after =window= has been typed:
 
-#+ATTR_HTML: :alt The command chooser listing ten commands that match window, each with its description and, for two of them, the key bound to it
-[[./images/command-chooser.png]]
+@@html:<img src="./images/command-chooser.png" alt="The command chooser listing ten commands that match window, each with its description and, for two of them, the key bound to it">@@
 
 * Installing
 
@@ -153,8 +152,7 @@ Running =countdown-start-for= shows the dialog below. Its text names the command
 requested and its position, and lists the values collected so far. The field holds the
 argument's default, 25:
 
-#+ATTR_HTML: :alt A dialog asking for minutes, for the command countdown-start-for, with 25 filled in
-[[./images/argument-prompt.png]]
+@@html:<img src="./images/argument-prompt.png" alt="A dialog asking for minutes, for the command countdown-start-for, with 25 filled in">@@
 
 Cancelling any prompt cancels the command, and =fn= is not called.
 

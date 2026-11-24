@@ -94,8 +94,7 @@ The window menu holds an option for most functions of this Spoon. =menuShow()= d
 screen of the focused window. Each option has a letter beneath it, and pressing that letter
 selects the option. The configuration under /Installing/ opens the menu with ⌥W.
 
-#+ATTR_HTML: :alt The window menu: thirty-four options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an icon and its letter
-[[./images/window-menu.png]]
+@@html:<img src="./images/window-menu.png" alt="The window menu: thirty-four options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an icon and its letter">@@
 
 The menu accepts keyboard input only. Selecting an option closes the menu, with three exceptions:
 
@@ -382,8 +381,7 @@ distance at once.
 | =mouseMove(x, y)=             | Moves the pointer to a point in screen coordinates. |
 | =mouseHighlight(x, y)=        | Draws the circle around a point, without moving the pointer. |
 
-#+ATTR_HTML: :alt The mouse pointer inside a red ring
-[[./images/pointer-ring.png]]
+@@html:<img src="./images/pointer-ring.png" alt="The mouse pointer inside a red ring">@@
 
 =mouseWindowCenterNext= takes the standard windows that are on screen, in the order in which
 hs_windowfilter-gt first saw them. The first call starts at the window after the focused one.
@@ -401,8 +399,7 @@ Isolation dims everything except the focused window. =isolationStart()= turns it
 In this example, the Terminal window in front has the focus and is not dimmed, and the window
 behind it is dimmed:
 
-#+ATTR_HTML: :alt A Terminal window shown normally in front of a dimmed window of text
-[[./images/isolation.png]]
+@@html:<img src="./images/isolation.png" alt="A Terminal window shown normally in front of a dimmed window of text">@@
 
 While isolation is on, the area that is not dimmed follows the focused window, on any screen. The
 area also changes when that window is moved or resized. The area is the window's frame, not the

@@ -30,8 +30,7 @@ combination.
 
 A menu of four options, each with its letter beneath it:
 
-#+ATTR_HTML: :alt A menu of four options, Safari, Calendar, News and Hello, with the letters s, a, d and f beneath them
-[[./images/on-screen-menu.png]]
+@@html:<img src="./images/on-screen-menu.png" alt="A menu of four options, Safari, Calendar, News and Hello, with the letters s, a, d and f beneath them">@@
 
 * Installing
 
@@ -289,8 +288,7 @@ menu has closed.
 The menu that hs_window-gt provides also has options for moving the pointer and taking a
 screenshot:
 
-#+ATTR_HTML: :alt A window menu of thirty options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an SF Symbol and its letter
-[[./images/window-menu.png]]
+@@html:<img src="./images/window-menu.png" alt="A window menu of thirty options, such as Undo, Maximize, Left half, Next screen and Isolate, each with an SF Symbol and its letter">@@
 
 * Options whose picture changes
 

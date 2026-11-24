@@ -20,8 +20,7 @@ Its main features are these:
 The chooser, with a copied image selected and drawn beside it, and one text entry masked as a
 password:
 
-#+ATTR_HTML: :alt The clipboard history chooser listing a copied image, selected and drawn larger to the chooser's left, followed by seven text entries, one of them masked as hidden - 12 chars, and the rows that clear the history and turn on paste on select
-[[./images/clipboard-chooser.png]]
+@@html:<img src="./images/clipboard-chooser.png" alt="The clipboard history chooser listing a copied image, selected and drawn larger to the chooser's left, followed by seven text entries, one of them masked as hidden - 12 chars, and the rows that clear the history and turn on paste on select">@@
 
 * Installing
 
