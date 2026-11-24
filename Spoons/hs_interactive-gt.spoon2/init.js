@@ -263,6 +263,9 @@ function pick(options) {
 //   CHOOSER_TOP_FRACTION    hardcoded in initialFrame, neither settable nor readable, so
 //                           an upstream change to it moves the chooser and leaves the
 //                           alert behind.
+//
+// Upstream issue #449 asks for the chooser's window id. With it, the chooser's frame is
+// read from hs.window, and these two copies are no longer needed.
 const CHOOSER_WIDTH_FRACTION = 0.5
 const CHOOSER_TOP_FRACTION = 0.25
 

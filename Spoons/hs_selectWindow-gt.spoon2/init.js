@@ -670,6 +670,11 @@ const HAMMERSPOON_BUNDLE_ID = "net.tenshu.Hammerspoon-2"
  *
  * config.thumbnailTopRatio is the fallback for when the chooser cannot be found, which is
  * the case in the moment before it is shown.
+ *
+ * This is a workaround: hs.chooser exposes neither its frame nor its window, so the chooser
+ * is recognised by its left edge and width rather than by an identifier. Upstream issue
+ * #449 asks for the chooser's window id. With it, the chooser's frame is read from hs.window,
+ * and this search is no longer needed.
  */
 function chooserGeometry(area) {
     const width = area.w * chooserWidth()
