@@ -19,22 +19,37 @@ The window menu of [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/
 
 * The Spoons
 
-The table lists each Spoon, what it does, and the other Spoons it requires. A required Spoon
-must be loaded before the Spoon that requires it.
+The table lists each Spoon, what it does, the other Spoons it requires, and the permissions of
+Hammerspoon 2 it needs. A required Spoon must be loaded before the Spoon that requires it, and
+also brings the permissions it needs. The Spoons are grouped by purpose: first those that
+switch between and place windows, then the tools, then the Spoons the others build on.
 
-| Spoon                                                                                                        | What it does                                                                                                                     | Requires                                            |
-|--------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------|
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]             | Places, resizes and moves windows from the keyboard, and undoes each change.                                                     | hs_interactive-gt, hs_windowfilter-gt, hs_menu-gt   |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_selectWindow-gt.spoon2][hs_selectWindow-gt]] | Switches to any open window by typing part of its title, and switches to an application and back with one key.                   | hs_interactive-gt, hs_windowfilter-gt, hs_window-gt |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_appleMusic-gt.spoon2][hs_appleMusic-gt]]     | Controls Apple Music from a menu, and plays albums from a list of albums kept in a text file.                                    | hs_interactive-gt, hs_menu-gt                       |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_clipboard-gt.spoon2][hs_clipboard-gt]]       | Keeps a history of the text and images copied to the clipboard, and copies an entry selected in a chooser back to the clipboard. | hs_interactive-gt, hs_menu-gt                       |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_countdown-gt.spoon2][hs_countdown-gt]]       | Runs a countdown timer whose progress is a bar along the bottom of every screen, with the time left in the menu bar.             | hs_interactive-gt, hs_menu-gt                       |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]                 | Creates menus of actions, each opened with one key, in which a letter selects each option.                                       |                                                     |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]   | Runs a function that requires arguments by asking the user for them, and runs any function by its name from a chooser.           |                                                     |
-| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] | Invokes a handler for the window events of the windows that a set of rules selects.                                              |                                                     |
+| Spoon              | What it does                                                                                                                                                                                      | Requires                                                        | Permissions                                                |
+|--------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------+------------------------------------------------------------|
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_selectWindow-gt.spoon2][hs_selectWindow-gt]] | Switches to any window by typing part of its title or application, most recently used first, with a preview of the window.                                                                        | hs_interactive-gt, hs_menu-gt, hs_window-gt, hs_windowfilter-gt | Screen Recording, for its thumbnails                       |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_window-gt.spoon2][hs_window-gt]]       | Places, moves and resizes windows with keys, across screens, undoes each change, and attaches windows to number keys that switch to them.                                                         | hs_interactive-gt, hs_menu-gt, hs_windowfilter-gt               | Accessibility; Screen Recording, for =screenshot()=          |
+|--------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------+------------------------------------------------------------|
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_clipboard-gt.spoon2][hs_clipboard-gt]]    | Keeps a history of the text and images copied to the clipboard, and copies an entry selected in a chooser back to the clipboard.                                                                  | hs_interactive-gt, hs_menu-gt                                   | none                                                       |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_countdown-gt.spoon2][hs_countdown-gt]]    | Runs a countdown timer, shown as a progress bar along the bottom edge of every screen and as the time left in the menu bar, with warnings as the end approaches and an alert when the time is up. | hs_interactive-gt, hs_menu-gt                                   | Notifications, for the notification when the time is up    |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_appleMusic-gt.spoon2][hs_appleMusic-gt]]   | Controls Apple Music: playback, volume, track information, and playing albums from a curated list, including albums held only in the Apple Music catalogue.                                       | hs_interactive-gt, hs_menu-gt                                   | Accessibility, to press the Play button on an album's page |
+|--------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------+------------------------------------------------------------|
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]  | Defines named commands, binds keys to them by name, and runs any of them from a chooser, as Emacs's M-x does, asking for any argument a command needs.                                            | none                                                            | Accessibility, for its window and screen readers           |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]         | Shows menus of commands on screen, where a letter beneath each option selects it, with submenus.                                                                                                  | none                                                            | none                                                       |
+| [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] | Reports when windows are created, closed, focused, moved or changed, for the windows that match given rules, as Hammerspoon 1's hs.window.filter did.                                             | none                                                            | Accessibility                                              |
+
+Two Spoons use another when it is loaded, without requiring it:
+
+- hs_menu-gt runs an option's command by name through hs_interactive-gt, which only options with
+  =command:= or =altCommand:= need.
+- hs_interactive-gt reads the open windows from hs_windowfilter-gt, when it is loaded, faster
+  than from Hammerspoon 2.
 
 hs_interactive-gt is required by every Spoon that asks the user for input, such as the window to
-act on.
+act on, and hs_menu-gt by every Spoon that offers a menu of its actions.
+
+Every Spoon further documents its installation and configuration in its own readme, linked from
+its name in the table: the Spoons it requires and how to load them, its settings and their
+defaults, its functions, and the keys that can be bound to them.
 
 * Installing
 
@@ -58,10 +73,29 @@ repository instead of its main branch. =hs.spoons.update(name)= downloads a Spoo
 the same source and ref, and reinstalls it when the version in its =spoon.json= has changed. A
 Spoon installed from a tag or a commit is therefore never changed by an update.
 
-The readme of each Spoon shows how to install that Spoon.
+The =config= option of =hs.spoons.use()= sets a Spoon's settings, and its =hotkeys= option binds
+keys to the Spoon's functions, as each Spoon's readme lists them:
+
+#+begin_src js
+hs.spoons.use("hs_countdown-gt", {
+    source: "dmgerman/hammer2spoons",
+    start: true,
+    config: { defaultLenMinutes: 50 },
+    hotkeys: { menuShow: [["cmd", "ctrl", "alt"], "t"] }
+})
+#+end_src
+
+The readme of each Spoon documents its installation and configuration in full.
 
 * Requirements
 
 The Spoons require a build of Hammerspoon 2 from its main branch on 2026-11-02 or later.
 Release 0.0.16 and earlier cannot install Spoons from a repository, and do not have
-=hs.spoons.load()=.
+=hs.spoons.load()=. The Spoons are tested with a build of the main branch of 2026-11-24, at
+commit =c7908c01=. A Spoon that needs a later change to Hammerspoon 2 says so in its readme.
+
+* License
+
+The Spoons are released under the MIT License, Copyright (c) 2026 Daniel M German; the full text
+is in [[./LICENSE][LICENSE]]. Some are ports of Hammerspoon 1 Spoons by other authors, also released under
+the MIT License, which the readme of each such Spoon names.
