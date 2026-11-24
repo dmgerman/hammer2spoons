@@ -51,6 +51,25 @@ function consoleCapture(t) {
 
 module.exports = [
     {
+        name: "each setting can also be set on the Spoon's object, as hs.spoons.use()'s config option sets it",
+        run: (t) => {
+            const config = t.spoon.config
+            const saved = Object.assign({}, config)
+            t.cleanup(() => Object.assign(config, saved))
+            const names = Object.keys(config)
+            t.assert.ok(names.length > 0, "no settings")
+            // A value that no setting has, set and restored at once.
+            const marker = { zqMarker: true }
+            for (const name of names) {
+                // As hs.spoons.use() applies its config option: Object.assign(spoon, config).
+                Object.assign(t.spoon, { [name]: marker })
+                t.assert.equal(config[name], marker, `${name}: config after setting the object`)
+                config[name] = saved[name]
+                t.assert.equal(t.spoon[name], saved[name], `${name}: the object after setting config`)
+            }
+        }
+    },
+    {
         name: "moveDebounce is how long windowMoved waits after the last move",
         run: async (t) => {
             configSet(t, { moveDebounce: 0.8 })

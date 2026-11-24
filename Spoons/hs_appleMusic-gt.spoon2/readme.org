@@ -317,6 +317,14 @@ The settings are the fields of this Spoon's =config= object, and take effect whe
 assigned, such as =hs.spoons["hs_appleMusic-gt"].config.alertDuration = 5=. The one exception is
 =autoPlayInterval=, which takes effect the next time auto-play is turned on.
 
+The =config= option of =hs.spoons.use()= sets them too, as the Hammerspoon 2 Spoons guide
+describes: each setting is also a property of this Spoon's object, which reads and writes
+=config=.
+
+#+begin_src js
+hs.spoons.use("hs_appleMusic-gt", { config: { alertDuration: 5 } })
+#+end_src
+
 | Setting                  | Default                                     | Meaning                                                                                                     |
 |--------------------------+---------------------------------------------+-------------------------------------------------------------------------------------------------------------|
 | =albumListPath=          | =albums.txt= in the configuration directory | The album list.                                                                                             |

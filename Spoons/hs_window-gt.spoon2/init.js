@@ -2457,3 +2457,16 @@ module.exports = {
 for (const [name, parameters] of Object.entries(EXPORTED_PARAMETERS)) {
     module.exports[name] = interactiveExportCreate(module.exports[name], parameters)
 }
+
+// hs.spoons.use()'s config option copies each of its properties onto this Spoon's object, as the
+// Hammerspoon 2 Spoons guide describes. The settings live in config, so each one is also a
+// property of the object that reads and writes config: both hs.spoons.use(name, { config: {...} })
+// and spoon.config.name = value then set it. No setting has the name of an exported function.
+for (const name of Object.keys(config)) {
+    Object.defineProperty(module.exports, name, {
+        get: () => config[name],
+        set: (value) => { config[name] = value },
+        enumerable: true,
+        configurable: true
+    })
+}

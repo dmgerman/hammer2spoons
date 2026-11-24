@@ -218,6 +218,14 @@ The settings are the fields of =config=, and are set before =start()=:
 hs.spoons["hs_clipboard-gt"].config.historySize = 200
 #+end_src
 
+The =config= option of =hs.spoons.use()= sets them too, as the Hammerspoon 2 Spoons guide
+describes: each setting is also a property of this Spoon's object, which reads and writes
+=config=.
+
+#+begin_src js
+hs.spoons.use("hs_clipboard-gt", { config: { historySize: 200 } })
+#+end_src
+
 | Setting                    | Default                   | Meaning                                         |
 |----------------------------+---------------------------+-------------------------------------------------|
 | =historySize=              | =100=                     | The number of text entries kept.                |

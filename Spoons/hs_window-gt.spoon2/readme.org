@@ -451,6 +451,14 @@ win.config.isolationOpacity = 0.7
 win.config.mouseHighlightColor = "#00FF00"
 #+end_src
 
+The =config= option of =hs.spoons.use()= sets them too, as the Hammerspoon 2 Spoons guide
+describes: each setting is also a property of this Spoon's object, which reads and writes
+=config=.
+
+#+begin_src js
+hs.spoons.use("hs_window-gt", { config: { isolationOpacity: 0.7 } })
+#+end_src
+
 | Setting                  | Default     | Meaning |
 |--------------------------+-------------+---------|
 | =historySize=            | =200=       | The number of positions kept in each window's history. The oldest is discarded first. |

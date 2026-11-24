@@ -361,6 +361,14 @@ hs.spoons["hs_selectWindow-gt"].config.showThumbnail = true
 =skipApplications= is read when this Spoon starts, so it must be set before =start()=. The other
 settings are read each time they are used.
 
+The =config= option of =hs.spoons.use()= sets them too, as the Hammerspoon 2 Spoons guide
+describes: each setting is also a property of this Spoon's object, which reads and writes
+=config=.
+
+#+begin_src js
+hs.spoons.use("hs_selectWindow-gt", { config: { showThumbnail: true } })
+#+end_src
+
 | Setting                    | Default | Meaning                                                  |
 |----------------------------+---------+----------------------------------------------------------|
 | =rowsToDisplay=            |      14 | Rows visible in the chooser at once                      |

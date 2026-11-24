@@ -2,6 +2,6 @@
     "name": "hs_appleMusic-gt",
     "author": "Daniel German <dmg@turingmachine.org>",
     "license": "MIT - https://opensource.org/licenses/MIT",
-    "version": "2.1.2",
+    "version": "2.1.3",
     "description": "Controls Apple Music: playback, volume, track information, and playing albums from a curated list, including albums held only in the Apple Music catalogue."
 }

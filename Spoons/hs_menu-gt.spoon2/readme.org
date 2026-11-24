@@ -446,6 +446,14 @@ or the prompt closes.
 
 The settings are fields of =menu.config=, where =menu= is =hs.spoons["hs_menu-gt"]=.
 
+The =config= option of =hs.spoons.use()= sets them too, as the Hammerspoon 2 Spoons guide
+describes: each setting is also a property of this Spoon's object, which reads and writes
+=config=.
+
+#+begin_src js
+hs.spoons.use("hs_menu-gt", { config: { tileSize: 96 } })
+#+end_src
+
 | Setting            | Default                    | Meaning                                     |
 |--------------------+----------------------------+---------------------------------------------|
 | =iconDir=          | =<config>/icons=           | Where a relative icon name is looked up.    |

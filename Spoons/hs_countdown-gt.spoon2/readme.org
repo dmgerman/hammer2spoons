@@ -192,6 +192,14 @@ The settings are the fields of =config=:
 hs.spoons["hs_countdown-gt"].config.defaultLenMinutes = 50
 #+end_src
 
+The =config= option of =hs.spoons.use()= sets them too, as the Hammerspoon 2 Spoons guide
+describes: each setting is also a property of this Spoon's object, which reads and writes
+=config=.
+
+#+begin_src js
+hs.spoons.use("hs_countdown-gt", { config: { defaultLenMinutes: 50 } })
+#+end_src
+
 | Setting                 | Default     | Meaning                                                    |
 |-------------------------+-------------+------------------------------------------------------------|
 | =defaultLenMinutes=     | =25=        | The length of a countdown started without one.             |

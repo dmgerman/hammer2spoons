@@ -357,6 +357,14 @@ used, so a change takes effect at once:
 hs.spoons["hs_windowfilter-gt"].config.moveDebounce = 0.2
 #+end_src
 
+The =config= option of =hs.spoons.use()= sets them too, as the Hammerspoon 2 Spoons guide
+describes: each setting is also a property of this Spoon's object, which reads and writes
+=config=.
+
+#+begin_src js
+hs.spoons.use("hs_windowfilter-gt", { config: { moveDebounce: 0.2 } })
+#+end_src
+
 | Setting                   | Default            | Meaning                                                          |
 |---------------------------+--------------------+------------------------------------------------------------------|
 | =moveDebounce=            | =0.1=              | Seconds without a move or resize before =windowMoved= or =windowResized= is emitted |
