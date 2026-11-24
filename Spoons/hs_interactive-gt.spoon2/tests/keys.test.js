@@ -192,7 +192,16 @@ module.exports = [
             const calling = t.spoon.callInteractively("commands-execute")
             await promptOpenWait(t)
             t.assert.equal(t.spoon.promptIsOpen(), true, "the chooser is open")
-            hs.eventtap.keyStroke([], "escape", null)
+            // A second Escape is sent when the chooser is still open after the first: on the
+            // machine these tests were written on, ~/Library/KeyBindings/DefaultKeyBinding.dict
+            // binds Escape as a prefix key, and after the keyRunning() test the first Escape did
+            // not close this chooser (hammer2spoons-ei6.74). The fixture's promptCancel() cannot
+            // be used, because it asks the user's hs_interactive-gt, which does not see the copy's
+            // chooser. The chooser is not modal, so the test can wait between the two.
+            for (let attempt = 0; attempt < 2 && t.spoon.promptIsOpen(); attempt++) {
+                hs.eventtap.keyStroke([], "escape", null)
+                await t.wait(0.5)
+            }
             await calling
             await t.wait(0.4)
             t.assert.equal(t.spoon.promptIsOpen(), false, "the chooser is still open")
