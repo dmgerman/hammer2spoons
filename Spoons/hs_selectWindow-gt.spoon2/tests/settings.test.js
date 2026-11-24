@@ -150,6 +150,23 @@ module.exports = [
         }
     },
     {
+        name: "textSize, subTextSize and querySize are given to the chooser, about 20% above its own by default, and null keeps its own",
+        run: async (t) => {
+            const choosers = choosersCapture(t)
+            await windowsReady(t)
+            const first = open(t, () => t.spoon.windowSelect())
+            await openWait(t, first)
+            await key(t, first, [], "escape")
+            const sizes = (record) => JSON.stringify(["textSize", "subTextSize", "querySize"].map((name) => record.assigned[name] === undefined ? null : record.assigned[name]))
+            t.assert.equal(sizes(choosers[0]), JSON.stringify([17, 14, 24]), "the default sizes")
+            settingsSet(t, { textSize: 18, subTextSize: null, querySize: 30 })
+            const second = open(t, () => t.spoon.windowSelect())
+            await openWait(t, second)
+            await key(t, second, [], "escape")
+            t.assert.equal(sizes(choosers[1]), JSON.stringify([18, null, 30]), "the sizes set, with subTextSize null")
+        }
+    },
+    {
         name: "skipApplications, read at start(), leaves an application's windows out",
         run: async (t) => {
             const [a] = await windowsReady(t)

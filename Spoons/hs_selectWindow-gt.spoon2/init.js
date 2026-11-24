@@ -50,6 +50,13 @@ const config = {
     wideWidth: 0.22,
     wideScreenPoints: 3000,
 
+    // Text sizes in the chooser, in points: a row's title, the line beneath it, and the search
+    // field. hs.chooser's own are 14, 12 and 20; these are about 20% larger, rounded to whole
+    // points. null keeps the chooser's own size.
+    textSize: 17,
+    subTextSize: 14,
+    querySize: 24,
+
     // A picture of the selected window, drawn above the chooser. One snapshot costs around
     // 120ms, so it is taken when a window is first selected rather than for the whole list,
     // and kept while the chooser is open. Tab turns it off and on.
@@ -666,6 +673,9 @@ function chooseFrom(all, placeholder, windowless = [], choose = focusWindowById)
     own.searchSubText = true
     own.visibleRows = config.rowsToDisplay
     own.width = chooserWidth()
+    for (const name of ["textSize", "subTextSize", "querySize"]) {
+        if (config[name] !== null && config[name] !== undefined) own[name] = config[name]
+    }
 
     own.setChoices(choicesFor(records, windowless))
 

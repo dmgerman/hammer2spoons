@@ -298,6 +298,9 @@ settings are read each time they are used.
 | =width=                    |     0.4 | Chooser width, as a fraction of the screen's width       |
 | =wideWidth=                |    0.22 | The fraction used on a display wider than =wideScreenPoints= |
 | =wideScreenPoints=         |    3000 | Above this width, in points, =wideWidth= is used         |
+| =textSize=                 |      17 | Size of a row's title, in points; null keeps the chooser's own, 14 |
+| =subTextSize=              |      14 | Size of the line beneath the title, in points; null keeps the chooser's own, 12 |
+| =querySize=                |      24 | Size of the search field's text, in points; null keeps the chooser's own, 20 |
 | =showThumbnail=            |   false | Whether the thumbnail is shown when the chooser opens    |
 | =thumbnailHeightRatio=     |     0.4 | Largest height of the thumbnail, as a fraction of the screen |
 | =thumbnailTopRatio=        |    0.12 | The thumbnail's top, as a fraction of the screen, when the chooser's position cannot be read |
@@ -351,7 +354,8 @@ The following table gives the function that replaces each binding of the Hammers
 | =previous_app_window_ws= | =applicationWindowPreviousSelect({ currentSpace: true })= |
 | =all_windows_move_to_current_workspace= | =windowToCurrentSpaceSelect()=, which refuses a window in fullscreen |
 
-The setting =fontSize= is not ported, because the Hammerspoon 2 chooser has no font setting.
+The setting =fontSize= is replaced by =textSize=, =subTextSize= and =querySize=. Their defaults are
+about 20% larger than the chooser's own sizes.
 
 * Requirements
 
