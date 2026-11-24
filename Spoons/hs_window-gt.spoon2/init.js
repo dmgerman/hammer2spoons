@@ -145,15 +145,18 @@ function alert(message) {
 /**
  * Every window of every ordinary application.
  *
- * Windows of accessory applications, such as Notification Centre, are left out.
- * hs.window.allWindows() measured 100 to 120 ms for 27 such windows on 2026-10-24. That was
- * faster than asking each application for its windows, which took about 200 ms. Asking
- * hs_windowfilter-gt costs about 1 ms, so anything that runs often uses filterWindows().
+ * Windows of accessory applications, such as Notification Centre, are left out. They are the
+ * windows hs_windowfilter-gt holds, minimized ones included, which this Spoon's filter reads in
+ * about 1 ms. hs.window.allWindows() asks every application instead: it measured 100 to 120 ms
+ * for 27 windows on 2026-10-24, and an application that does not answer, such as Music during a
+ * library sync on 2026-11-23, made a call take seconds (hammer2spoons-ei6.71). It is used only
+ * before start() has created the filter.
  *
  * Ordering is by application rather than front to back, so a caller that needs the order
  * uses windowsStacked().
  */
 function allApplicationWindows() {
+    if (windowFilter) return filterWindows()
     return hs.window.allWindows().filter((window) => {
         const application = window.application
         return application !== null && application.kind === "standard"
@@ -297,8 +300,9 @@ function coveredFrontWindowsRaise(window, before, after) {
     }
     if (changed.length === 0) return
 
-    // Only now are windows looked up, since nothing else needs them.
-    const byId = new Map(hs.window.allWindows().map((w) => [w.id, w]))
+    // Only now are windows looked up, since nothing else needs them, and from the windows
+    // hs_windowfilter-gt holds rather than by asking every application.
+    const byId = new Map(allApplicationWindows().map((w) => [w.id, w]))
     const pid = window.pid
     for (const { previous, current } of changed) {
         const covering = byId.get(current)

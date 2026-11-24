@@ -56,6 +56,14 @@ async function fullscreenEnter(t, window) {
     await t.wait(1.5)
 }
 
+// The front window of a screen, from the stacking order of the Space it shows, among the windows
+// given.
+function frontOf(screen, windows) {
+    const space = (screen.spaces || []).find((s) => s.isCurrent)
+    const ids = new Set(windows.map((w) => w.id))
+    return space ? space.windowIDs().find((id) => ids.has(id)) || null : null
+}
+
 const tests = [
     {
         name: "windowToScreenMove next moves a window to the next screen, keeping its place relative to the screen",
@@ -273,5 +281,35 @@ const tests = [
         }
     }
 ]
+
+tests.push({
+    // An application that is activated can bring forward the window it last had as its main
+    // window: Google Chrome did, on 2026-11-23 (hammer2spoons-ei6.50). The test windows do not
+    // behave that way, so the test does it itself: right after the switch, it raises the other
+    // window of the same application, as Chrome would.
+    name: "windowFocus raises again another screen's front window that a window of the same application covered",
+    run: async (t) => {
+        const [a, b] = hs.screen.all()
+        const [p1, p2] = await t.windowsOpen(2)
+        const [q] = await t.windowsOpen(1)
+        await t.frameSet(p1, within(b, 0.1, 0.1, 0.4, 0.5))
+        await t.frameSet(q, within(b, 0.15, 0.15, 0.4, 0.5))
+        await t.frameSet(p2, within(a, 0.1, 0.1, 0.4, 0.5))
+        for (const window of [p2, p1, q]) {
+            window.focus()
+            await t.wait(0.4)
+        }
+        t.assert.equal(frontOf(b, [p1, q]), q.id, "the front window of the second screen before the switch")
+        t.spoon.windowFocus(p2)
+        await t.wait(0.05)
+        p1.raise()
+        await t.wait(0.05)
+        t.assert.equal(frontOf(b, [p1, q]), p1.id, "the other window of the same application covered it")
+        await t.wait(t.spoon.config.focusReassertDelay + 0.7)
+        t.assert.equal(frontOf(b, [p1, q]), q.id, "the front window of the second screen after the switch")
+        const focused = hs.window.focusedWindow()
+        t.assert.equal(focused ? focused.id : null, p2.id, "the focused window")
+    }
+})
 
 module.exports = { screens: 2, tests }
