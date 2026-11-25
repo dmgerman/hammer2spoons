@@ -306,14 +306,46 @@ function frontWindowsRecord() {
         if (!window) window = ordered.find(onScreen)
         if (window) perScreen.push(window)
     }
-    return { perScreen, focused: hs.window.focusedWindow() }
+    return { perScreen, spaces: spacesRecord(), focused: hs.window.focusedWindow() }
+}
+
+// The id of the Space showing on each screen.
+//
+// A test window opened on a screen makes macOS show a desktop Space there. On 2026-11-25 the
+// iPad mini, which showed a fullscreen kiosk browser, was left showing its desktop after a run.
+// The kiosk browser turns its Accessibility API off, so its window could not be raised either:
+// only going back to its Space brings it back.
+function spacesRecord() {
+    const spaces = []
+    for (const screen of hs.screen.all()) {
+        try {
+            const space = screen.currentSpace
+            if (space) spaces.push(space.id)
+        } catch (e) {
+            // A screen whose Space cannot be read is left as it is.
+        }
+    }
+    return spaces
+}
+
+// Shows again each recorded Space that still exists and is no longer showing.
+async function spacesRestore(spaces) {
+    for (const id of spaces || []) {
+        try {
+            const space = hs.screen.spaceForID(id)
+            if (space && space.exists && !space.isCurrent) await space.goto()
+        } catch (e) {
+            // A Space that cannot be shown again is left as it is.
+        }
+    }
 }
 
 // The recorded windows, by application name and window id, for the report. Titles are left out,
 // because they can hold the user's private information.
 function frontWindowsDescribe(front) {
     const name = (w) => `${w.application ? w.application.name : "?"} #${w.id}`
-    return `in front: ${front.perScreen.map(name).join(", ")}; focused: ${front.focused ? name(front.focused) : "none"}`
+    return `in front: ${front.perScreen.map(name).join(", ")}; spaces: ${(front.spaces || []).join(", ")}; ` +
+        `focused: ${front.focused ? name(front.focused) : "none"}`
 }
 
 // Whether a recorded window still exists.
@@ -340,13 +372,14 @@ async function frontWindowFocus(window) {
     return false
 }
 
-// Brings back the window that was in front on each screen, then gives the focus back to the
-// window that had it.
+// Shows again the Space that was showing on each screen, brings back the window that was in
+// front on each screen, then gives the focus back to the window that had it.
 //
 // The front windows are raised, not focused. focus() activates the window's application, and
 // activating every application in turn brought their windows forward over the user's, on
 // 2026-11-23. raise() brings only that window forward, without activating its application.
 async function frontWindowsRestore(front) {
+    await spacesRestore(front.spaces)
     const focusedId = front.focused ? front.focused.id : null
     for (const window of front.perScreen) {
         if (window.id === focusedId || !windowExists(window)) continue
