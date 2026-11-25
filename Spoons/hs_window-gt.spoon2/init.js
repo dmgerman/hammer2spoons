@@ -760,20 +760,21 @@ function screenChoose(window) {
 /**
  * The ids of the screens showing a fullscreen window.
  *
- * Hammerspoon 1 asked hs.spaces for the type of the space on each screen. Hammerspoon 2
- * has no spaces module, and cannot say which Space a window is on. hs.window.allWindows()
- * includes windows on other Spaces, so a fullscreen window on a Space that is not showing
- * would count as well. Instead, the window at the centre of each screen is asked whether
- * it is fullscreen: the hit test only finds windows that are on the visible Space.
+ * A screen shows a fullscreen window when the Space showing on it is a fullscreen Space, as
+ * Hammerspoon 1 found with hs.spaces. The window server gives the type of each screen's
+ * current Space, so this works for every application: about 5 ms for four screens.
+ *
+ * Asking the window at the centre of each screen whether it is fullscreen, as this did before,
+ * misses an application that turns its Accessibility API off, such as Firefox in kiosk mode:
+ * hs.window.windowAtPoint() cannot find its windows.
  *
  * @returns {Set<number>}
  */
 function fullscreenScreenIds() {
     const ids = new Set()
     for (const screen of screenList()) {
-        const f = screen.fullFrame
-        const window = hs.window.windowAtPoint(new HSPoint(f.x + f.w / 2, f.y + f.h / 2))
-        if (window && window.isFullscreen) ids.add(screen.id)
+        const space = screen.currentSpace
+        if (space && space.type === "fullscreen") ids.add(screen.id)
     }
     return ids
 }

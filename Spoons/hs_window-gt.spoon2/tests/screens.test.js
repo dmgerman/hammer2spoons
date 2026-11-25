@@ -215,5 +215,33 @@ module.exports = [
             t.assert.equal(t.spoon.windowWithWindowSwap(other, window), false, "windowWithWindowSwap returned")
             t.assert.equal(alerts.join(" | "), "A fullscreen window cannot be moved", "alert")
         }
+    },
+    {
+        // An application that turns its Accessibility API off, such as Firefox in kiosk mode,
+        // has windows that hs.window.windowAtPoint() cannot find. windowAtPoint() is replaced by
+        // one that finds nothing, so the screen must be recognised without it.
+        name: "a screen showing a fullscreen window is reported even when hs.window cannot find that window",
+        timeout: 20,
+        run: async (t) => {
+            const [window] = await t.windowsOpen()
+            window.focus()
+            await t.wait(0.4)
+            window.toggleFullscreen()
+            const started = Date.now()
+            while (!window.isFullscreen && Date.now() - started < 5000) await t.wait(0.1)
+            t.assert.ok(window.isFullscreen, "the window did not enter fullscreen")
+            // The Space switch takes about a second to finish.
+            await t.wait(1.5)
+            const screen = window.screen
+            const original = hs.window.windowAtPoint
+            const own = Object.prototype.hasOwnProperty.call(hs.window, "windowAtPoint")
+            hs.window.windowAtPoint = () => null
+            try {
+                t.assert.equal(t.spoon.fullscreenScreenIds().has(screen.id), true, "fullscreenScreenIds")
+            } finally {
+                if (own) hs.window.windowAtPoint = original
+                else delete hs.window.windowAtPoint
+            }
+        }
     }
 ]

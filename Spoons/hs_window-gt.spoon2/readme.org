@@ -301,7 +301,9 @@ left fullscreen after =config.fullscreenLeaveWait= seconds.
 *** fullscreenScreenIds(), screenHasFullscreenWindow([screen])
 
 =fullscreenScreenIds= returns a =Set= of the ids of the screens that are showing a fullscreen
-window. =screenHasFullscreenWindow= returns whether one screen is among them.
+window. =screenHasFullscreenWindow= returns whether one screen is among them. A screen counts
+when the Space showing on it is a fullscreen Space, as macOS reports it. This includes the
+windows of an application that turns its Accessibility API off, such as Firefox in kiosk mode.
 
 ** Two windows, and the focus
 

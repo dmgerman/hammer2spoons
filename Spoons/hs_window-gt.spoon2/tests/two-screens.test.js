@@ -94,8 +94,13 @@ const tests = [
     {
         name: "windowToScreenMove to a given screen moves the window there",
         run: async (t) => {
+            // The target is the last screen not showing a fullscreen window: a move onto one that
+            // is showing one is refused, which another test checks.
             const screens = hs.screen.all()
-            const a = screens[0], target = screens[screens.length - 1]
+            const occupied = t.spoon.fullscreenScreenIds()
+            const a = screens[0]
+            const target = screens.slice(1).reverse().find((s) => !occupied.has(s.id))
+            if (!target) t.skip("every screen but the first is showing a fullscreen window")
             const window = await windowOn(t, a)
             const before = copy(window.frame)
             t.assert.equal(t.spoon.windowToScreenMove(target, window), true, "returned")
