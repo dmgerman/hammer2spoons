@@ -65,6 +65,8 @@ module.exports = [
             t.assert.equal(frame.w, box, "the canvas's width")
             t.assert.equal(frame.h, box, "the canvas's height")
             t.assert.equal(frame.x + frame.w / 2, x, "the canvas's horizontal centre")
+            // A canvas is placed in screen coordinates, with y = 0 at the top of the primary screen.
+            t.assert.equal(frame.y + frame.h / 2, y, "the canvas's vertical centre")
             const ring = canvas.canvasElements()[0]
             t.assert.equal(ring.type, "circle", "the element")
             t.assert.equal(ring.action, "stroke", "the element's action")

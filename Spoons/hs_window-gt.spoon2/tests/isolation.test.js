@@ -4,12 +4,11 @@
 // is rounded to whole points.
 const EDGE_TOLERANCE = 1
 
-// A canvas's frame in screen coordinates. Canvases are placed with y = 0 at the bottom of the
-// primary screen, and screens and windows with y = 0 at its top.
+// A canvas's frame. Canvases are placed in screen coordinates, with y = 0 at the top of the
+// primary screen, as screens and windows are.
 function canvasScreenFrame(canvas) {
     const f = canvas.frame()
-    const primary = hs.screen.primary().fullFrame
-    return { x: f.x, y: primary.y + primary.h - (f.y + f.h), w: f.w, h: f.h }
+    return { x: f.x, y: f.y, w: f.w, h: f.h }
 }
 
 function showing(canvas) {

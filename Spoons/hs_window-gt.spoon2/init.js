@@ -1182,7 +1182,7 @@ function mouseHighlight(x, y) {
     const diameter = config.mouseHighlightSize
     const width = config.mouseHighlightWidth
     const box = diameter + width
-    const rect = toUIRect({ x: x - box / 2, y: y - box / 2, w: box, h: box })
+    const rect = { x: x - box / 2, y: y - box / 2, w: box, h: box }
 
     highlightWindow = hs.canvas.create({ x: rect.x, y: rect.y, w: rect.w, h: rect.h })
         .level("status")
@@ -1724,26 +1724,9 @@ function _keyToWindowAttach(window, key) {
 // The uncovered area is the window's frame, not the display the window is on. A window occupying part of a
 // screen leaves the rest of that screen dimmed, and a fullscreen window — whose frame is the
 // whole display, menu bar included — leaves its display clear.
-
-/**
- * Convert a rectangle from screen coordinates to hs.ui window coordinates.
- *
- * A screen's frame and a window's frame have their origin at the top left of the primary
- * screen, with y increasing downwards. An hs.ui window is placed with its origin at the
- * bottom left of the primary screen, with y increasing upwards, so a screen below the
- * primary has a negative y. Passing one as the other puts a panel somewhere plausible but
- * wrong, which is what dimmed the left of the screen rather than the right.
- */
-function toUIRect(rect) {
-    const primary = hs.screen.primary().fullFrame
-    const primaryBottom = primary.y + primary.h
-    return {
-        x: rect.x,
-        y: primaryBottom - (rect.y + rect.h),
-        w: rect.w,
-        h: rect.h
-    }
-}
+//
+// The panels are placed in screen coordinates, as windows are: hs.canvas measures y from the
+// top of the primary screen since Hammerspoon 2's change #454.
 
 // Canvas colours are {red, green, blue, alpha} components in 0..1.
 function canvasColor(value, alpha) {
@@ -1866,8 +1849,7 @@ function isolationSignature(rects) {
  * change flickers, and the pool is at most one panel per screen plus three.
  */
 function drawIsolation(rects) {
-    rects.forEach((screenRect, index) => {
-        const rect = toUIRect(screenRect)
+    rects.forEach((rect, index) => {
         const overlay = isolationWindows[index]
         if (!overlay) {
             isolationWindows[index] = makeOverlay(rect)
