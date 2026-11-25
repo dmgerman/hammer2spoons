@@ -622,37 +622,20 @@ function revealKeysDisable() {
 // If a third appears it is worth extracting: the sizing, the placement and the polling are
 // not specific to what the picture is of.
 
-const HAMMERSPOON_BUNDLE_ID = "net.tenshu.Hammerspoon-2"
-
 /**
  * Where the chooser is, so the preview can sit beside it.
  *
- * Its width and left edge follow from hs.chooser centring a window of the configured
- * width. Its vertical position does not, and hs.chooser reports no frame, so it is read
- * from Hammerspoon's own window list: the chooser is the window whose left edge and width
- * match the computed ones, which separates it from the console and from this canvas.
- *
- * Asking one application for its windows costs about 10ms.
+ * An open chooser gives its frame, in screen coordinates. Before it is shown there is no
+ * frame, and the position is computed instead: hs.chooser centres a window of the configured
+ * width, and config.previewTopRatio stands for its height on the screen.
  */
 function chooserGeometry(area) {
+    const frame = chooser && chooser.isVisible ? chooser.frame : null
+    if (frame) return { left: frame.x, width: frame.w, top: frame.y }
+
     const width = area.w * (chooser && chooser.width ? chooser.width : 0.5)
     const left = area.x + (area.w - width) / 2
-    let top = area.y + area.h * config.previewTopRatio
-
-    try {
-        const app = hs.application.matchingBundleID(HAMMERSPOON_BUNDLE_ID)
-        for (const window of (app ? app.allWindows || [] : [])) {
-            const frame = window.frame
-            if (!frame) continue
-            if (Math.abs(frame.x - left) <= 2 && Math.abs(frame.w - width) <= 2) {
-                top = frame.y
-                break
-            }
-        }
-    } catch (e) {
-        // The computed position stands.
-    }
-
+    const top = area.y + area.h * config.previewTopRatio
     return { left: left, width: width, top: top }
 }
 

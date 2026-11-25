@@ -226,7 +226,8 @@ function ask(options) {
 /**
  * Show a chooser and resolve to the chosen row's `value`, or to CANCEL / SKIP.
  *
- * @param {object} options `placeholder`, `context`, `choices`, `optional`.
+ * @param {object} options `placeholder`, `context`, `choices`, `optional`, and `alert`, a
+ *        message shown at the chooser's corner once it is open.
  * @returns {Promise<*>} The selected value.
  */
 function pick(options) {
@@ -247,47 +248,29 @@ function pick(options) {
         }
         promptOpened()
         chooser.show()
+        // Only an open chooser has a frame, so the alert is shown after it.
+        if (options.alert) alertAtChooser(options.alert, chooser)
     })
 }
 
-// A chooser sits horizontally centred on the main screen, a quarter of the way down, and
-// is half the screen's width. The frame is computed inside Hammerspoon 2, by
-// ChooserPanel.initialFrame in hs.chooser/Views/ChooserWindow.swift, and HSChooser exposes
-// neither the frame nor the window, so these two repeat the arithmetic rather than read
-// it. They place the alert, never the chooser, and so are copies that can fall out of step:
-//
-//   CHOOSER_WIDTH_FRACTION  the default of the JS-settable `chooser.width`, applied by
-//                           HSChooser as width × the main screen's full width. pick()
-//                           leaves it alone; anything that does set chooser.width has to
-//                           set this to match.
-//   CHOOSER_TOP_FRACTION    hardcoded in initialFrame, neither settable nor readable, so
-//                           an upstream change to it moves the chooser and leaves the
-//                           alert behind.
-//
-// Upstream issue #449 asks for the chooser's window id. With it, the chooser's frame is
-// read from hs.window, and these two copies are no longer needed.
-const CHOOSER_WIDTH_FRACTION = 0.5
-const CHOOSER_TOP_FRACTION = 0.25
-
 /**
- * Show a short message where a chooser's top left corner is, or would be.
+ * Show a short message at the top left corner of an open chooser.
  *
- * hs.ui.alert positions the centre of its bubble, in points down and right of the main
- * screen's top left corner, so the message straddles the corner rather than starting at
+ * The corner is read from the chooser's frame, which Hammerspoon 2 gives in screen
+ * coordinates. hs.ui.alert positions the centre of its bubble, in points down and right of the
+ * main screen's top left corner, so the message straddles the corner rather than starting at
  * it, and is lifted clear of the search field.
  *
  * @param {string} message The text to show.
+ * @param {object} chooser The chooser, already shown.
  */
-function alertAtChooser(message) {
+function alertAtChooser(message, chooser) {
     const alert = hs.ui.alert(message).duration(2)
     const screen = hs.screen.main()
-    if (screen) {
-        const frame = screen.frame
-        const width = CHOOSER_WIDTH_FRACTION * screen.fullFrame.w
-        alert.position({
-            x: (frame.w - width) / 2,
-            y: CHOOSER_TOP_FRACTION * frame.h - 30
-        })
+    const frame = chooser.frame
+    if (screen && frame) {
+        const origin = screen.frame
+        alert.position({ x: frame.x - origin.x, y: frame.y - origin.y - 30 })
     }
     alert.show()
 }
@@ -356,10 +339,8 @@ const readers = {
         auto: (context, parameter, snap) => {
             const window = snapshotWindow(parameter, snap)
             if (window) return window
-            if (snap.application) {
-                alertAtChooser(`${snap.application.name} reports no visible window`)
-            }
-            return readers.window.prompted(context, parameter, snap)
+            const alert = snap.application ? `${snap.application.name} reports no visible window` : null
+            return readers.window.prompted(context, parameter, snap, alert)
         },
 
         /**
@@ -370,7 +351,7 @@ const readers = {
          *   includeNonStandard  true also offers windows that are not standard, such as
          *                       dialogs, panels and palettes. Only standard windows by default.
          */
-        prompted: (context, parameter, snap) => {
+        prompted: (context, parameter, snap, alert) => {
             const current = snap ? snap.window : null
             const wantCurrent = parameter.includeCurrent !== false
             const wantNonStandard = parameter.includeNonStandard === true
@@ -396,6 +377,7 @@ const readers = {
                 placeholder: parameter.placeholder || "Window",
                 context: context,
                 optional: parameter.optional,
+                alert: alert,
                 // The application name is in `text` as well as `subText`: a window is often
                 // easier to name by its application than by its title, and typing matches
                 // `text` whatever the chooser's searchSubText setting happens to be.

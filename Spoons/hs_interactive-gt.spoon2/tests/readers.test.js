@@ -21,7 +21,7 @@ function choosersCapture(t) {
     const choosers = []
     hs.chooser.create = function () {
         const real = original.apply(hs.chooser, arguments)
-        const record = { rows: [], placeholder: null }
+        const record = { rows: [], placeholder: null, chooser: real }
         choosers.push(record)
         const proxy = new Proxy(real, {
             get(target, property) {
@@ -158,10 +158,19 @@ module.exports = [
             const shown = alerts(t)
             const { window } = await windowSnapshot(t)
             const reading = run(t, t.spoon.readers.window.auto, {}, { window: null, application: window.application, screen: window.screen })
+            await promptOpenWait(t)
+            // The alert is centred on the chooser's top left corner, lifted 30 points, in points
+            // from the main screen's usable area. The chooser's frame is read while it is open.
+            const frame = choosers[0].chooser.frame
+            const origin = hs.screen.main().frame
             await chooserAnswer(t, null)
             t.assert.equal(await reading, null, "the value after Escape")
             t.assert.equal(choosers.length, 1, "choosers shown")
-            t.assert.ok(shown.includes("osascript reports no visible window"), `alerts: ${shown.join(" | ")}`)
+            const index = shown.indexOf("osascript reports no visible window")
+            t.assert.ok(index >= 0, `alerts: ${shown.join(" | ")}`)
+            const position = shown.positions[index]
+            t.assert.ok(position && Math.abs(position.x - (frame.x - origin.x)) <= 1 && Math.abs(position.y - (frame.y - origin.y - 30)) <= 1,
+                `the alert's position: ${JSON.stringify(position)}, the chooser's frame: ${JSON.stringify(frame)}`)
         }
     },
     {

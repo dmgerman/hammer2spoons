@@ -189,14 +189,16 @@ function create(titlePrefix, skip, dir) {
     // returns the list it records into. The alerts are still shown. hs.ui.alert is restored by
     // close().
     //
-    // The list also has a property `durations`, which holds the seconds given to each alert's
-    // duration(), at the same index as its message, or undefined when duration() was not called.
-    // Each alert is returned inside a Proxy that records duration() and passes every call on to
-    // the real alert, so that an alert another Spoon shows during the test works as usual.
+    // The list also has the properties `durations` and `positions`, which hold what was given to
+    // each alert's duration() and position(), at the same index as its message, or undefined when
+    // the call was not made. Each alert is returned inside a Proxy that records both calls and
+    // passes every call on to the real alert, so that an alert another Spoon shows during the
+    // test works as usual.
     let alertOriginal = null
     let alertOwn = false
     const alerts = []
     alerts.durations = []
+    alerts.positions = []
     function alertsCapture() {
         if (alertOriginal) return alerts
         alertOwn = Object.prototype.hasOwnProperty.call(hs.ui, "alert")
@@ -212,6 +214,7 @@ function create(titlePrefix, skip, dir) {
                     if (typeof value !== "function") return value
                     return (...args) => {
                         if (property === "duration") alerts.durations[index] = args[0]
+                        if (property === "position") alerts.positions[index] = args[0]
                         const result = value.apply(target, args)
                         return result === target ? proxy : result
                     }

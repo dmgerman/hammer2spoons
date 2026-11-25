@@ -645,49 +645,20 @@ function chooserWidth() {
     return screen.fullFrame.w > config.wideScreenPoints ? config.wideWidth : config.width
 }
 
-// Hammerspoon's own bundle, asked for its windows to locate the open chooser.
-const HAMMERSPOON_BUNDLE_ID = "net.tenshu.Hammerspoon-2"
-
 /**
  * Where the chooser is on screen.
  *
- * Its width and left edge follow from hs.chooser centring a window of config.width, and
- * measuring confirms both to the point. Its vertical position does not follow from anything
- * this Spoon sets, so it is read from Hammerspoon's own window list: the chooser is the
- * window whose left edge and width match the computed ones, which separates it from the
- * console and from this Spoon's own preview canvas.
- *
- * Asking one application for its windows costs about 10ms. Hammerspoon 1 found the same
- * window with hs.window.allWindows(), which walks every process and costs a second and a
- * half here.
- *
- * config.thumbnailTopRatio is the fallback for when the chooser cannot be found, which is
- * the case in the moment before it is shown.
- *
- * This is a workaround: hs.chooser exposes neither its frame nor its window, so the chooser
- * is recognised by its left edge and width rather than by an identifier. Upstream issue
- * #449 asks for the chooser's window id. With it, the chooser's frame is read from hs.window,
- * and this search is no longer needed.
+ * An open chooser gives its frame, in screen coordinates. Before it is shown there is no
+ * frame, and the position is computed instead: hs.chooser centres a window of config.width,
+ * and config.thumbnailTopRatio stands for its height on the screen.
  */
 function chooserGeometry(area) {
+    const frame = chooser && chooser.isVisible ? chooser.frame : null
+    if (frame) return { left: frame.x, width: frame.w, top: frame.y }
+
     const width = area.w * chooserWidth()
     const left = area.x + (area.w - width) / 2
-    let top = area.y + area.h * config.thumbnailTopRatio
-
-    try {
-        const app = hs.application.matchingBundleID(HAMMERSPOON_BUNDLE_ID)
-        for (const window of (app ? app.allWindows || [] : [])) {
-            const frame = window.frame
-            if (!frame) continue
-            if (Math.abs(frame.x - left) <= 2 && Math.abs(frame.w - width) <= 2) {
-                top = frame.y
-                break
-            }
-        }
-    } catch (e) {
-        // The computed position stands.
-    }
-
+    const top = area.y + area.h * config.thumbnailTopRatio
     return { left, width, top }
 }
 
