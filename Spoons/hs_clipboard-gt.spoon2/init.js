@@ -659,8 +659,7 @@ function chooserGeometry(area) {
 /** Where to draw a preview of this image, or null when there is nowhere sensible. */
 function previewFrame(image) {
     const screen = hs.screen.main() || hs.screen.primary()
-    const reference = hs.screen.primary() || screen
-    if (!screen || !reference) return null
+    if (!screen) return null
 
     const area = screen.frame
     const size = image.size
@@ -681,14 +680,8 @@ function previewFrame(image) {
     const left = geometry.left - config.previewGap - width
     const top = geometry.top
 
-    // hs.screen measures y downwards from the top of the primary display and a canvas
-    // upwards from its bottom.
-    return {
-        x: left,
-        y: (reference.fullFrame.y + reference.fullFrame.h) - (top + height),
-        w: width,
-        h: height
-    }
+    // A canvas is placed in screen coordinates, as hs.screen and hs.window are.
+    return { x: left, y: top, w: width, h: height }
 }
 
 function previewHide() {

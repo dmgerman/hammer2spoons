@@ -203,6 +203,10 @@ module.exports = [
             const preview = canvases[canvases.length - 1]
             const size = HSImage.fromPath(chooser.rows[0].data).size
             t.assert.ok(Math.abs(preview.frame.h - size.h) <= 1, `the preview is ${preview.frame.h} points high, and the image ${size.h}`)
+            // A canvas is placed in screen coordinates, as the chooser's frame is given, so the
+            // preview's top is the chooser's top.
+            const top = chooser.chooser.frame.y
+            t.assert.ok(Math.abs(preview.frame.y - top) <= 2, `the preview's top: expected ${top}, got ${preview.frame.y}`)
             await key(t, chooser, [], "down")
             await t.wait(0.5)
             let showing = false
