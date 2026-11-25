@@ -1166,30 +1166,21 @@ function currentScreen() {
 }
 
 /**
- * A frame of the given size, centred on a screen.
- *
- * The two coordinate systems have to be reconciled to place it: hs.screen frames have
- * their origin at the top left of the primary display, while canvas frames have
- * theirs at its bottom left, with y growing upwards. Centring on the primary screen is
- * symmetric and comes out the same either way — which is why drawing there needed no
- * conversion — but on any other screen the two disagree, and by the height of the screen
- * plus the height of the menu.
+ * A frame of the given size, centred on a screen. A canvas is placed in screen coordinates,
+ * as hs.screen is, with y = 0 at the top of the primary display.
  *
  * @param {object} target The screen to centre on.
  * @param {number} width The window's width.
  * @param {number} height The window's height.
- * @returns {object} An `{x, y, w, h}` frame in the canvas's screen coordinates.
+ * @returns {object} An `{x, y, w, h}` frame in screen coordinates.
  */
 function centredOnScreen(target, width, height) {
-    const reference = hs.screen.primary() || target
-    if (!target || !reference) return { x: 0, y: 0, w: width, h: height }
+    if (!target) return { x: 0, y: 0, w: width, h: height }
 
     const area = target.fullFrame
-    const primary = reference.fullFrame
-
     return {
         x: area.x + (area.w - width) / 2,
-        y: (primary.y + primary.h) - ((area.y + (area.h - height) / 2) + height),
+        y: area.y + (area.h - height) / 2,
         w: width,
         h: height
     }

@@ -75,11 +75,10 @@ function promptPretend(t) {
     return close
 }
 
-// The centre of a canvas frame in hs.screen's coordinates. A canvas frame has its origin at the
-// bottom left of the primary screen, with y growing upwards.
+// The centre of a canvas frame. A canvas is placed in screen coordinates, as hs.screen is, with
+// y = 0 at the top of the primary screen.
 function canvasCentre(frame) {
-    const primary = hs.screen.primary().fullFrame
-    return { x: frame.x + frame.w / 2, y: (primary.y + primary.h) - (frame.y + frame.h / 2) }
+    return { x: frame.x + frame.w / 2, y: frame.y + frame.h / 2 }
 }
 
 function centreOn(t, frame, screen, message) {
@@ -403,8 +402,21 @@ module.exports = [
             // other in a corner, away from it, with the focus.
             await t.frameSet(beneath, { x: centre.x - 300, y: centre.y - 200, w: 600, h: 400 })
             await t.frameSet(focused, { x: f.x + 20, y: f.y + 20, w: 300, h: 200 })
+            // The window beneath is focused first, so that it is in front of the user's windows at
+            // the middle of the screen: on 2026-11-25 a Google Chrome window of the user's was in
+            // front of it there, and the click went to Chrome. raise() was not enough, because
+            // macOS does not put a window of an inactive application above the active one's.
+            // Focusing it activates the test windows' application, and the other test window,
+            // focused next, belongs to the same application.
+            beneath.focus()
+            await t.wait(0.4)
             focused.focus()
             await t.wait(0.4)
+            // Checked before the menu is drawn, so that the menu itself is not the window found.
+            const front = hs.window.windowAtPoint(new HSPoint(centre.x, centre.y))
+            if (!front || front.id !== beneath.id) {
+                t.assert.fail(`not clicking: ${front ? `${front.application.name} #${front.id}` : "no window"} is in front of the test window at the middle of the screen`)
+            }
 
             settingsSet(t, { showDelay: 0 })
             const calls = counter()

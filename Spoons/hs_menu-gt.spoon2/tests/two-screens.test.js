@@ -14,11 +14,10 @@ async function windowOn(t, screen) {
     return window
 }
 
-// The centre of a canvas frame in hs.screen's coordinates. A canvas frame has its origin at the
-// bottom left of the primary screen, with y growing upwards.
+// The centre of a canvas frame. A canvas is placed in screen coordinates, as hs.screen is, with
+// y = 0 at the top of the primary screen.
 function canvasCentre(frame) {
-    const primary = hs.screen.primary().fullFrame
-    return { x: frame.x + frame.w / 2, y: (primary.y + primary.h) - (frame.y + frame.h / 2) }
+    return { x: frame.x + frame.w / 2, y: frame.y + frame.h / 2 }
 }
 
 function centreOn(t, frame, screen, message) {
