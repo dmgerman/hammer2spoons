@@ -125,6 +125,10 @@ module.exports = [
             const screen = (hs.screen.main() || hs.screen.primary()).frame
             t.assert.ok(thumbnail.frame.x + thumbnail.frame.w <= screen.x + screen.w / 2, "the thumbnail is not left of the middle of the screen")
             t.assert.ok(thumbnail.frame.h <= screen.h * t.spoon.config.thumbnailHeightRatio + 1, `the thumbnail is ${thumbnail.frame.h} points high`)
+            // A canvas is placed in screen coordinates, as the chooser's frame is given, so the
+            // thumbnail's top is the chooser's top.
+            const top = chooser.frame.y
+            t.assert.ok(Math.abs(thumbnail.frame.y - top) <= 2, `the thumbnail's top: expected ${top}, got ${thumbnail.frame.y}`)
             await key(t, chooser, [], t.spoon.config.thumbnailToggleKey)
             let showing = false
             try { showing = thumbnail.canvas.isShowing() } catch (e) { showing = false }

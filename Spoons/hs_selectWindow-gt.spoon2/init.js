@@ -294,8 +294,7 @@ function firstRecordPerApplication() {
  */
 function thumbnailFrame(image) {
     const screen = hs.screen.main() || hs.screen.primary()
-    const reference = hs.screen.primary() || screen
-    if (!screen || !reference) return null
+    if (!screen) return null
 
     // frame rather than fullFrame: the menu bar and the dock are not usable space, and
     // Hammerspoon 1 sizes against the usable area.
@@ -320,14 +319,8 @@ function thumbnailFrame(image) {
     const left = chooser.left - config.thumbnailGap - width
     const top = chooser.top
 
-    // hs.screen measures y downwards from the top of the primary display and a canvas
-    // upwards from its bottom.
-    return {
-        x: left,
-        y: (reference.fullFrame.y + reference.fullFrame.h) - (top + height),
-        w: width,
-        h: height
-    }
+    // A canvas is placed in screen coordinates, as hs.screen and hs.window are.
+    return { x: left, y: top, w: width, h: height }
 }
 
 function hideThumbnail() {
@@ -1316,21 +1309,13 @@ function bindingsShow() {
 
     bindingsHide()
     const screen = hs.screen.main() || hs.screen.primary()
-    const primary = hs.screen.primary() || screen
     const area = screen.frame
     const canvas = hs.canvas.create({ x: area.x, y: 0, w: 10, h: 10 })
     const size = canvas.minimumTextSize(BINDINGS_TEXT, text)
     const w = Math.ceil(size.w) + BINDINGS_PADDING * 2
     const h = Math.ceil(size.h) + BINDINGS_PADDING * 2
-    const top = area.y + (area.h - h) / 2
-    // hs.screen measures y downwards from the top of the primary display, and a canvas upwards
-    // from its bottom.
-    canvas.setFrame({
-        x: area.x + (area.w - w) / 2,
-        y: (primary.fullFrame.y + primary.fullFrame.h) - (top + h),
-        w,
-        h
-    })
+    // A canvas is placed in screen coordinates, as hs.screen is.
+    canvas.setFrame({ x: area.x + (area.w - w) / 2, y: area.y + (area.h - h) / 2, w, h })
     canvas.level("popUpMenu").ignoreMouseEvents(true).behaviorList(["canJoinAllSpaces", "stationary"])
     canvas.appendElements([
         { type: "rectangle", action: "fill", fillColor: { red: 0.1, green: 0.1, blue: 0.1, alpha: 0.9 }, frame: { x: 0, y: 0, w, h } },

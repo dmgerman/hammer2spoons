@@ -98,6 +98,14 @@ module.exports = [
             t.assert.ok(!radii || (!radii.xRadius && !radii.yRadius), `the rectangle has rounded corners: ${JSON.stringify(radii)}`)
             t.assert.ok(String(canvas.elementAttribute(1, "text")).includes(`${label}  menuShow`), "the text drawn")
             t.assert.ok(canvas.isShowing(), "the rectangle is not shown")
+            // A canvas is placed in screen coordinates, so the rectangle's centre is the centre of
+            // the usable area of the main screen.
+            const area = (hs.screen.main() || hs.screen.primary()).frame
+            const f = canvas.frame()
+            t.assert.ok(Math.abs((f.y + f.h / 2) - (area.y + area.h / 2)) <= 1,
+                `the rectangle's vertical centre: expected ${area.y + area.h / 2}, got ${f.y + f.h / 2}`)
+            t.assert.ok(Math.abs((f.x + f.w / 2) - (area.x + area.w / 2)) <= 1,
+                `the rectangle's horizontal centre: expected ${area.x + area.w / 2}, got ${f.x + f.w / 2}`)
             hs.eventtap.keyStroke(MODIFIERS, "9", null)
             await t.wait(0.6)
             t.assert.equal(shown.length, 1, "the menu shown by the key")
