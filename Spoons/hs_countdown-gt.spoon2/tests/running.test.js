@@ -108,10 +108,11 @@ module.exports = [
             const bars = barsCapture(t)
             const screens = hs.screen.all()
             t.assert.equal(bars.length, screens.length, "bars")
-            const primary = hs.screen.primary().fullFrame
+            // A canvas is placed in screen coordinates, with y = 0 at the top of the primary
+            // screen, so a bar along the bottom edge starts its height above the screen's bottom.
             for (const screen of screens) {
                 const area = screen.fullFrame
-                const y = (primary.y + primary.h) - (area.y + area.h)
+                const y = area.y + area.h - t.spoon.config.barHeight
                 const bar = bars.find((c) => Math.abs(c.frame().x - area.x) < 1 && Math.abs(c.frame().y - y) < 1)
                 t.assert.ok(bar, `no bar along the bottom of ${screen.name}`)
                 t.assert.equal(bar.frame().w, area.w, `the width of the bar on ${screen.name}`)

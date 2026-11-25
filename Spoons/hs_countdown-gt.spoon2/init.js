@@ -144,17 +144,13 @@ function barColor(value) {
     }
 }
 
-// The bar's frame along the bottom edge of `screen`, at its full width.
-//
-// hs.screen measures y downwards from the top of the primary display and a canvas window
-// upwards from its bottom, so the screen's bottom edge has to be converted. On the primary
-// screen this comes out as 0.
-function barFrame(screen, primary) {
+// The bar's frame along the bottom edge of `screen`, at its full width. A canvas is placed in
+// screen coordinates, as hs.screen is, with y increasing downwards.
+function barFrame(screen) {
     const area = screen.fullFrame
-    const reference = primary.fullFrame
     return {
         x: area.x,
-        y: (reference.y + reference.h) - (area.y + area.h),
+        y: area.y + area.h - config.barHeight,
         w: area.w,
         h: config.barHeight
     }
@@ -162,8 +158,8 @@ function barFrame(screen, primary) {
 
 // Builds one bar on `screen`. Each segment is a canvas element, recoloured in place by
 // index as the countdown passes it, so a tick touches only the segments just crossed.
-function barBuild(screen, primary, count) {
-    const frame = barFrame(screen, primary)
+function barBuild(screen, count) {
+    const frame = barFrame(screen)
     const segmentWidth = frame.w / count
 
     const canvas = hs.canvas.create(frame)
@@ -194,11 +190,10 @@ function barBuild(screen, primary, count) {
 // them then.
 function barsBuild() {
     const screens = hs.screen.all()
-    const primary = hs.screen.primary() || screens[0]
-    if (!primary || screens.length === 0) return
+    if (screens.length === 0) return
 
     const count = Math.max(1, Math.floor(config.barSegments))
-    bars = screens.map((screen) => barBuild(screen, primary, count))
+    bars = screens.map((screen) => barBuild(screen, count))
     barSegments = count
     barFilled = 0
     if (barShowing) for (const canvas of bars) canvas.show()
