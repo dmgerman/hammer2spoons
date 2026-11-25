@@ -11,6 +11,10 @@
 // The longest wait for the copy to read a change: two readings of the clipboard, and a margin.
 // The clipboard is read at the interval of Hammerspoon 2's one clipboard watcher, which is set
 // when the watcher starts, so the user's hs_clipboard-gt has already set it.
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 const settle = () => (Number(hs.pasteboard.watcherInterval) || 0.8) * 2 + 0.5
 
 // Resolves once the copy's history has changed, or after settle() seconds when it does not.
@@ -138,7 +142,7 @@ async function historyOpen(t, record, beforeShow) {
 
 async function key(t, record, modifiers, name) {
     if (!isOpen(record)) t.assert.fail(`the history closed before ${name} was pressed`)
-    hs.eventtap.keyStroke(modifiers, name, null)
+    hs.eventtap.keyStroke(withFn(modifiers, name), name, null)
     await t.wait(0.5)
 }
 

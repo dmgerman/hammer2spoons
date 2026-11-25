@@ -11,6 +11,10 @@
 // No prompt is shown.
 
 // Opens a test window and gives it the focus.
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 async function windowFocused(t) {
     const [window] = await t.windowsOpen()
     window.focus()
@@ -31,7 +35,7 @@ function keyCheck(t, key) {
 
 async function keyPress(t, modifiers, key) {
     keyCheck(t, key)
-    hs.eventtap.keyStroke(modifiers, key, null)
+    hs.eventtap.keyStroke(withFn(modifiers, key), key, null)
     await t.wait(0.3)
 }
 

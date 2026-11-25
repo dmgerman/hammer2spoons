@@ -15,6 +15,10 @@
 // hs_interactive-gt reports a prompt open.
 
 // Sets fields of the copy's config until the test ends.
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 function settingsSet(t, values) {
     const config = t.spoon.config
     const original = {}
@@ -58,7 +62,7 @@ function timeFromNow(offset) {
 function promptAnswer(t, text, delay = 0.8) {
     const interactive = hs.spoons["hs_interactive-gt"]
     const timer = hs.timer.doAfter(delay, () => {
-        const send = (modifiers, key) => { if (interactive.promptIsOpen()) hs.eventtap.keyStroke(modifiers, key, null) }
+        const send = (modifiers, key) => { if (interactive.promptIsOpen()) hs.eventtap.keyStroke(withFn(modifiers, key), key, null) }
         send(["cmd"], "a")
         for (const character of String(text)) if (interactive.promptIsOpen()) hs.eventtap.keyStrokes(character)
         send([], "return")

@@ -6,6 +6,10 @@
 // making it, and press the menu's options through a session of the user's hs_menu-gt with a test
 // presenter, which shows nothing and does not touch that position.
 
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 const { copy, fresh, entries, text, interactive, chooserCapture, record, historyOpen, key } = require("./clipboard.js")
 
 const MODIFIERS = ["ctrl", "alt", "shift"]
@@ -183,19 +187,19 @@ module.exports = [
             const [window] = await t.windowsOpen(1)
             window.focus()
             await t.wait(0.4)
-            t.spoon.bindHotkeys({ historyShow: [MODIFIERS, "7"] })
-            hs.eventtap.keyStroke(MODIFIERS, "7", null)
+            t.spoon.bindHotkeys({ historyShow: [MODIFIERS, "f17"] })
+            hs.eventtap.keyStroke(withFn(MODIFIERS, "f17"), "f17", null)
             await t.wait(0.6)
             t.assert.ok(chooser.chooser.isVisible, "7 did not open the chooser")
             await key(t, chooser, [], "escape")
-            t.spoon.bindHotkeys({ historyToggle: [MODIFIERS, "8"] })
-            hs.eventtap.keyStroke(MODIFIERS, "7", null)
+            t.spoon.bindHotkeys({ historyToggle: [MODIFIERS, "f18"] })
+            hs.eventtap.keyStroke(withFn(MODIFIERS, "f17"), "f17", null)
             await t.wait(0.6)
             t.assert.ok(!chooser.chooser.isVisible, "7 still opens the chooser")
             let error = null
-            try { t.spoon.bindHotkeys({ historyClear: [MODIFIERS, "9"] }) } catch (e) { error = e }
+            try { t.spoon.bindHotkeys({ historyClear: [MODIFIERS, "f19"] }) } catch (e) { error = e }
             t.assert.ok(error && error.message.includes("historyClear"), `the error: ${error && error.message}`)
-            t.spoon.bindHotkeys({ menuShow: [MODIFIERS, "9"] })
+            t.spoon.bindHotkeys({ menuShow: [MODIFIERS, "f19"] })
         }
     },
     // --- start and stop ---

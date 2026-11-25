@@ -112,7 +112,7 @@ module.exports = [
     {
         name: "revealCurrentKey and revealAllKey change the keys that reveal masked entries",
         run: async (t) => {
-            settingsSet(t, { revealCurrentKey: { mods: ["ctrl", "alt", "shift"], key: "7" }, revealAllKey: { mods: ["ctrl", "alt", "shift"], key: "8" } })
+            settingsSet(t, { revealCurrentKey: { mods: ["ctrl", "alt", "shift"], key: "f17" }, revealAllKey: { mods: ["ctrl", "alt", "shift"], key: "f18" } })
             // The keys are created by start(), which chooserCapture() runs.
             const chooser = chooserCapture(t)
             fresh(t)
@@ -120,9 +120,9 @@ module.exports = [
             await copy(t, OTHER_PASSWORD)
             const shown = () => chooser.rows.slice(0, 2).map((r) => r.text.startsWith("[hidden") ? "hidden" : "shown").join(",")
             await historyOpen(t, chooser)
-            await key(t, chooser, ["ctrl", "alt", "shift"], "7")
+            await key(t, chooser, ["ctrl", "alt", "shift"], "f17")
             t.assert.equal(shown(), "shown,hidden", "after the reveal key")
-            await key(t, chooser, ["ctrl", "alt", "shift"], "8")
+            await key(t, chooser, ["ctrl", "alt", "shift"], "f18")
             t.assert.equal(shown(), "shown,shown", "after the reveal all key")
             await key(t, chooser, [], "escape")
         }

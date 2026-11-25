@@ -3,6 +3,10 @@
 // commands are defined in the copy under test, whose registry is its own.
 
 // Records console.error and console.log until the test ends.
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 function consoleCapture(t) {
     const original = { error: console.error, log: console.log }
     const written = { error: [], log: [] }
@@ -49,7 +53,7 @@ async function chooserType(t, text) {
 }
 function chooserKey(t, key) {
     if (!t.spoon.promptIsOpen()) t.assert.fail(`not sending ${key}: no chooser of the copy is open`)
-    hs.eventtap.keyStroke([], key, null)
+    hs.eventtap.keyStroke(withFn([], key), key, null)
 }
 
 module.exports = [
@@ -314,13 +318,13 @@ module.exports = [
             const MODIFIERS = ["ctrl", "alt", "shift"]
             let ran = false
             t.spoon.define({ name: "test-execute-row", doc: "a description found only by xylophonic", fn: () => { ran = true } })
-            t.spoon.keySet(MODIFIERS, "9", "test-execute-row")
-            t.cleanup(() => t.spoon.keyUnset(MODIFIERS, "9"))
+            t.spoon.keySet(MODIFIERS, "f19", "test-execute-row")
+            t.cleanup(() => t.spoon.keyUnset(MODIFIERS, "f19"))
             t.spoon.execute()
             await promptOpenWait(t)
             const row = rows.find((r) => r.command === "test-execute-row")
             t.assert.ok(row, "the command has no row")
-            t.assert.equal(row.text, "test-execute-row   ⌃⌥⇧9", "the row's text")
+            t.assert.equal(row.text, "test-execute-row   ⌃⌥⇧f19", "the row's text")
             t.assert.equal(row.subText, "a description found only by xylophonic", "the row's description")
             await chooserType(t, "xylophonic")
             await t.wait(0.4)

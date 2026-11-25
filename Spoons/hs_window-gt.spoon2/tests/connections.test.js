@@ -4,6 +4,10 @@
 // The keys bound here use ctrl-alt-shift with 7, 8 and 9, which the user's configuration does
 // not bind, as in keys.test.js. A key is sent only when a test window has the focus.
 
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 const MODIFIERS = ["ctrl", "alt", "shift"]
 
 function keySend(t, modifiers, key) {
@@ -12,7 +16,7 @@ function keySend(t, modifiers, key) {
     if (!title.startsWith(t.titlePrefix)) {
         t.assert.fail(`not sending ${key}: the focused window is not a test window ("${title}")`)
     }
-    hs.eventtap.keyStroke(modifiers, key, null)
+    hs.eventtap.keyStroke(withFn(modifiers, key), key, null)
 }
 
 function isPromise(value) {
@@ -49,9 +53,9 @@ function menuOptions(buttons) {
 const PROMPTING = [
     { name: "fractionWidth", omitted: (w) => [undefined, w], given: (w) => [3, w] },
     { name: "moveByOwnSize", omitted: (w) => [undefined, w], given: (w) => ["right", w] },
-    { name: "digitAttach", omitted: (w) => [w, undefined], given: (w) => [w, "7", true] },
-    { name: "attachedFocus", omitted: () => [], given: () => ["7"], attached: true },
-    { name: "keyDetach", omitted: () => [], given: () => ["7"], attached: true }
+    { name: "digitAttach", omitted: (w) => [w, undefined], given: (w) => [w, "9", true] },
+    { name: "attachedFocus", omitted: () => [], given: () => ["9"], attached: true },
+    { name: "keyDetach", omitted: () => [], given: () => ["9"], attached: true }
 ]
 
 const tests = []
@@ -64,7 +68,7 @@ for (const entry of PROMPTING) {
             const modifiers = t.spoon.config.attachModifiers
             t.spoon.config.attachModifiers = MODIFIERS
             try {
-                if (entry.attached) t.spoon.digitAttach(window, "7", true)
+                if (entry.attached) t.spoon.digitAttach(window, "9", true)
                 const cancelled = t.promptCancel()
                 const result = t.spoon[entry.name](...entry.omitted(window))
                 t.assert.ok(isPromise(result), "the function did not return a promise")
@@ -84,7 +88,7 @@ for (const entry of PROMPTING) {
             const modifiers = t.spoon.config.attachModifiers
             t.spoon.config.attachModifiers = MODIFIERS
             try {
-                if (entry.attached) t.spoon.digitAttach(window, "7", true)
+                if (entry.attached) t.spoon.digitAttach(window, "9", true)
                 const result = t.spoon[entry.name](...entry.given(window))
                 t.assert.ok(!isPromise(result), "the function returned a promise")
                 t.assert.ok(!promptIsOpen(), "a prompt is open")
@@ -207,8 +211,8 @@ tests.push({
     run: async (t) => {
         const { window, screen } = await windowOpen(t)
         try {
-            t.assert.equal(t.spoon.bindHotkeys({ leftHalf: [MODIFIERS, "9"] }), t.spoon, "returned")
-            keySend(t, MODIFIERS, "9")
+            t.assert.equal(t.spoon.bindHotkeys({ leftHalf: [MODIFIERS, "f19"] }), t.spoon, "returned")
+            keySend(t, MODIFIERS, "f19")
             await t.wait(0.5)
             t.assert.frameEqual(window.frame, { x: screen.x, y: screen.y, w: screen.w / 2, h: screen.h })
         } finally {
@@ -222,9 +226,9 @@ tests.push({
     run: async (t) => {
         const { window, frame } = await windowOpen(t)
         try {
-            t.spoon.bindHotkeys({ leftHalf: [MODIFIERS, "9"] })
-            t.spoon.bindHotkeys({ rightHalf: [MODIFIERS, "8"] })
-            keySend(t, MODIFIERS, "9")
+            t.spoon.bindHotkeys({ leftHalf: [MODIFIERS, "f19"] })
+            t.spoon.bindHotkeys({ rightHalf: [MODIFIERS, "f18"] })
+            keySend(t, MODIFIERS, "f19")
             await t.wait(0.5)
             t.assert.frameEqual(window.frame, frame, "the key of the first call still acted")
         } finally {
@@ -240,13 +244,13 @@ tests.push({
         try {
             let error = null
             try {
-                t.spoon.bindHotkeys({ leftHalf: [MODIFIERS, "9"], place: [MODIFIERS, "8"] })
+                t.spoon.bindHotkeys({ leftHalf: [MODIFIERS, "f19"], place: [MODIFIERS, "f18"] })
             } catch (e) {
                 error = e
             }
             t.assert.ok(error, "bindHotkeys did not throw")
             t.assert.ok(String(error.message).includes("place is not a function a key can run"), `the error: ${error.message}`)
-            keySend(t, MODIFIERS, "9")
+            keySend(t, MODIFIERS, "f19")
             await t.wait(0.5)
             t.assert.frameEqual(window.frame, frame, "the valid key was bound")
         } finally {
@@ -281,8 +285,8 @@ tests.push({
         const canvases = t.canvasesCapture()
         let stopped = false
         try {
-            t.spoon.bindHotkeys({ leftHalf: [MODIFIERS, "9"] })
-            t.spoon.digitAttach(window, "7", true)
+            t.spoon.bindHotkeys({ leftHalf: [MODIFIERS, "f19"] })
+            t.spoon.digitAttach(window, "9", true)
             t.spoon.isolationStart()
             t.spoon.mouseHighlight(frame.x + 50, frame.y + 50)
             t.assert.ok(canvases.length > 1, "no panel or ring was drawn")
@@ -295,8 +299,8 @@ tests.push({
             t.assert.equal(shown.length, 0, "panels or the ring still shown")
             t.assert.equal(Object.keys(t.spoon.attachedWindows()).length, 0, "digits still attached")
             const saved = JSON.parse(hs.fs.read(t.spoon.config.attachFile, 0, 0))
-            t.assert.ok(saved["7"], "stop removed the digit from config.attachFile")
-            keySend(t, MODIFIERS, "9")
+            t.assert.ok(saved["9"], "stop removed the digit from config.attachFile")
+            keySend(t, MODIFIERS, "f19")
             await t.wait(0.5)
             t.assert.frameEqual(window.frame, frame, "the key bound by bindHotkeys still acted")
 
@@ -304,7 +308,7 @@ tests.push({
             t.assert.equal(t.spoon.start(), t.spoon, "start returned")
             stopped = false
             t.assert.equal(windowfilter.status().filters, filtersBefore, "hs_windowfilter-gt's filters after start")
-            t.assert.ok(t.spoon.attachedWindows()["7"], "start did not attach 7 again")
+            t.assert.ok(t.spoon.attachedWindows()["9"], "start did not attach 9 again")
             t.assert.ok(alerts.some((a) => a.startsWith("Window keys restored:")), `alerts: ${alerts.join(" | ")}`)
         } finally {
             if (stopped) t.spoon.start()

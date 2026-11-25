@@ -9,7 +9,21 @@
 // The copy creates its menu bar item and its progress bars in start(), so a test that looks at them
 // restarts the copy with hs.menubar.create and hs.canvas.create recorded.
 
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 const MODIFIERS = ["ctrl", "alt", "shift"]
+
+// Whether nothing is bound to a chord: hs.hotkey.bind() refuses a chord that is bound already.
+// A released key is checked this way rather than pressed, because a key that nothing is bound
+// to reaches the frontmost application: on 2026-11-25 a "7" was typed into the user's.
+function chordFree(mods, key) {
+    const probe = hs.hotkey.bind(mods, key, () => {}, null)
+    if (!probe) return false
+    probe.destroy()
+    return true
+}
 
 function settingsSet(t, values) {
     const config = t.spoon.config
@@ -205,23 +219,21 @@ module.exports = [
         run: async (t) => {
             const calls = onScreenShowRecord(t)
             t.cleanup(() => t.spoon.bindHotkeys({}))
-            t.spoon.bindHotkeys({ menuShow: [MODIFIERS, "7"] })
-            hs.eventtap.keyStroke(MODIFIERS, "7", null)
+            t.spoon.bindHotkeys({ menuShow: [MODIFIERS, "f17"] })
+            hs.eventtap.keyStroke(withFn(MODIFIERS, "f17"), "f17", null)
             await t.wait(0.6)
             t.assert.equal(calls.length, 1, "menus shown after the key of the first call")
-            t.spoon.bindHotkeys({ menuShow: [MODIFIERS, "8"] })
-            hs.eventtap.keyStroke(MODIFIERS, "7", null)
-            await t.wait(0.6)
-            t.assert.equal(calls.length, 1, "menus shown after the key of the first call, released")
-            hs.eventtap.keyStroke(MODIFIERS, "8", null)
+            t.spoon.bindHotkeys({ menuShow: [MODIFIERS, "f18"] })
+            t.assert.ok(chordFree(MODIFIERS, "f17"), "the key of the first call is still bound")
+            hs.eventtap.keyStroke(withFn(MODIFIERS, "f18"), "f18", null)
             await t.wait(0.6)
             t.assert.equal(calls.length, 2, "menus shown after the key of the second call")
-            for (const mapping of [{ countdownStart: [MODIFIERS, "9"] }, { menuShow: "9" }]) {
+            for (const mapping of [{ countdownStart: [MODIFIERS, "f19"] }, { menuShow: "f19" }]) {
                 let error = null
                 try { t.spoon.bindHotkeys(mapping) } catch (e) { error = e }
                 t.assert.ok(error, `no error for ${JSON.stringify(mapping)}`)
             }
-            hs.eventtap.keyStroke(MODIFIERS, "8", null)
+            hs.eventtap.keyStroke(withFn(MODIFIERS, "f18"), "f18", null)
             await t.wait(0.6)
             t.assert.equal(calls.length, 3, "a refused call released the key bound before it")
         }
@@ -244,15 +256,14 @@ module.exports = [
                 bar.destroy = function () { destroyed.push(bar); return original.apply(bar, arguments) }
             }
             const events = []
-            t.spoon.bindHotkeys({ menuShow: [MODIFIERS, "7"] })
+            t.spoon.bindHotkeys({ menuShow: [MODIFIERS, "f17"] })
             t.spoon.countdownStart(3, (event) => events.push(event))
             t.assert.ok(bars.length > 0 && bars.every((bar) => bar.isShowing()), "the bars are not shown during the countdown")
             t.spoon.stop()
             t.assert.equal(t.spoon.countdownIsRunning(), false, "countdownIsRunning() after stop()")
             t.assert.equal(item().destroyed, true, "the menu bar item was not removed")
             t.assert.equal(destroyed.length, bars.length, "bars removed")
-            hs.eventtap.keyStroke(MODIFIERS, "7", null)
-            await t.wait(0.6)
+            t.assert.ok(chordFree(MODIFIERS, "f17"), "the key is still bound after stop()")
             t.assert.equal(calls.length, 0, "menus shown after stop()")
         }
     },

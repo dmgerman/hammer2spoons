@@ -137,13 +137,13 @@ module.exports = [
         name: "attachKeys limits the digits a window can be attached to",
         run: async (t) => {
             const { first } = await twoOpen(t)
-            await withConfig(t, { attachKeys: "78", attachModifiers: MODIFIERS }, async () => {
+            await withConfig(t, { attachKeys: "89", attachModifiers: MODIFIERS }, async () => {
                 try {
                     const alerts = t.alertsCapture()
-                    t.assert.equal(t.spoon.digitAttach(first, "9", true), false, "9 returned")
-                    t.assert.equal(alerts.join(" | "), `Cannot attach to "9"\nuse one of 78`, "alert")
-                    t.assert.equal(t.spoon.digitAttach(first, "7", true), true, "7 returned")
-                    t.assert.equal(Object.keys(t.spoon.attachedWindows()).join(","), "7", "the digits attached")
+                    t.assert.equal(t.spoon.digitAttach(first, "7", true), false, "7 returned")
+                    t.assert.equal(alerts.join(" | "), `Cannot attach to "7"\nuse one of 89`, "alert")
+                    t.assert.equal(t.spoon.digitAttach(first, "9", true), true, "9 returned")
+                    t.assert.equal(Object.keys(t.spoon.attachedWindows()).join(","), "9", "the digits attached")
                 } finally {
                     t.spoon.keysAllDetach()
                 }

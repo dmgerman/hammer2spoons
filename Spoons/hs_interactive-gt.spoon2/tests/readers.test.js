@@ -10,6 +10,10 @@
 // Records every chooser created until the test ends: {rows, placeholder}. The chooser is
 // returned inside a Proxy that records setChoices() and the placeholder, and passes every call
 // and assignment on to the real chooser.
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 function choosersCapture(t) {
     const original = hs.chooser.create
     // Taken before the replacement, so that the function is put back as it was.
@@ -70,7 +74,7 @@ async function promptType(t, text) {
 // Presses one key, only while the copy's prompt is open.
 function promptKey(t, modifiers, key) {
     if (!t.spoon.promptIsOpen()) t.assert.fail(`the prompt closed before ${key} was pressed`)
-    hs.eventtap.keyStroke(modifiers, key, null)
+    hs.eventtap.keyStroke(withFn(modifiers, key), key, null)
 }
 
 // Types into the copy's open chooser and presses Return, or presses Escape when text is null.
@@ -89,7 +93,7 @@ async function chooserAnswer(t, text) {
 // runs while the keys are sent.
 function dialogAnswer(t, text) {
     const timer = hs.timer.doAfter(0.8, () => {
-        const send = (modifiers, key) => { if (t.spoon.promptIsOpen()) hs.eventtap.keyStroke(modifiers, key, null) }
+        const send = (modifiers, key) => { if (t.spoon.promptIsOpen()) hs.eventtap.keyStroke(withFn(modifiers, key), key, null) }
         if (text !== undefined) {
             send(["cmd"], "a")
             for (const character of String(text)) if (t.spoon.promptIsOpen()) hs.eventtap.keyStrokes(character)

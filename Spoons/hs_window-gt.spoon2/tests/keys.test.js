@@ -6,6 +6,10 @@
 // attachments into the run's temporary directory, so the user's own keys and file are not
 // touched.
 
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 const MODIFIERS = ["ctrl", "alt", "shift"]
 const LABEL = MODIFIERS.join("-")
 
@@ -39,7 +43,7 @@ function keySend(t, modifiers, key) {
     if (!title.startsWith(t.titlePrefix)) {
         t.assert.fail(`not sending ${key}: the focused window is not a test window ("${title}")`)
     }
-    hs.eventtap.keyStroke(modifiers, key, null)
+    hs.eventtap.keyStroke(withFn(modifiers, key), key, null)
 }
 
 // Opens two test windows and focuses the second, so that a key for the first has something
@@ -67,14 +71,14 @@ module.exports = [
         run: (t) => withKeys(t, async () => {
             const { first } = await twoOpen(t)
             const alerts = t.alertsCapture()
-            t.assert.equal(t.spoon.digitAttach(first, "7"), true, "returned")
-            const listed = t.spoon.attachedWindows()["7"]
+            t.assert.equal(t.spoon.digitAttach(first, "9"), true, "returned")
+            const listed = t.spoon.attachedWindows()["9"]
             t.assert.ok(listed, "attachedWindows does not list 7")
             t.assert.equal(listed.id, first.id, "id")
             t.assert.equal(listed.title, first.title, "title")
             t.assert.equal(listed.alive, true, "alive")
-            t.assert.equal(saved(t)["7"].id, first.id, "the saved id")
-            t.assert.equal(alerts.join(" | "), `${LABEL}-7\n${first.title}`, "alert")
+            t.assert.equal(saved(t)["9"].id, first.id, "the saved id")
+            t.assert.equal(alerts.join(" | "), `${LABEL}-9\n${first.title}`, "alert")
         })
     },
     {
@@ -91,8 +95,8 @@ module.exports = [
         name: "attachedFocus focuses the attached window",
         run: (t) => withKeys(t, async () => {
             const { first } = await twoOpen(t)
-            t.spoon.digitAttach(first, "7")
-            t.assert.equal(t.spoon.attachedFocus("7"), true, "returned")
+            t.spoon.digitAttach(first, "9")
+            t.assert.equal(t.spoon.attachedFocus("9"), true, "returned")
             await t.wait(0.4)
             t.assert.equal(focusedId(), first.id, "the focused window")
         })
@@ -101,8 +105,8 @@ module.exports = [
         name: "the digit's key, pressed, focuses the attached window",
         run: (t) => withKeys(t, async () => {
             const { first } = await twoOpen(t)
-            t.spoon.digitAttach(first, "7")
-            keySend(t, MODIFIERS, "7")
+            t.spoon.digitAttach(first, "9")
+            keySend(t, MODIFIERS, "9")
             await t.wait(0.6)
             t.assert.equal(focusedId(), first.id, "the focused window")
         })
@@ -111,10 +115,10 @@ module.exports = [
         name: "attachedFocus on the window that already has the focus goes back to the previous window",
         run: (t) => withKeys(t, async () => {
             const { first, second } = await twoOpen(t)
-            t.spoon.digitAttach(first, "7")
-            t.spoon.attachedFocus("7")
+            t.spoon.digitAttach(first, "9")
+            t.spoon.attachedFocus("9")
             await t.wait(0.6)
-            t.spoon.attachedFocus("7")
+            t.spoon.attachedFocus("9")
             await t.wait(0.6)
             t.assert.equal(focusedId(), second.id, "the focused window")
         })
@@ -123,30 +127,30 @@ module.exports = [
         name: "attaching a digit already in use releases the earlier window",
         run: (t) => withKeys(t, async () => {
             const { first, second } = await twoOpen(t)
-            t.spoon.digitAttach(first, "7")
-            t.spoon.digitAttach(second, "7")
+            t.spoon.digitAttach(first, "9")
+            t.spoon.digitAttach(second, "9")
             const listed = t.spoon.attachedWindows()
-            t.assert.equal(Object.keys(listed).join(","), "7", "the digits listed")
-            t.assert.equal(listed["7"].id, second.id, "the window on 7")
+            t.assert.equal(Object.keys(listed).join(","), "9", "the digits listed")
+            t.assert.equal(listed["9"].id, second.id, "the window on 9")
         })
     },
     {
         name: "keyDetach releases a digit and removes it from the file",
         run: (t) => withKeys(t, async () => {
             const { first, second } = await twoOpen(t)
-            t.spoon.digitAttach(first, "7")
+            t.spoon.digitAttach(first, "9")
             t.spoon.digitAttach(second, "8")
-            t.assert.equal(t.spoon.keyDetach("7"), true, "returned")
+            t.assert.equal(t.spoon.keyDetach("9"), true, "returned")
             t.assert.equal(Object.keys(t.spoon.attachedWindows()).join(","), "8", "the digits listed")
             t.assert.equal(Object.keys(saved(t)).join(","), "8", "the digits saved")
-            t.assert.equal(t.spoon.keyDetach("7"), false, "a second keyDetach returned")
+            t.assert.equal(t.spoon.keyDetach("9"), false, "a second keyDetach returned")
         })
     },
     {
         name: "keysAllDetach releases every digit and empties the file",
         run: (t) => withKeys(t, async () => {
             const { first, second } = await twoOpen(t)
-            t.spoon.digitAttach(first, "7")
+            t.spoon.digitAttach(first, "9")
             t.spoon.digitAttach(second, "8")
             t.assert.equal(t.spoon.keysAllDetach(), true, "returned")
             t.assert.equal(Object.keys(t.spoon.attachedWindows()).length, 0, "digits still listed")
@@ -158,26 +162,26 @@ module.exports = [
         run: (t) => withKeys(t, async () => {
             const [window] = await t.windowsOpen()
             const title = window.title
-            t.spoon.digitAttach(window, "7")
+            t.spoon.digitAttach(window, "9")
             const alerts = t.alertsCapture()
             await t.windowClose(window)
             const started = Date.now()
-            while (t.spoon.attachedWindows()["7"] && Date.now() - started < 3000) await t.wait(0.1)
-            t.assert.equal(t.spoon.attachedWindows()["7"], undefined, "7 is still listed")
-            t.assert.equal(alerts.join(" | "), `${LABEL}-7 released\n${title} has closed`, "alert")
+            while (t.spoon.attachedWindows()["9"] && Date.now() - started < 3000) await t.wait(0.1)
+            t.assert.equal(t.spoon.attachedWindows()["9"], undefined, "9 is still listed")
+            t.assert.equal(alerts.join(" | "), `${LABEL}-9 released\n${title} has closed`, "alert")
         })
     },
     {
         name: "start() attaches the saved windows again, as after a reload",
         run: (t) => withKeys(t, async () => {
             const { first } = await twoOpen(t)
-            t.spoon.digitAttach(first, "7")
+            t.spoon.digitAttach(first, "9")
             const alerts = t.alertsCapture()
             await restart(t)
-            const listed = t.spoon.attachedWindows()["7"]
-            t.assert.ok(listed, "7 was not attached again")
+            const listed = t.spoon.attachedWindows()["9"]
+            t.assert.ok(listed, "9 was not attached again")
             t.assert.equal(listed.id, first.id, "id")
-            t.assert.equal(alerts.join(" | "), `Window keys restored:\n${LABEL}-7 ${first.title}`, "alert")
+            t.assert.equal(alerts.join(" | "), `Window keys restored:\n${LABEL}-9 ${first.title}`, "alert")
         })
     },
     {
@@ -186,14 +190,14 @@ module.exports = [
             const { first } = await twoOpen(t)
             t.spoon.stop()
             hs.fs.write(t.spoon.config.attachFile,
-                JSON.stringify({ 7: { id: 999999999, bundleID: null, title: first.title } }), false)
+                JSON.stringify({ 9: { id: 999999999, bundleID: null, title: first.title } }), false)
             const alerts = t.alertsCapture()
             t.spoon.start()
             await t.wait(0.3)
-            const listed = t.spoon.attachedWindows()["7"]
-            t.assert.ok(listed, "7 was not attached")
+            const listed = t.spoon.attachedWindows()["9"]
+            t.assert.ok(listed, "9 was not attached")
             t.assert.equal(listed.id, first.id, "id")
-            t.assert.equal(alerts.join(" | "), `Window keys restored:\n${LABEL}-7 ${first.title} (by title)`, "alert")
+            t.assert.equal(alerts.join(" | "), `Window keys restored:\n${LABEL}-9 ${first.title} (by title)`, "alert")
         })
     },
     {
@@ -201,21 +205,21 @@ module.exports = [
         run: (t) => withKeys(t, async () => {
             t.spoon.stop()
             hs.fs.write(t.spoon.config.attachFile,
-                JSON.stringify({ 7: { id: 999999999, bundleID: null, title: "no such window" } }), false)
+                JSON.stringify({ 9: { id: 999999999, bundleID: null, title: "no such window" } }), false)
             const alerts = t.alertsCapture()
             t.spoon.start()
             await t.wait(0.3)
-            t.assert.equal(t.spoon.attachedWindows()["7"], undefined, "7 is listed")
-            t.assert.equal(Object.keys(saved(t)).length, 0, "7 is still saved")
-            t.assert.equal(alerts.join(" | "), `Windows gone, keys released:\n${LABEL}-7 no such window`, "alert")
+            t.assert.equal(t.spoon.attachedWindows()["9"], undefined, "9 is listed")
+            t.assert.equal(Object.keys(saved(t)).length, 0, "9 is still saved")
+            t.assert.equal(alerts.join(" | "), `Windows gone, keys released:\n${LABEL}-9 no such window`, "alert")
         })
     },
     {
         name: "keyToWindowAttach with a key attaches the window to it",
         run: (t) => withKeys(t, async () => {
             const { first } = await twoOpen(t)
-            t.assert.equal(t.spoon.keyToWindowAttach(first, "7"), true, "returned")
-            t.assert.equal(t.spoon.attachedWindows()["7"].id, first.id, "the window on 7")
+            t.assert.equal(t.spoon.keyToWindowAttach(first, "9"), true, "returned")
+            t.assert.equal(t.spoon.attachedWindows()["9"].id, first.id, "the window on 9")
         })
     },
     {

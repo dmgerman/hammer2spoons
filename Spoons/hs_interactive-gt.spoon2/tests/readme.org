@@ -28,9 +28,11 @@ own choosers use.
 
 Three things need care:
 
-1. *Keys.* A test binds keys only with ctrl-alt-shift and the digits 7, 8 and 9, which the user
-   does not bind, and presses one only after the copy has bound it, so that its hotkey takes the
-   press.
+1. *Keys.* A test binds keys only with ctrl-alt-shift and F17, F18 and F19, which nothing else
+   on the user's machine binds, and presses one only after the copy has bound it, so that its
+   hotkey takes the press. A released key is checked by binding it again, not by pressing it: a
+   key that nothing is bound to reaches the frontmost application. The digits 7, 8 and 9 were
+   used until 2026-11-25, when ctrl-alt-shift-7 turned out to be the user's screenshot shortcut.
 2. *Loading Spoons.* =use()= loads Spoons with =hs.spoons.load()=. Its tests replace
    =hs.spoons.load= for the length of a test with a loader of test Spoons made in memory, so
    that no Spoon of the user's is loaded.

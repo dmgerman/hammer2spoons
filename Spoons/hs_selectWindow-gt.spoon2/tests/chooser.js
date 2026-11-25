@@ -10,6 +10,10 @@
 // Records every chooser created until the test ends: {rows, placeholder, assigned, chooser},
 // where assigned holds every property set on the chooser, such as visibleRows and width, and
 // chooser is the chooser itself, for reading its state.
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 function choosersCapture(t) {
     const original = hs.chooser.create
     // Taken before the replacement, so that the function is put back as it was.
@@ -80,7 +84,7 @@ async function type(t, chooser, text) {
 
 async function key(t, chooser, modifiers, name) {
     if (!isOpen(chooser)) t.assert.fail(`the chooser closed before ${name} was pressed`)
-    hs.eventtap.keyStroke(modifiers, name, null)
+    hs.eventtap.keyStroke(withFn(modifiers, name), name, null)
     await t.wait(0.5)
 }
 

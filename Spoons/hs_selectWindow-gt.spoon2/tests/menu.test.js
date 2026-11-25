@@ -6,6 +6,10 @@
 // nothing. The functions the options call are replaced by recorders, so that no chooser opens and
 // no window is focused.
 
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 const MODIFIERS = ["ctrl", "alt", "shift"]
 
 // Replaces obj[name] with `ours` until the test ends, recording each call.
@@ -87,8 +91,8 @@ module.exports = [
             const canvases = t.canvasesCapture()
             const shown = replace(t, hs.spoons["hs_menu-gt"], "onScreenShow", () => {})
             t.cleanup(() => t.spoon.bindHotkeys({}))
-            t.spoon.bindHotkeys({ menuShow: [MODIFIERS, "9"] })
-            const label = hs.spoons["hs_interactive-gt"].keyLabel({ mods: MODIFIERS, key: "9" })
+            t.spoon.bindHotkeys({ menuShow: [MODIFIERS, "f19"] })
+            const label = hs.spoons["hs_interactive-gt"].keyLabel({ mods: MODIFIERS, key: "f19" })
             const lines = t.spoon.bindingsShow()
             t.assert.ok(lines.includes(`${label}  menuShow`), `the lines: ${lines.join(" | ")}`)
             t.assert.equal(canvases.length, 1, "canvases drawn")
@@ -106,7 +110,7 @@ module.exports = [
                 `the rectangle's vertical centre: expected ${area.y + area.h / 2}, got ${f.y + f.h / 2}`)
             t.assert.ok(Math.abs((f.x + f.w / 2) - (area.x + area.w / 2)) <= 1,
                 `the rectangle's horizontal centre: expected ${area.x + area.w / 2}, got ${f.x + f.w / 2}`)
-            hs.eventtap.keyStroke(MODIFIERS, "9", null)
+            hs.eventtap.keyStroke(withFn(MODIFIERS, "f19"), "f19", null)
             await t.wait(0.6)
             t.assert.equal(shown.length, 1, "the menu shown by the key")
             t.spoon.bindHotkeys({})

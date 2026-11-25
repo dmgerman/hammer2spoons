@@ -82,13 +82,13 @@ module.exports = [
                     spoon.events.push(`commands ${s === spoon}`)
                     interactive.define({ name: `${spoon.name}-command`, fn: () => "ran" })
                 },
-                keys: [[MODIFIERS, "9", `${spoon.name}-command`]]
+                keys: [[MODIFIERS, "f19", `${spoon.name}-command`]]
             })
-            t.cleanup(() => t.spoon.keyUnset(MODIFIERS, "9"))
+            t.cleanup(() => t.spoon.keyUnset(MODIFIERS, "f19"))
             t.assert.equal(spoon.events.join(" | "), "before | load | after config.b=20 | commands true | start", "the steps")
             t.assert.equal(JSON.stringify(spoon.config), '{"a":1,"b":20,"c":30}', "the merged config")
             t.assert.equal(interactiveGiven, t.spoon, "commands received this Spoon")
-            t.assert.equal(t.spoon.keyDescribe(MODIFIERS, "9").command, `${spoon.name}-command`, "the key bound")
+            t.assert.equal(t.spoon.keyDescribe(MODIFIERS, "f19").command, `${spoon.name}-command`, "the key bound")
         }
     },
     {
@@ -101,14 +101,14 @@ module.exports = [
                     interactive.define({ name: `${spoon.name}-keyed`, doc: "With a key.", fn: () => {} })
                     interactive.define({ name: `${spoon.name}-unkeyed`, doc: "Without one.", fn: () => {} })
                 },
-                keys: [[MODIFIERS, "9", `${spoon.name}-keyed`]]
+                keys: [[MODIFIERS, "f19", `${spoon.name}-keyed`]]
             })
-            t.cleanup(() => t.spoon.keyUnset(MODIFIERS, "9"))
+            t.cleanup(() => t.spoon.keyUnset(MODIFIERS, "f19"))
             t.spoon.define({ name: `${spoon.name}-elsewhere`, fn: () => {} })
             const listed = t.spoon.commandsOfSpoon(spoon.name)
             t.assert.equal(listed.map((c) => c.name).join(", "), `${spoon.name}-keyed, ${spoon.name}-unkeyed`, "the commands")
             t.assert.equal(listed[0].doc, "With a key.", "the first command's doc")
-            t.assert.equal(JSON.stringify(listed[0].keys), JSON.stringify([t.spoon.keyLabel({ mods: MODIFIERS, key: "9" })]), "the first command's keys")
+            t.assert.equal(JSON.stringify(listed[0].keys), JSON.stringify([t.spoon.keyLabel({ mods: MODIFIERS, key: "f19" })]), "the first command's keys")
             t.assert.equal(listed[1].keys.length, 0, "the second command's keys")
             t.assert.equal(t.spoon.commandsOfSpoon("test-spoon-none").length, 0, "a Spoon without commands")
         }

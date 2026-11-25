@@ -1,10 +1,14 @@
 // Tests of the key that opened the chooser, pressed again, and of singleRowSwitch, as the readme
 // describes them under "The chooser" and "Settings".
 //
-// The key is bound with bindHotkeys() as ctrl-alt-7, so that its Shift form, ctrl-alt-shift-7,
-// is one of the test keys this repository uses. ctrl-alt-7 itself is checked to be free first, and
+// The key is bound with bindHotkeys() as ctrl-alt-f17, so that its Shift form, ctrl-alt-shift-f17,
+// is one of the test keys this repository uses. ctrl-alt-f17 itself is checked to be free first, and
 // the test is skipped when it is not. Every key is pressed only while the copy's chooser is open,
 // except the one that opens it.
+
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
 
 const { choosersCapture, interactive, focus, focusedId } = require("./chooser.js")
 
@@ -24,21 +28,21 @@ module.exports = [
         name: "the key that opened the chooser moves its selection down when pressed again, and up with Shift, round at either end",
         timeout: 20,
         run: async (t) => {
-            if (!chordFree(BASE, "7") || !chordFree(SHIFTED, "7")) t.skip("ctrl-alt-7 or ctrl-alt-shift-7 is bound")
+            if (!chordFree(BASE, "f17") || !chordFree(SHIFTED, "f17")) t.skip("ctrl-alt-f17 or ctrl-alt-shift-f17 is bound")
             const choosers = choosersCapture(t)
             const [a, b, c] = await t.windowsOpen(3)
             for (const window of [a, b, c]) await focus(t, window)
             t.cleanup(() => t.spoon.bindHotkeys({}))
             t.cleanup(() => { t.spoon.stop(); t.spoon.start() })
-            t.spoon.bindHotkeys({ windowSelect: [BASE, "7"] })
+            t.spoon.bindHotkeys({ windowSelect: [BASE, "f17"] })
 
-            hs.eventtap.keyStroke(BASE, "7", null)
+            hs.eventtap.keyStroke(withFn(BASE, "f17"), "f17", null)
             await t.wait(0.8)
             t.assert.equal(choosers.length, 1, "choosers after the first press")
             const chooser = choosers[0].chooser
             const press = async (mods) => {
                 if (!(chooser.isVisible && interactive().promptIsOpen())) t.assert.fail("the chooser closed")
-                hs.eventtap.keyStroke(mods, "7", null)
+                hs.eventtap.keyStroke(withFn(mods, "f17"), "f17", null)
                 await t.wait(0.4)
                 return chooser.selectedRow
             }

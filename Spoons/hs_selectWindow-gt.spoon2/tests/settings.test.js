@@ -4,6 +4,10 @@
 // The keys bound are ctrl-alt-shift with 7, 8 or 9, which the user does not bind. A test window
 // has the focus before each key, so a key the copy did not bind reaches that window.
 
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 const { choosersCapture, open, interactive, isOpen, openWait, key, focus } = require("./chooser.js")
 
 const MODIFIERS = ["ctrl", "alt", "shift"]
@@ -13,7 +17,7 @@ const MODIFIERS = ["ctrl", "alt", "shift"]
 async function keyOpens(t, name) {
     const focused = hs.window.focusedWindow()
     if (!focused || !String(focused.title).startsWith(t.titlePrefix)) t.assert.fail(`not pressing ${name}: a test window does not have the focus`)
-    hs.eventtap.keyStroke(MODIFIERS, name, null)
+    hs.eventtap.keyStroke(withFn(MODIFIERS, name), name, null)
     const started = Date.now()
     while (Date.now() - started < 1500) {
         if (interactive().promptIsOpen()) {
@@ -76,11 +80,11 @@ module.exports = [
         run: async (t) => {
             t.cleanup(() => t.spoon.bindHotkeys({}))
             await windowsReady(t)
-            t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "7"] })
-            t.assert.ok(await keyOpens(t, "7"), "7 did not open the chooser")
-            t.spoon.bindHotkeys({ applicationWindowSelect: [MODIFIERS, "8"] })
-            t.assert.ok(!(await keyOpens(t, "7")), "7 still opens the chooser")
-            t.assert.ok(await keyOpens(t, "8"), "8 did not open the chooser")
+            t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "f17"] })
+            t.assert.ok(await keyOpens(t, "f17"), "f17 did not open the chooser")
+            t.spoon.bindHotkeys({ applicationWindowSelect: [MODIFIERS, "f18"] })
+            t.assert.ok(!(await keyOpens(t, "f17")), "f17 still opens the chooser")
+            t.assert.ok(await keyOpens(t, "f18"), "f18 did not open the chooser")
         }
     },
     {
@@ -89,12 +93,12 @@ module.exports = [
             t.cleanup(() => t.spoon.bindHotkeys({}))
             await windowsReady(t)
             let error = null
-            try { t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "7"], noSuchFunction: [MODIFIERS, "8"] }) } catch (e) { error = e }
+            try { t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "f17"], noSuchFunction: [MODIFIERS, "f18"] }) } catch (e) { error = e }
             t.assert.ok(error && error.message.includes("noSuchFunction"), `the error: ${error && error.message}`)
             error = null
-            try { t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "7"], applicationSelect: ["9"] }) } catch (e) { error = e }
+            try { t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "f17"], applicationSelect: ["f19"] }) } catch (e) { error = e }
             t.assert.ok(error && error.message.includes("applicationSelect"), `the error: ${error && error.message}`)
-            t.assert.ok(!(await keyOpens(t, "7")), "7 was bound")
+            t.assert.ok(!(await keyOpens(t, "f17")), "f17 was bound")
         }
     },
     {
@@ -105,7 +109,7 @@ module.exports = [
                 "applicationWindowPreviousSelect", "windowToCurrentSpaceSelect", "menuShow", "windowSelectCurrentSpace",
                 "applicationWindowSelectCurrentSpace", "windowPreviousSelectCurrentSpace", "applicationWindowPreviousSelectCurrentSpace"]
             const mapping = {}
-            names.forEach((name, i) => { mapping[name] = [MODIFIERS, ["7", "8", "9"][i % 3]] })
+            names.forEach((name, i) => { mapping[name] = [MODIFIERS, ["f17", "f18", "f19"][i % 3]] })
             // Names share keys here; only whether bindHotkeys() accepts each name matters.
             for (const name of names) t.spoon.bindHotkeys({ [name]: mapping[name] })
         }
@@ -116,7 +120,7 @@ module.exports = [
         run: async (t) => {
             t.cleanup(() => { t.spoon.bindHotkeys({}); t.spoon.start() })
             await windowsReady(t)
-            t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "7"] })
+            t.spoon.bindHotkeys({ windowSelect: [MODIFIERS, "f17"] })
             const chooser = t.spoon.windowSelect()
             await openWait(t, chooser)
             t.spoon.stop()
@@ -124,7 +128,7 @@ module.exports = [
             t.assert.ok(!isOpen(chooser), "the chooser is still open")
             t.assert.ok(!interactive().promptIsOpen(), "a prompt is still reported open")
             t.spoon.start()
-            t.assert.ok(!(await keyOpens(t, "7")), "7 still opens the chooser")
+            t.assert.ok(!(await keyOpens(t, "f17")), "f17 still opens the chooser")
         }
     },
     {

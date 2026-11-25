@@ -8,6 +8,10 @@
 // fullscreen and focuses another test window on the same screen, which shows that screen's desktop
 // again; the fixture takes a window out of fullscreen before closing it.
 
+// A synthetic F-key press reaches a hotkey only with fn, which a real F-key carries: on
+// 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
+const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
+
 const { choosersCapture, open, openWait, type, key, focus, focusedId, interactive } = require("./chooser.js")
 
 const MODIFIERS = ["ctrl", "alt", "shift"]
@@ -220,21 +224,21 @@ module.exports = [
             const { away } = await threeWithOneAway(t)
             t.cleanup(() => t.spoon.bindHotkeys({}))
             t.cleanup(() => { t.spoon.stop(); t.spoon.start() })
-            t.spoon.bindHotkeys({ windowToCurrentSpaceSelect: [MODIFIERS, "7"], windowSelectCurrentSpace: [MODIFIERS, "8"] })
-            hs.eventtap.keyStroke(MODIFIERS, "7", null)
+            t.spoon.bindHotkeys({ windowToCurrentSpaceSelect: [MODIFIERS, "f17"], windowSelectCurrentSpace: [MODIFIERS, "f18"] })
+            hs.eventtap.keyStroke(withFn(MODIFIERS, "f17"), "f17", null)
             await t.wait(1)
             t.assert.equal(choosers.length, 1, "choosers after the first key")
             t.assert.equal(choosers[0].placeholder, "Window to bring here", "the first key's chooser")
             if (interactive().promptIsOpen()) hs.eventtap.keyStroke([], "escape", null)
             await t.wait(0.8)
-            hs.eventtap.keyStroke(MODIFIERS, "8", null)
+            hs.eventtap.keyStroke(withFn(MODIFIERS, "f18"), "f18", null)
             await t.wait(1)
             t.assert.equal(choosers.length, 2, "choosers after the second key")
             t.assert.ok(!rowOf(choosers[1], away), "the second key's chooser lists the window on the other desktop")
             if (interactive().promptIsOpen()) hs.eventtap.keyStroke([], "escape", null)
             await t.wait(0.5)
             let error = null
-            try { t.spoon.bindHotkeys({ applicationSelectCurrentSpace: [MODIFIERS, "9"] }) } catch (e) { error = e }
+            try { t.spoon.bindHotkeys({ applicationSelectCurrentSpace: [MODIFIERS, "f19"] }) } catch (e) { error = e }
             t.assert.ok(error, "no error for applicationSelectCurrentSpace, which does not exist")
         }
     }
