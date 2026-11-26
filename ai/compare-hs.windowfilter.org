@@ -5,26 +5,36 @@ This note is the result of bead hammer2spoons-rr1.2. It compares Hammerspoon 2's
 =hs_windowfilter-gt= Spoon. The upstream module was read in the source and tried through =hs2=
 on a Debug build of c3e77b2a, on 2026-11-26.
 
+Bead hammer2spoons-rr1.4 updated it the same day for upstream PR #480 (commit 23ee8135), which
+was tried on a Debug build of ea1ed63b. Of the two needs listed in /What is missing that we need/, PR #480 meets
+the one about applications that have turned the Accessibility API off: upstream now reports
+them and stops asking them. It does not meet the one about reading a window's state without an
+Accessibility call.
+
 * Summary
 
 =hs.windowfilter= can replace =hs_windowfilter-gt= for most of what our Spoons use. It is
 written in Swift, it shares its Accessibility observers with =hs.ax=, and it adds Spaces and the
 order in which windows were focused, which =hs_selectWindow-gt= currently records itself.
 
-Three things that our Spoons rely on are missing upstream:
+Before PR #480, three things that our Spoons rely on were missing upstream. PR #480 added the
+list of applications that have turned the Accessibility API off. The state record and reading
+state without an Accessibility call are still missing:
 
 1. A listener receives the =HSWindow= and the application's name, but no record of the
    window's state. After =windowDestroyed=, only the window's =id= can be read.
-2. There is no list of the applications that have turned the Accessibility API off.
-   =hs_selectWindow-gt= uses =applicationsAccessibilityDisabled()= to offer the kiosk Firefox
-   in its chooser. Upstream retries such an application five times and then stops, writing
-   only a debug message.
+2. /Added by PR #480./ A list of the applications that have turned the Accessibility API off.
+   =hs.windowfilter.inaccessibleApplications()= returns them, and the module's
+   =inaccessibleApplication= event reports each one found later. Upstream no longer asks such
+   an application again until it quits. On this machine, it lists the kiosk Firefox with the
+   same process id as our =applicationsAccessibilityDisabled()=.
 3. A window's state cannot be read without asking its application. =windows()= returns
    =HSWindow= objects, and every property read from one, such as =title=, is an Accessibility
    call.
 
-None of the three prevents a migration, but the second needs a replacement in our code or an
-upstream request.
+Neither of the two that remain prevents a migration. Since PR #480, nothing in our Spoons is
+left without an upstream replacement. What remains is a cost: reading window state through
+Accessibility calls instead of from the tracker.
 
 * Features
 
@@ -69,7 +79,9 @@ the differences in detail.
 | State of one window                                            | =windowState(w)=                          | no                                          |
 | Whether a filter accepts a window or an application            | =isWindowAllowed(w)=                      | =isWindowAllowed(w)=, =isAppAllowed(app)=    |
 | Nearest window in a direction, and focusing it                 | no                                        | =windowsToEast()=, =focusWindowEast()= and the other directions |
-| Applications that turned the Accessibility API off             | =applicationsAccessibilityDisabled()=      | no; they are dropped after five attempts    |
+| Applications that turned the Accessibility API off             | =applicationsAccessibilityDisabled()=      | =inaccessibleApplications()= (PR #480)      |
+| Event when such an application is found                        | no                                        | =hs.windowfilter.on("inaccessibleApplication")= (PR #480) |
+| Such an application asked again                                | no, until it quits                        | no, until it quits (PR #480); before it, on every activation |
 | Diagnostics                                                    | =status()=, =logLevel=                    | no                                          |
 | Debounce delays                                                | settings: =moveDebounce=, =titleDebounce=, =stateDebounce= | fixed at 0.2 seconds              |
 | Applications never observed                                    | setting: =skipApplications=               | fixed list of six bundle identifiers        |
@@ -79,8 +91,9 @@ the differences in detail.
 
 *What this means.* On rules, events and navigation, upstream has every feature of ours and
 more. Ours has more only in two areas. The first is information that can be read without
-asking an application: the state record, =records()=, =windowState()=, the list of
-applications that turned the Accessibility API off, and =status()=. The second is settings,
+asking an application: the state record, =records()=, =windowState()= and =status()=. Before
+PR #480, the list of applications that turned the Accessibility API off was also in this
+group; upstream now has it, and also reports each one with an event, which ours does not. The second is settings,
 such as the debounce delays and the applications to skip. Moving to upstream therefore loses
 no behaviour that our Spoons rely on. It loses information, and the cost of reading that
 information is what the following sections measure.
@@ -97,6 +110,16 @@ The two modules were measured on the same machine, one after the other, with 28 
 | Starting to observe windows                                  | 157 ms             | 300 ms (2026-11-23) |
 | Reading five properties from each of 28 =HSWindow= objects     | 15 ms              | 0 (read from the state) |
 | Windows accepted by =create({})=                              | 28                 | 24                 |
+| Applications that turned the Accessibility API off, while observing (PR #480) | 0 ms, Firefox | Firefox, same pid |
+| The same, with no listener registered (PR #480)                | 631 ms             | not available      |
+| The chooser's eight fields for 31 windows (PR #480 build)      | 27 ms              | 0.09 ms            |
+
+The 27 ms was measured field by field, as the average of five runs over 31 windows:
+=isStandard= 15 ms, =screen.name= 9.3 ms, =title= 7.0 ms, =isFocused= 6.5 ms,
+=application.isHidden= 3.5 ms, =isMinimized= 2.6 ms, and =application.name= and
+=application.bundleID= 0.4 ms each. The last two are cheap because they do not ask the
+window's application through the Accessibility API. The fields add up to more than 27 ms
+because each was timed on its own.
 
 Without a listener, upstream's =windows()= enumerates every application's windows, as
 =hs.window.allWindows()= does. Our Spoons always register a listener before they call
@@ -115,14 +138,19 @@ Firefox, because that Firefox does not answer the Accessibility API.
    to register a listener anyway, for example on =windowDestroyed=, so that the tracker runs.
 2. The difference between 0.4 ms and 0.05 ms per call has no practical consequence. Both are
    far below the delay a user notices after pressing a key.
-3. Starting in half the time shortens a reload of the configuration by about 0.15 seconds.
-4. Opening the window chooser would cost about 25 ms more, because its eight fields are read
-   from each window, and 15 ms was measured for five. This is an estimate, because some
-   =HSWindow= properties may not need an Accessibility call. It grows with the number of
-   windows, to about 90 ms for 100 windows, and is
+3. Starting to observe took 157 ms and, on the build with PR #480, 263 ms, against 300 ms for
+   ours. The difference on a reload of the configuration is small either way.
+4. Opening the window chooser would cost about 27 ms more for 31 windows, because its eight
+   fields are read from each window. If =isStandard= becomes a rule of the filter, the
+   remaining fields should cost about 18 ms, an estimate from the share of =isStandard= in the
+   separate timings. The cost grows with the number of windows, to about
+   90 ms for 100 windows with every field, and is
    still below what a user notices. The larger risk is an application that does not answer,
    which the next section and /What is missing that we need/ describe.
-5. The chooser would list four more windows, all untitled, unless its filter excludes them.
+5. =inaccessibleApplications()= costs nothing while a listener is registered, and 631 ms
+   without one, because it then asks every application. =hs_selectWindow-gt= always has a
+   listener when its chooser opens, so it would pay nothing.
+6. The chooser would list four more windows, all untitled, unless its filter excludes them.
    =hs_selectWindow-gt='s filter must therefore add =allowRoles: "AXStandardWindow"= and
    =allowTitles: 1=.
 
@@ -229,13 +257,13 @@ It adds =windowInCurrentSpace=, =windowNotInCurrentSpace=, =hasWindow=, =hasNoWi
 | =isWindowAllowed(w)=       | =isWindowAllowed(w)=, and =isAppAllowed(name)=                |
 | =windowState(w)=           | no equivalent                                                 |
 | =status()=                 | no equivalent                                                 |
-| =applicationsAccessibilityDisabled()= | no equivalent                                      |
+| =applicationsAccessibilityDisabled()= | =hs.windowfilter.inaccessibleApplications()= (PR #480) |
 | no equivalent              | =windowsToEast()= and the other directions, =focusWindowEast()= |
 
 *What this means.* What upstream lacks here is all about reading information. The missing
 =records()= and =windowState()= move the cost of reading a window's state from the tracker
 to an Accessibility call for every property. The missing =status()= affects only debugging.
-The missing =applicationsAccessibilityDisabled()= removes a feature of =hs_selectWindow-gt=.
+Since PR #480, no feature of =hs_selectWindow-gt= is lost.
 
 * What our code uses
 
@@ -266,14 +294,14 @@ itself from =windowFocused= and =windowDestroyed=. The chooser reads, for each r
 
 Upstream's =windows("focusedLast")= replaces the recorded focus order. The fields would be read
 from each =HSWindow=, which costs about 0.1 ms per property when the chooser opens: about
-25 ms for eight properties of 28 windows. =applicationsAccessibilityDisabled()= has no replacement.
+25 ms for eight properties of 28 windows. =hs.windowfilter.inaccessibleApplications()=
+replaces =applicationsAccessibilityDisabled()=.
 
-*What this means.* =hs_selectWindow-gt= can move as well, and would no longer record the
-focus order itself. It would, however, have to find the applications that turned the
-Accessibility API off by itself. That means one Accessibility call per running application
-each time the chooser opens, which is the kind of call an application that does not answer
-can delay. Until upstream provides this list, moving =hs_selectWindow-gt= either keeps that
-code or drops the kiosk Firefox from the chooser.
+*What this means.* Since PR #480, =hs_selectWindow-gt= can move without losing anything, and
+would no longer record the focus order itself. The one cost left is that the chooser reads
+its fields through Accessibility calls, about 25 ms when it opens. An application that does
+not answer can make that much longer. /What is missing that we need/ describes this as a
+window's state without an Accessibility call.
 
 ** The configuration
 
@@ -284,15 +312,28 @@ Spoon before =hs_window-gt=. Both would follow whichever module the two Spoons u
 
 This section lists what =hs.windowfilter= lacks and our Spoons need. It is meant as the basis
 of an upstream issue. Each item gives our use, what upstream does now, and what would meet the
-need. The facts about upstream come from its source at c3e77b2a. The API suggestions are ours,
+need. The facts about upstream come from its source at c3e77b2a, and, for the applications that
+cannot be observed, at ea1ed63b, after PR #480. The API suggestions are ours,
 and upstream may prefer another form.
 
 ** Needed
 
-These two items have no workaround inside =hs.windowfilter=. Without them, our Spoons would
-either lose a feature or keep code of their own beside it.
+These two items had no workaround inside =hs.windowfilter=. PR #480 met the one about
+applications that cannot be observed. The one about a window's state is still open, and it is
+what an upstream issue would ask for.
 
-*** 1. The applications whose windows cannot be observed
+*** 1. The applications whose windows cannot be observed: met by PR #480
+
+PR #480 does what is asked below. =WindowTracker= treats =kAXErrorAPIDisabled= as final until
+the application quits, while Hammerspoon 2 has the Accessibility permission. It lists these
+applications with =hs.windowfilter.inaccessibleApplications()=, which returns =HSApplication=
+objects, and reports each new one with the module's =inaccessibleApplication= event. Its
+author could not reproduce the refusal in a virtual machine. On this machine, the function
+lists the kiosk Firefox, which confirms the behaviour on a real setup. That upstream no longer
+asks the kiosk Firefox on every activation was read in the source and was not tested, because
+testing it would activate the kiosk Firefox on the user's iPad.
+
+The text below describes upstream before PR #480.
 
 - *Our use.* The user runs a second Firefox in kiosk mode, which turns its Accessibility API
   off. =hs_selectWindow-gt= adds such an application to its window chooser, so that it can
@@ -328,6 +369,16 @@ either lose a feature or keep code of their own beside it.
 - *What would meet the need.* A form of =windows()= that also returns the tracker's
   =WindowState= for each window, as a plain object, for example =windows({withState: true})=
   returning ={window, state}= objects.
+- *The timeout.* =WindowTracker.withShortTimeout()= sets the Accessibility messaging timeout
+  to 0.25 seconds for the tracker's own reads, and =hs.window.allWindows()=, =forID()= and the
+  directional functions do the same. The value is fixed in the code, and no JavaScript API
+  sets it. The =HSWindow= property getters set no timeout. There are therefore two ways to
+  meet this need:
+  1. Return the tracker's state with =windows()=. No Accessibility call is made, so no
+     timeout is needed. This is the better fix.
+  2. Give the =HSWindow= getters the same 0.25-second timeout. This is smaller and helps every
+     user of =hs.window=, but an application that does not answer still delays each read by
+     up to 0.25 seconds.
 
 ** Desirable
 
@@ -372,9 +423,9 @@ user's windows:
 
 * Possible next beads
 
-1. Move =hs_selectWindow-gt= to =hs.windowfilter=, keeping a small replacement for
-   =applicationsAccessibilityDisabled()=, or ask upstream for one.
-2. Move =hs_window-gt= to =hs.windowfilter=.
-3. Run the open questions above as tests of =hs.windowfilter=.
-4. Once nothing uses it, deprecate =hs_windowfilter-gt=, or keep it only for the state record if
+1. Move =hs_window-gt= to =hs.windowfilter=.
+2. Move =hs_selectWindow-gt= to =hs.windowfilter=, using =inaccessibleApplications()=.
+3. Draft an upstream issue asking for a window's state without an Accessibility call, and tell upstream that =inaccessibleApplications()= lists the kiosk Firefox here.
+4. Run the open questions above as tests of =hs.windowfilter=.
+5. Once nothing uses it, deprecate =hs_windowfilter-gt=, or keep it only for the state record if
    that turns out to be needed.
