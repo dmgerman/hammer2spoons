@@ -325,6 +325,31 @@ function snapshotWindow(parameter, snap) {
     }
 }
 
+// The filters of hs.windowfilter that the readers use, by their rules, created when first needed.
+const windowFilters = new Map()
+
+/**
+ * The windows of hs.windowfilter whose subrole is `roles` and that satisfy `rules`, most recently
+ * used first, or null when this build of Hammerspoon 2 has no hs.windowfilter (added in
+ * Hammerspoon 2's pull request #470).
+ *
+ * The filters have no listener, so this Spoon never makes hs.windowfilter observe windows. When
+ * another Spoon does, windows() reads what hs.windowfilter holds, in about 0.4 ms. Otherwise it
+ * asks every application, as hs.window.orderedWindows() does.
+ *
+ * Until Hammerspoon/Hammerspoon2#485 is fixed, a filter of AXStandardWindow leaves out minimized
+ * windows and the windows of an application that was hidden, because macOS reports them as
+ * AXDialog.
+ */
+function windowfilterWindows(roles, rules = {}) {
+    if (!hs.windowfilter || typeof hs.windowfilter.create !== "function") return null
+    const key = JSON.stringify([roles, rules])
+    if (!windowFilters.has(key)) {
+        windowFilters.set(key, hs.windowfilter.create({ default: Object.assign({ allowRoles: roles }, rules) }))
+    }
+    return windowFilters.get(key).windows("focusedLast")
+}
+
 const readers = {
     window: {
         implicit: (context, parameter, snap) => snapshotWindow(parameter, snap),
@@ -356,15 +381,12 @@ const readers = {
             const wantCurrent = parameter.includeCurrent !== false
             const wantNonStandard = parameter.includeNonStandard === true
 
-            // From hs_windowfilter-gt when it is loaded: it tracks every window already,
-            // whereas hs.window.orderedWindows() walks every running process and waits on
-            // the slowest. The order is lost, which matters only for reading the list.
-            const tracker = hs.spoons["hs_windowfilter-gt"]
-            const listed = tracker
-                ? tracker.default.records()
-                    .filter((record) => wantNonStandard || record.state.standard)
-                    .map((record) => record.window)
-                : hs.window.orderedWindows().filter((w) => wantNonStandard || w.isStandard)
+            // From hs.windowfilter when Hammerspoon 2 has it, most recently used first.
+            // hs.window.orderedWindows(), in older builds, walks every running process and
+            // waits on the slowest.
+            const filtered = windowfilterWindows(wantNonStandard ? "*" : "AXStandardWindow")
+            const listed = filtered ||
+                hs.window.orderedWindows().filter((w) => wantNonStandard || w.isStandard)
             const windows = listed.filter(
                 (w) => wantCurrent || !current || w.id !== current.id)
 
@@ -428,11 +450,10 @@ const readers = {
             // spaces module, so a screen counts as fullscreen when a window on it is.
             const fullscreen = new Set()
             if (!wantFullscreen) {
-                const tracker = hs.spoons["hs_windowfilter-gt"]
-                if (tracker) {
-                    // The tracker holds each window's fullscreen flag and screen already.
-                    for (const { state } of tracker.default.records()) {
-                        if (state.fullscreen && state.screenID !== null) fullscreen.add(state.screenID)
+                const filtered = windowfilterWindows("*", { fullscreen: true })
+                if (filtered) {
+                    for (const window of filtered) {
+                        if (window.screen) fullscreen.add(window.screen.id)
                     }
                 } else {
                     for (const window of hs.window.allWindows()) {

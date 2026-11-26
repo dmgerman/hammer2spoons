@@ -2,6 +2,6 @@
     "name": "hs_interactive-gt",
     "author": "Daniel German <dmg@turingmachine.org>",
     "license": "MIT - https://opensource.org/licenses/MIT",
-    "version": "0.5.16",
+    "version": "0.5.17",
     "description": "Defines named commands, binds keys to them by name, and runs any of them from a chooser, as Emacs's M-x does, asking for any argument a command needs."
 }

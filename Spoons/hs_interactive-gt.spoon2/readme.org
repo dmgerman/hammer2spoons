@@ -231,6 +231,13 @@ macOS reports Finder's desktop as the focused window, which is not a standard wi
 =readers.window.auto= then asks for the window in a chooser, and =readers.window.implicit= gives
 null.
 
+The window chooser lists the windows most recently used first, as Hammerspoon 2's
+=hs.windowfilter= records them. A build of Hammerspoon 2 without =hs.windowfilter= lists them
+front to back instead, and takes longer, because it asks every running application. Until
+Hammerspoon 2's issue [[https://github.com/Hammerspoon/Hammerspoon2/issues/485][#485]] is fixed,
+the chooser of standard windows leaves out minimized windows and the windows of an application
+that was hidden, because macOS reports them as dialogs.
+
 A number typed into a dialog that is not a number is reported in an alert, and the command is
 cancelled.
 
@@ -720,8 +727,10 @@ This Spoon defines five commands of its own:
 * Requirements
 
 - No other Spoon is required.
-- When [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] is loaded, the window chooser and the check for fullscreen windows
-  use its record of the open windows. That is faster than asking every running application.
+- In a build of Hammerspoon 2 that includes =hs.windowfilter= (pull request #470, 2026-11-25),
+  the window chooser and the check for fullscreen windows read the open windows from it. That is
+  faster than asking every running application when another Spoon has made =hs.windowfilter=
+  observe windows.
 - The Accessibility permission, which the window and screen readers require to read the open
   windows.
 

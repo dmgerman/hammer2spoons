@@ -255,6 +255,24 @@ module.exports = [
             t.assert.equal((await reading).id, second.id)
         }
     },
+    {
+        name: "window.prompted lists the most recently used window first",
+        run: async (t) => {
+            const choosers = choosersCapture(t)
+            const [first, second] = await t.windowsOpen(2)
+            first.focus()
+            await t.wait(0.6)
+            second.focus()
+            await t.wait(0.6)
+            const snap = { window: second, application: second.application, screen: second.screen }
+            const reading = run(t, t.spoon.readers.window.prompted, {}, snap)
+            await chooserAnswer(t, null)
+            await reading
+            const ids = choosers[0].rows.map((r) => r.value && r.value.id)
+            t.assert.ok(ids.indexOf(second.id) !== -1 && ids.indexOf(first.id) !== -1, "a test window is not listed")
+            t.assert.ok(ids.indexOf(second.id) < ids.indexOf(first.id), "the window focused first is listed before the one focused last")
+        }
+    },
     // --- application ---
     {
         name: "application.implicit and application.auto take the snapshot's application",
