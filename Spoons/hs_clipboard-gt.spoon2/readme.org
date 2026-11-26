@@ -289,7 +289,8 @@ These are the differences from ClipboardTool:
 This Spoon requires the following:
 
 - hs_interactive-gt and hs_menu-gt, loaded before this Spoon.
-- A build of Hammerspoon 2 that includes upstream pull request #377, for the right-click menu.
+- Hammerspoon 2 1.0.0 Beta 4 or later, for the right-click menu and for the preview to follow the
+  selected row.
 
 * License
 

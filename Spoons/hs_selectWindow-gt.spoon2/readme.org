@@ -32,10 +32,9 @@ the selected window to its left:
 
 * Installing
 
-This Spoon requires a build of Hammerspoon 2 that includes =hs.windowfilter= and its
-=inaccessibleApplications()=, which were added on 2026-11-25 and 2026-11-26 (Hammerspoon 2 pull
-requests #470 and #480). =hs.windowfilter= keeps a record of the open windows and of the order in
-which they received the focus. This Spoon takes its list of windows, and their order, from it.
+This Spoon requires Hammerspoon 2 1.0.0 Beta 4 or later, which includes =hs.windowfilter=.
+=hs.windowfilter= keeps a record of the open windows and of the order in which they received the
+focus. This Spoon takes its list of windows, and their order, from it.
 
 This Spoon also requires three other Spoons from this repository, which must be loaded before it:
 
@@ -449,8 +448,7 @@ German, released under the MIT License.
 
 This Spoon requires the following:
 
-- A build of Hammerspoon 2 that includes =hs.windowfilter= and its =inaccessibleApplications()=
-  (pull requests #470 and #480, 2026-11-25 and 2026-11-26).
+- Hammerspoon 2 1.0.0 Beta 4 or later.
 - hs_interactive-gt, hs_window-gt and hs_menu-gt, loaded before this Spoon.
 - The Screen Recording permission, for the thumbnails only.
 

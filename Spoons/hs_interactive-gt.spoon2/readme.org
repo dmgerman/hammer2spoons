@@ -727,8 +727,8 @@ This Spoon defines five commands of its own:
 * Requirements
 
 - No other Spoon is required.
-- In a build of Hammerspoon 2 that includes =hs.windowfilter= (pull request #470, 2026-11-25),
-  the window chooser and the check for fullscreen windows read the open windows from it. That is
+- With Hammerspoon 2 1.0.0 Beta 4 or later, which includes =hs.windowfilter=, the window chooser
+  and the check for fullscreen windows read the open windows from it. That is
   faster than asking every running application when another Spoon has made =hs.windowfilter=
   observe windows.
 - The Accessibility permission, which the window and screen readers require to read the open
