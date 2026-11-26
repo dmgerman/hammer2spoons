@@ -15,9 +15,13 @@ These were found by reading every place a Spoon in =../Spoons= refers to another
    works without it.
 2. A required dependency is one without which the Spoon cannot do its job.
 
+hs_windowfilter-gt was removed on 2026-11-26 (hammer2spoons-rr1.10). Its four users, hs_window-gt
+and hs_selectWindow-gt (required), and hs_interactive-gt and the user's hs_emacs-gt (optional),
+now use Hammerspoon 2's =hs.windowfilter= or =hs.window.forID()=, and their rows were removed from
+this table. The sections below that discuss hs_windowfilter-gt are kept as a record.
+
 | Spoon                | Uses                 | Kind     | What it gets, and what happens without it                         | Where                          |
 |----------------------+----------------------+----------+-------------------------------------------------------------------+--------------------------------|
-| =hs_window-gt=       | =hs_windowfilter-gt= | Required | Events for the previous window, closed windows and isolation. Changed from optional on 2026-11-14 (ei6.9). | =start()= |
 | =hs_countdown-gt=    | =hs_interactive-gt=  | Required | readers.string.prompted, for the length asked by startAsk(). Decided on 2026-11-15 (ei6.15). | =start()=, =startAsk()= |
 | =hs_countdown-gt=    | =hs_menu-gt=         | Required | Its countdown menu, whose options use =fn:=. Decided on 2026-11-15 (ei6.15). | =start()=, =menuShow()= |
 | =hs_clipboard-gt=    | =hs_interactive-gt=  | Required | promptOpened() and promptClosed(), so that the history's chooser is reported as a prompt. Decided on 2026-11-15 (ei6.14). | =start()=, =historyShow()= |
@@ -25,10 +29,7 @@ These were found by reading every place a Spoon in =../Spoons= refers to another
 | =hs_appleMusic-gt=   | =hs_interactive-gt=  | Required | Its choice reader, for the album chooser. Decided on 2026-11-15 (ei6.44). | =start()=, =albumChoose()= |
 | =hs_window-gt=       | =hs_interactive-gt=  | Required | Its readers, for the choosers of /Swap with/, /Tile with/ and /To screen/, and =interactiveFunctionCreate()=, through which its exported functions read omitted arguments (ei6.45). Changed on 2026-11-15 (ei6.43), replacing the rule of 2026-11-14 that no published Spoon requires it. | =start()=, =readerRun()= |
 | =hs_window-gt=       | =hs_menu-gt=         | Required | Its window menu, whose buttons use =fn:=. Decided on 2026-11-14 (ei6.9). | not yet written |
-| =hs_emacs-gt=        | =hs_windowfilter-gt= | Optional | Finding a window by its id quickly. Without it, it filters =hs.window.allWindows()=. | =init.js:437=        |
-| =hs_interactive-gt=  | =hs_windowfilter-gt= | Optional | The window list for choosing a window. Without it, =hs.window.orderedWindows()=, which is slower. | =init.js:331=, =397= |
 | =hs_selectWindow-gt= | =hs_interactive-gt=  | Required | promptOpened() and promptClosed(), so that its chooser is reported as a prompt. Decided on 2026-11-15 (ei6.47.5). | =start()=, =chooseFrom()=, =finishChoosing()= |
-| =hs_selectWindow-gt= | =hs_windowfilter-gt= | Required, since 2026-11-15 (ei6.10); it lists no windows without it | Windows ordered by use. Without it, windows front to back. But see the bug below. | =init.js:141=, =941= |
 | =hs_selectWindow-gt= | =hs_window-gt=       | Required, since 2026-11-15 (ei6.10); its own copies were removed | Its =fullscreenScreenIds()= and two other helpers. Without it, its own versions. | =init.js:660=, =712=, =743= |
 | =hs_menu-gt=         | =hs_interactive-gt=  | Required for buttons that name a command | Running a named command, and asking for its missing arguments. Buttons with =fn:=, =app:= or =url:= work without it; a =command:= button logs an error. Corrected on 2026-11-14. | =init.js:697= |
 | =hs_streamdeck-gt=   | =hs_menu-gt=         | Required | The menus it displays. Without it, it throws "hs_menu-gt is not loaded". | =init.js:80= |

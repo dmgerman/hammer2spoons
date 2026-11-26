@@ -28,7 +28,6 @@ async function run() {
     const spoons = [
         // hs_interactive-gt has no start(), and use() refuses the start option for it.
         ["hs_interactive-gt", { start: false }],
-        ["hs_windowfilter-gt", {}],
         ["hs_menu-gt", { config: { cacheDir: `${DIR}/menu-cache` } }],
         ["hs_window-gt", { config: { attachFile: `${DIR}/window-keys.json` }, hotkeys: { menuShow: [["alt"], "w"] } }],
         ["hs_selectWindow-gt", { hotkeys: { windowSelect: [["alt"], "b"] } }],

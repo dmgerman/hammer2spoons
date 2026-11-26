@@ -76,9 +76,10 @@ function create(titlePrefix, skip, dir) {
 
     // Closes a window during a test, with its close button, and resolves when it is gone.
     //
-    // A window is closed this way, not by ending its process, because hs_windowfilter-gt reports
-    // windowDestroyed only for the close button. On 2026-11-23, ending the process produced no
-    // event within 2 s, and the window stayed in hs_windowfilter-gt's list of windows.
+    // A window is closed this way, not by ending its process, because hs_windowfilter-gt, which
+    // the Spoons used until 2026-11-26, reported windowDestroyed only for the close button. On
+    // 2026-11-23, ending the process produced no event within 2 s, and the window stayed in its
+    // list of windows. This has not been measured with Hammerspoon 2's hs.windowfilter.
     async function windowClose(window) {
         if (!windows.some((w) => w.id === window.id)) {
             throw new Error(`window "${window.title}" was not opened by this test`)
@@ -322,7 +323,7 @@ function create(titlePrefix, skip, dir) {
         }
         hs.mouse.setAbsolutePosition(pointer.x, pointer.y)
         // A window must be on screen for its close button to work, and a window left minimized
-        // or hidden after a test that fails would otherwise stay in hs_windowfilter-gt's list.
+        // or hidden after a test that fails would otherwise stay in hs.windowfilter's list.
         for (const window of windows) {
             try {
                 if (window.isFullscreen) {

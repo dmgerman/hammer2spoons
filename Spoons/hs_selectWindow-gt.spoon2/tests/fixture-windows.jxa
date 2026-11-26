@@ -15,9 +15,9 @@
 // A window's title cannot be changed through the Accessibility API: AXTitle is not settable on
 // these windows, measured on 2026-11-23. Hence the file.
 //
-// The windows belong to this process rather than to Hammerspoon 2, because hs_windowfilter-gt
-// leaves Hammerspoon 2's own windows out of its default filter, which Spoons such as hs_window-gt
-// use. Such a Spoon would then receive no events about them.
+// The windows belong to this process rather than to Hammerspoon 2, because Hammerspoon 2's
+// hs.windowfilter never includes Hammerspoon 2's own windows, and Spoons such as hs_window-gt
+// learn about windows through it. Such a Spoon would then receive no events about them.
 //
 // Shared by every Spoon's tests: edit tests-common/fixture-windows.jxa, not a copy.
 
@@ -26,8 +26,8 @@ ObjC.import("Cocoa")
 function run(argv) {
     const app = $.NSApplication.sharedApplication
     // A regular application, which shows an icon in the Dock while the tests run.
-    // hs_windowfilter-gt tracks only standard applications, and an accessory application,
-    // which would have no Dock icon, is not one: its windows would produce no events.
+    // hs_windowfilter-gt, which the Spoons used until 2026-11-26, tracked only standard
+    // applications, and an accessory application, which would have no Dock icon, is not one.
     app.setActivationPolicy($.NSApplicationActivationPolicyRegular)
     const style = $.NSWindowStyleMaskTitled | $.NSWindowStyleMaskClosable |
         $.NSWindowStyleMaskResizable | $.NSWindowStyleMaskMiniaturizable
