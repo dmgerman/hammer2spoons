@@ -4,7 +4,7 @@
 // order() lists the user's windows as well as the test windows. The tests look only at the test
 // windows, found by their titles, except where the readme says which window comes first.
 
-// Focuses a window and waits until hs_windowfilter-gt has had time to report it.
+// Focuses a window and waits until hs.windowfilter has had time to report it.
 async function focus(t, window) {
     window.focus()
     const started = Date.now()

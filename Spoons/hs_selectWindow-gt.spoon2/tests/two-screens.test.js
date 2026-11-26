@@ -6,7 +6,7 @@
 // another test window behind it on the same screen, and switches to that window with
 // windowPreviousSelect(). The fixture takes the windows out of fullscreen when the test ends.
 
-const { focus } = require("./chooser.js")
+const { focus, previousGuard } = require("./chooser.js")
 
 // Opens a test window in the middle of a screen.
 async function windowOn(t, screen) {
@@ -44,7 +44,10 @@ async function behindFullscreen(t) {
     return { first, behind, fullscreen }
 }
 
-async function previousSelect(t) {
+// Switches to `behind` with windowPreviousSelect(), after checking that it is the window that
+// would be switched to.
+async function previousSelect(t, behind) {
+    previousGuard(t, behind)
     t.assert.equal(t.spoon.windowPreviousSelect(), true, "windowPreviousSelect()")
     await t.wait(2)
 }
@@ -58,7 +61,7 @@ const tests = [
         run: async (t) => {
             skipSet(t, false)
             const { first, behind } = await behindFullscreen(t)
-            await previousSelect(t)
+            await previousSelect(t, behind)
             t.assert.equal(behind.screen.id, first.id, "the chosen window's screen")
             t.assert.equal(focusedId(), behind.id, "the focused window")
         }
@@ -70,7 +73,7 @@ const tests = [
             skipSet(t, true)
             const { behind, fullscreen } = await behindFullscreen(t)
             const second = hs.screen.all()[1]
-            await previousSelect(t)
+            await previousSelect(t, behind)
             t.assert.equal(behind.screen.id, second.id, "the chosen window's screen")
             t.assert.equal(focusedId(), behind.id, "the focused window")
             t.assert.ok(fullscreen.isFullscreen, "the fullscreen window left fullscreen")
@@ -84,7 +87,7 @@ const tests = [
             const { first, behind } = await behindFullscreen(t)
             behind.minimize()
             await t.wait(1)
-            await previousSelect(t)
+            await previousSelect(t, behind)
             t.assert.ok(!behind.isMinimized, "the window is still minimized")
             t.assert.equal(behind.screen.id, first.id, "the chosen window's screen")
         }
@@ -98,7 +101,7 @@ const tests = [
             const others = hs.screen.all().slice(1)
             for (const screen of others) await fullscreenEnter(t, await windowOn(t, screen))
             const { first, behind } = await behindFullscreen(t)
-            await previousSelect(t)
+            await previousSelect(t, behind)
             t.assert.equal(behind.screen.id, first.id, "the chosen window's screen")
             t.assert.equal(focusedId(), behind.id, "the focused window")
         }

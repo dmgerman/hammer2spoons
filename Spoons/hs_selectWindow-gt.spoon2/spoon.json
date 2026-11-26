@@ -1,6 +1,6 @@
 {
     "name": "hs_selectWindow-gt",
-    "version": "0.3.17",
+    "version": "0.4.0",
     "author": "Daniel German <dmg@turingmachine.org>",
     "license": "MIT - https://opensource.org/licenses/MIT",
     "description": "Switches to any window by typing part of its title or application, most recently used first, with a preview of the window."

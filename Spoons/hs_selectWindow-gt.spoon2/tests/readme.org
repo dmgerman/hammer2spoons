@@ -22,10 +22,10 @@ Run only the files a change can affect.
 
 The Spoon writes no files, so the copy needs no =tests/spoon.js=.
 
-The copy uses the user's hs_interactive-gt, hs_window-gt and hs_windowfilter-gt, which the
-configuration has loaded. Its =start()=, which the harness calls, creates a filter on the user's
-hs_windowfilter-gt. Its =stop()=, which the harness calls at the end, closes its chooser,
-destroys that filter and releases its keys.
+The copy uses the user's hs_interactive-gt, hs_window-gt and hs_menu-gt, which the configuration
+has loaded. Its =start()=, which the harness calls, creates a filter with Hammerspoon 2's
+=hs.windowfilter=. Its =stop()=, which the harness calls at the end, closes its chooser, removes
+that filter's listener and releases its keys.
 
 * The tests of the chooser
 

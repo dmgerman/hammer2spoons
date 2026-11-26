@@ -3,7 +3,7 @@
 // whole, leaving out windows that are not standard, a thumbnail not being enlarged, and
 // windowPreviousSelect() reaching a minimized window.
 
-const { choosersCapture, open, openWait, type, key, focus, focusedId, testRows } = require("./chooser.js")
+const { choosersCapture, open, openWait, type, key, focus, focusedId, testRows, previousGuard } = require("./chooser.js")
 
 // The id of the row the copy's chooser has selected, or null when no row is listed.
 function selectedId(chooser) {
@@ -96,6 +96,7 @@ module.exports = [
             await focus(t, b)
             a.minimize()
             await t.wait(1)
+            previousGuard(t, a)
             t.assert.equal(t.spoon.windowPreviousSelect(), true, "the result")
             await t.wait(1)
             t.assert.ok(!a.isMinimized, "the window is still minimized")

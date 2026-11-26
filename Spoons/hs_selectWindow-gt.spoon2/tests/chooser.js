@@ -88,7 +88,7 @@ async function key(t, chooser, modifiers, name) {
     await t.wait(0.5)
 }
 
-// Focuses a window and waits until hs_windowfilter-gt has had time to report it.
+// Focuses a window and waits until hs.windowfilter has had time to report it.
 async function focus(t, window) {
     window.focus()
     const started = Date.now()
@@ -119,4 +119,18 @@ function onlyTestWindows(t) {
     })
 }
 
-module.exports = { choosersCapture, open, interactive, isOpen, openWait, type, key, focus, focusedId, testRows, titles, onlyTestWindows }
+// Fails the test, before anything is switched, unless `window` is listed by order() with only
+// test windows before it. A test calls this before a function that switches without a chooser,
+// such as windowPreviousSelect(), which acts on the first window order() lists, or on the first
+// of those on the current Space. Without it, a window missing from the list makes that function
+// act on a window of the user's: on 2026-11-26, a minimized test window was missing, and
+// windowPreviousSelect() moved the user's Chrome window to another screen.
+function previousGuard(t, window) {
+    const listed = t.spoon.order()
+    const at = listed.findIndex((entry) => entry.endsWith(`: ${window.title}`))
+    if (at === -1) t.assert.fail(`"${window.title}" is not listed by order(), so nothing was switched`)
+    const before = listed.slice(0, at).filter((entry) => !entry.includes(t.titlePrefix))
+    if (before.length) t.assert.fail(`windows of the user's come before "${window.title}" in order(), so nothing was switched: ${before.join(" | ")}`)
+}
+
+module.exports = { choosersCapture, open, interactive, isOpen, openWait, type, key, focus, focusedId, testRows, titles, onlyTestWindows, previousGuard }

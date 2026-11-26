@@ -132,10 +132,10 @@ module.exports = [
         }
     },
     {
-        name: "start() throws, naming the Spoon, when hs_interactive-gt, hs_windowfilter-gt, hs_window-gt or hs_menu-gt is not loaded",
+        name: "start() throws, naming the Spoon, when hs_interactive-gt, hs_window-gt or hs_menu-gt is not loaded",
         run: (t) => {
             t.cleanup(() => t.spoon.start())
-            for (const name of ["hs_interactive-gt", "hs_windowfilter-gt", "hs_window-gt", "hs_menu-gt"]) {
+            for (const name of ["hs_interactive-gt", "hs_window-gt", "hs_menu-gt"]) {
                 t.spoon.stop()
                 // Taken away and put back within this one synchronous call, so nothing else runs
                 // while the user's Spoon is missing.
@@ -151,6 +151,26 @@ module.exports = [
                 }
                 t.assert.ok(error && error.message.includes(name), `${name}: ${error ? error.message : "no error"}`)
             }
+        }
+    },
+    {
+        name: "start() throws, naming hs.windowfilter, when Hammerspoon 2 does not have inaccessibleApplications()",
+        run: (t) => {
+            t.cleanup(() => t.spoon.start())
+            t.spoon.stop()
+            // Taken away and put back within this one synchronous call, so nothing else runs
+            // while the function is missing.
+            const original = hs.windowfilter.inaccessibleApplications
+            let error = null
+            try {
+                hs.windowfilter.inaccessibleApplications = undefined
+                t.spoon.start()
+            } catch (e) {
+                error = e
+            } finally {
+                hs.windowfilter.inaccessibleApplications = original
+            }
+            t.assert.ok(error && error.message.includes("hs.windowfilter"), error ? error.message : "no error")
         }
     },
     // --- the settings ---

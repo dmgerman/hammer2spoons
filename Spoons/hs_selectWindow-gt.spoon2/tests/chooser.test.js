@@ -13,7 +13,7 @@
 // The test windows have no bundle identifier, so applicationByBundleSelect() is tested only for
 // an application that is not running and for its alerts.
 
-const { choosersCapture, open, interactive, openWait, type, key, focus, focusedId, testRows, titles, onlyTestWindows } = require("./chooser.js")
+const { choosersCapture, open, interactive, openWait, type, key, focus, focusedId, testRows, titles, onlyTestWindows, previousGuard } = require("./chooser.js")
 
 module.exports = [
     // --- the chooser ---
@@ -242,12 +242,10 @@ module.exports = [
             hs.application.runningApplications = function () { return original.apply(hs.application, arguments).concat(fakes) }
             t.cleanup(() => { if (own) hs.application.runningApplications = original; else delete hs.application.runningApplications })
             // Zq Kiosk stands for an application that has turned the Accessibility API off, which
-            // the user's hs_windowfilter-gt reports, replaced here until the test ends.
-            const windowfilter = hs.spoons["hs_windowfilter-gt"]
-            const filterOriginal = windowfilter.applicationsAccessibilityDisabled
-            const filterOwn = Object.prototype.hasOwnProperty.call(windowfilter, "applicationsAccessibilityDisabled")
-            windowfilter.applicationsAccessibilityDisabled = () => [fakes[4]]
-            t.cleanup(() => { if (filterOwn) windowfilter.applicationsAccessibilityDisabled = filterOriginal; else delete windowfilter.applicationsAccessibilityDisabled })
+            // hs.windowfilter.inaccessibleApplications() reports, replaced here until the test ends.
+            const inaccessibleOriginal = hs.windowfilter.inaccessibleApplications
+            hs.windowfilter.inaccessibleApplications = () => [fakes[4]]
+            t.cleanup(() => { hs.windowfilter.inaccessibleApplications = inaccessibleOriginal })
 
             for (const [fn, n] of [["windowSelect", 0], ["applicationSelect", 1]]) {
                 const chooser = open(t, () => t.spoon[fn]())
@@ -274,6 +272,7 @@ module.exports = [
             const [a, b] = await t.windowsOpen(2)
             await focus(t, a)
             await focus(t, b)
+            previousGuard(t, a)
             t.assert.equal(t.spoon.windowPreviousSelect(), true, "the result")
             await t.wait(0.8)
             t.assert.equal(focusedId(), a.id, "the focused window")

@@ -12,7 +12,7 @@
 // 2026-11-25 ctrl-alt-shift-f17 sent without it ran nothing. fn is added to F-keys only.
 const withFn = (mods, key) => (/^f\d+$/.test(key) ? [...mods, "fn"] : mods)
 
-const { choosersCapture, open, openWait, type, key, focus, focusedId, interactive } = require("./chooser.js")
+const { choosersCapture, open, openWait, type, key, focus, focusedId, interactive, previousGuard } = require("./chooser.js")
 
 const MODIFIERS = ["ctrl", "alt", "shift"]
 
@@ -153,6 +153,7 @@ module.exports = [
             t.assert.equal(JSON.stringify(await listed(() => t.spoon.windowSelect({ currentSpace: true }))), JSON.stringify({ shown: true, away: false }), "windowSelect({ currentSpace: true })")
             t.assert.equal(JSON.stringify(await listed(() => t.spoon.applicationWindowSelect(undefined, { currentSpace: true }))), JSON.stringify({ shown: true, away: false }), "applicationWindowSelect(undefined, { currentSpace: true })")
             // away was used after shown, so without the option it would be the previous window.
+            previousGuard(t, shown)
             t.assert.equal(t.spoon.windowPreviousSelect({ currentSpace: true }), true, "windowPreviousSelect() returned")
             await t.wait(0.8)
             t.assert.equal(focusedId(), shown.id, "the window windowPreviousSelect({ currentSpace: true }) focused")

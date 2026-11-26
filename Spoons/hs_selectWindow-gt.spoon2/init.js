@@ -12,19 +12,19 @@
 //
 // No keys are bound. bindHotkeys() is available for a caller that wants them.
 //
-// The Spoon needs hs_windowfilter-gt and hs_window-gt, and loads neither itself: the user's
-// configuration loads them first. start() checks for both.
+// The Spoon needs Hammerspoon 2's hs.windowfilter, and hs_window-gt, which it does not load
+// itself: the user's configuration loads it first. start() checks for both.
 //
-// Both the list of windows and their order come from hs_windowfilter-gt. That Spoon already
-// tracks every window and holds its title, application, screen and flags, kept current by
-// the notifications it subscribes to, so this Spoon never enumerates windows itself and
-// never reads a property off one. It subscribes to windowFocused and keeps the ids in the
-// order they were last focused.
+// Both the list of windows and their order come from hs.windowfilter, which tracks every window
+// and the order in which they were focused, so this Spoon never enumerates windows itself. The
+// title, application, screen and flags of each window are read from its HSWindow when a chooser
+// opens: about 27 ms for 31 windows, measured on 2026-11-26. hs.windowfilter holds these values
+// too, but does not return them (ai/compare-hs.windowfilter.org, hammer2spoons-rr1.8).
 //
 // Asking hs.window instead is what made this slow. allWindows(), orderedWindows() and
 // visibleWindows() each took about 1.5 s when this was written. They took about 0.1 s for
 // 35 windows on 2026-10-24, which is still a visible pause when the switcher opens. Asking
-// the tracker takes 1 ms.
+// hs.windowfilter for its windows takes 0.4 ms.
 //
 // Their front-to-back order also leaves out minimized windows and windows of a hidden
 // application, which a switcher is precisely for.
@@ -99,8 +99,7 @@ const config = {
 
 // MARK: - State
 
-let filter = null                  // the hs_windowfilter-gt instance used for focus order
-let focusOrder = []                // window ids, most recently focused first
+let filter = null                  // the hs.windowfilter filter of the windows offered
 let chooser = null
 let promptHeld = false             // whether the open chooser is reported to hs_interactive-gt
 let pollTimer = null
@@ -139,113 +138,112 @@ function spoonRequired(name) {
         `See ${DOCUMENTATION}/${name}.spoon2`)
 }
 
-// MARK: - Most-recently-used order
+// MARK: - Which windows to offer, most recently used first
 
 /**
- * Record that a window was focused, moving it to the front of the order.
- *
- * Called from the window filter rather than polled, so the order is right even for windows
- * that were focused and then minimized.
+ * hs.windowfilter, which this Spoon cannot work without. Throws when the running Hammerspoon 2
+ * does not have the module, or is older than inaccessibleApplications(), which upstream added in
+ * PR #480.
  */
-function noteFocused(id) {
-    if (id === null || id === undefined) return
-    const at = focusOrder.indexOf(id)
-    if (at !== -1) focusOrder.splice(at, 1)
-    focusOrder.unshift(id)
+function windowfilterRequired() {
+    const windowfilter = hs.windowfilter
+    if (windowfilter && typeof windowfilter.create === "function" &&
+        typeof windowfilter.inaccessibleApplications === "function") return windowfilter
+    throw new Error(`${SPOON_NAME} needs hs.windowfilter with inaccessibleApplications(), which this ` +
+        "build of Hammerspoon 2 does not have. It was added on 2026-11-26 " +
+        "(Hammerspoon/Hammerspoon2#470 and #480).")
 }
 
-function startTrackingFocus() {
+/**
+ * Creates the filter of the windows offered, once.
+ *
+ * It accepts every standard window that has a title, including minimized ones and those of
+ * hidden applications: a minimized window is exactly what a switcher is for. The title leaves
+ * out the untitled windows of menu bar applications, such as NordVPN's. Hammerspoon 2's own
+ * windows are never included.
+ *
+ * AXDialog is allowed as well as AXStandardWindow, because macOS reports a minimized window's
+ * subrole as AXDialog, and hs.windowfilter reads the subrole each time (measured on 2026-11-26).
+ * With AXStandardWindow alone, every minimized window would be left out. The cost is that a
+ * dialog with a title is offered too.
+ *
+ * Its windowDestroyed listener drops the window's thumbnail. It also keeps hs.windowfilter
+ * observing windows, so that windows() and inaccessibleApplications() read what it holds rather
+ * than asking every application.
+ */
+function filterStart() {
     if (filter) return
+    const windowfilter = windowfilterRequired()
+    filter = windowfilter.create({ default: { allowRoles: ["AXStandardWindow", "AXDialog"], allowTitles: 1 } })
+    for (const application of config.skipApplications) filter.rejectApp(application)
+    filter.on("windowDestroyed", windowDestroyed)
+}
 
-    const windowfilter = spoonRequired("hs_windowfilter-gt")
+function windowDestroyed(window) {
+    if (window) thumbnails.delete(window.id)
+}
 
-    // Every window, including minimized ones: a minimized window is exactly what a switcher
-    // is for, and its place in the order has to be remembered while it is out of sight.
-    filter = windowfilter.create({ rejectApplications: config.skipApplications })
-    filter.on("windowFocused", (event, window, state) => noteFocused(state.id))
-    filter.on("windowDestroyed", (event, window, state) => {
-        const at = focusOrder.indexOf(state.id)
-        if (at !== -1) focusOrder.splice(at, 1)
-        thumbnails.delete(state.id)
-    })
+/**
+ * The record of one window: the window, and the values the chooser and the functions below
+ * read from it, read once.
+ *
+ * `focused` is whether the window is the first in the order of use, which hs.windowfilter
+ * updates on every windowFocused event. It is not read from the window: a window of another
+ * application can report that it is focused after the focus has left it.
+ */
+function recordOf(window, focusedId) {
+    const application = window.application
+    const screen = window.screen
+    return {
+        window,
+        state: {
+            id: window.id,
+            title: window.title || "",
+            application: application ? (application.name || "") : "",
+            bundleID: application ? application.bundleID : null,
+            screenName: screen ? screen.name : null,
+            minimized: Boolean(window.isMinimized),
+            fullscreen: Boolean(window.isFullscreen),
+            hidden: application ? Boolean(application.isHidden) : false,
+            focused: window.id === focusedId
+        }
+    }
+}
 
-    // Seed with what is open now, so the order is useful before anything has been focused.
-    // Beyond the focused window below, the seeding order is arbitrary: the tracker holds
-    // its windows by id rather than front to back. One focus change corrects it.
-    // hs.window.orderedWindows() would not give a front-to-back order either, because it
-    // keeps each application's windows together. See switchableRecords().
-    for (const record of filter.records()) noteFocused(record.state.id)
+/**
+ * The windows to offer, most recently used first, from hs.windowfilter. Windows that existed
+ * before hs.windowfilter started observing, and have not been focused since, follow in their
+ * order on screen, front to back.
+ */
+function switchable() {
+    filterStart()
+    return filter ? filter.windows("focusedLast") : []
+}
 
-    // The focused window belongs at the front. Taken from the tracker, which knows which
-    // window that is; asking hs.window.focusedWindow() would query the frontmost
-    // application through accessibility and wait for however long it takes to answer.
-    const current = filter.records().find((record) => record.state.focused)
-    if (current) noteFocused(current.state.id)
+/**
+ * Every switchable window, most recently used first, as `{window, state}` records. The values in
+ * `state` are read from each window, so this is called once each time a chooser opens.
+ */
+function allRecords() {
+    const windows = switchable()
+    const focusedId = windows.length ? windows[0].id : null
+    return windows.map((window) => recordOf(window, focusedId))
 }
 
 /**
  * The records without the focused window's. A chooser leaves the focused window out, because
  * choosing it would change nothing, so the window used before it is the first row, which the
  * chooser selects when it opens.
- *
- * The focused window is the first of focusOrder, which follows hs_windowfilter-gt's
- * windowFocused events. The tracker's per-window `focused` flag is not used: it can stay true
- * on a window of another application after the focus has left it.
  */
 function withoutFocused(records) {
-    const focusedId = focusOrder.length ? focusOrder[0] : null
-    return records.filter((record) => record.state.id !== focusedId)
-}
-
-/** Records in most-recently-used order. Those never focused come last. */
-function recordsByUse(records) {
-    const rank = new Map()
-    focusOrder.forEach((id, index) => rank.set(id, index))
-
-    return records.slice().sort((a, b) => {
-        const one = rank.has(a.state.id) ? rank.get(a.state.id) : Number.MAX_SAFE_INTEGER
-        const two = rank.has(b.state.id) ? rank.get(b.state.id) : Number.MAX_SAFE_INTEGER
-        return one - two
-    })
-}
-
-// MARK: - Which windows to offer
-
-/**
- * The windows to offer, with the state the tracker holds for each.
- *
- * Taken from hs_windowfilter-gt rather than enumerated. The tracker already holds every
- * window it watches, along with its title, application, screen and flags, kept current by
- * the notifications it subscribes to. Asking it costs nothing.
- *
- * Enumerating instead is what made this Spoon slow. hs.window.allWindows(),
- * orderedWindows() and visibleWindows() took about 0.1 s for 35 windows on 2026-10-24,
- * against 1 ms for asking the tracker.
- *
- * @returns {Array} `{window, state}` objects, in no particular order.
- */
-function switchableRecords() {
-    startTrackingFocus()
-    if (!filter) return []
-    return filter.records().filter((record) => record.state.standard)
-}
-
-function switchable() {
-    return switchableRecords().map((record) => record.window)
-}
-
-/** Every switchable window, most recently used first. */
-function allRecords() {
-    return recordsByUse(switchableRecords())
+    return records.filter((record) => !record.state.focused)
 }
 
 /**
  * Records for one application, most recently used first. Defaults to the focused one.
  *
- * Which application that is comes from the tracker's own record of which window has focus,
- * not from hs.window.focusedWindow(), which waits on the frontmost application. The first
- * record in use order is a fallback for the moment after a reload, before any focus change
- * has been seen.
+ * Which application that is comes from hs.windowfilter's order of use, whose first window is
+ * the focused one, not from hs.window.focusedWindow(), which waits on the frontmost application.
  */
 function applicationRecords(application) {
     const ordered = allRecords()
@@ -592,10 +590,10 @@ function spaceLabel(window, current) {
  * 2026-11-24, paid once each time a chooser opens.
  *
  * The applications that have turned the Accessibility API off, such as Firefox in kiosk mode,
- * follow. hs_windowfilter-gt cannot read their windows, so they never have a window row, but they
+ * follow. hs.windowfilter cannot read their windows, so they never have a window row, but they
  * exist and can be activated. They are listed even when another copy of the application has
- * windows, as a second Firefox in kiosk mode beside a normal one does. hs_windowfilter-gt already
- * holds this list, so reading it calls no application.
+ * windows, as a second Firefox in kiosk mode beside a normal one does. hs.windowfilter holds
+ * this list while this Spoon's filter has a listener, so reading it calls no application.
  *
  * @param {Array} records The window records the chooser lists.
  * @returns {Array} `{application, inaccessible}` objects: those without windows by name, then
@@ -604,12 +602,9 @@ function spaceLabel(window, current) {
 function windowlessApplications(records) {
     const frontmost = hs.application.frontmost()
     const frontmostPid = frontmost ? frontmost.pid : null
-    const windowfilter = spoonRequired("hs_windowfilter-gt")
-    // Older versions of hs_windowfilter-gt do not have the function.
-    const inaccessible = typeof windowfilter.applicationsAccessibilityDisabled === "function"
-        ? windowfilter.applicationsAccessibilityDisabled()
-            .filter((application) => application.name && application.pid !== frontmostPid)
-        : []
+    filterStart()
+    const inaccessible = windowfilterRequired().inaccessibleApplications()
+        .filter((application) => application.name && application.pid !== frontmostPid)
     const inaccessiblePids = new Set(inaccessible.map((application) => application.pid))
 
     const listed = new Set(records.map(({ state }) => state.bundleID || state.application))
@@ -696,7 +691,7 @@ function chooseFrom(all, placeholder, windowless = [], choose = focusWindowById)
         return null
     }
 
-    startTrackingFocus()
+    filterStart()
 
     // A chooser already open is closed first. Its own callbacks then find that it is no longer
     // the current chooser, and do not report the new one's prompt as closed.
@@ -930,9 +925,10 @@ function windowToCurrentSpaceSelect() {
  */
 async function windowToCurrentSpaceBring(id, screen, space) {
     const window = sessionWindows.get(id) || switchable().find((w) => w.id === id)
-    // A window that closed while the chooser was open can still be in the tracker's list for a
-    // moment, so it is read again: windowState() returns null for a window that has closed.
-    if (!window || !spoonRequired("hs_windowfilter-gt").windowState(window)) {
+    // A window that closed while the chooser was open can still be in hs.windowfilter's list
+    // for a moment, so it is looked up again: hs.window.forID() returns null for a window that
+    // has closed.
+    if (!window || !hs.window.forID(window.id)) {
         hs.ui.alert("The window is no longer open").duration(3).show()
         return false
     }
@@ -1383,7 +1379,7 @@ function start() {
     spoonRequired("hs_interactive-gt")
     spoonRequired("hs_window-gt")
     spoonRequired("hs_menu-gt")
-    startTrackingFocus()
+    filterStart()
     return module.exports
 }
 
@@ -1391,11 +1387,11 @@ function stop() {
     chooserClose()
 
     if (filter) {
-        const windowfilter = hs.spoons["hs_windowfilter-gt"]
-        if (windowfilter) windowfilter.destroy(filter)
+        // A filter with a listener stays active after its last reference is dropped, so the
+        // listener is removed.
+        filter.off("windowDestroyed", windowDestroyed)
         filter = null
     }
-    focusOrder = []
     thumbnails = new Map()
     pendingSnapshots = new Set()
 
