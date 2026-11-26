@@ -191,7 +191,7 @@ module.exports = [
             const id = window.id
             t.assert.equal(t.spoon.historyDepth({ id }), 1, "historyDepth before closing")
             await t.windowClose(window)
-            // hs_windowfilter-gt reports the closing a little after the window has gone.
+            // hs.windowfilter reports the closing a little after the window has gone.
             const started = Date.now()
             while (t.spoon.historyDepth({ id }) !== 0 && Date.now() - started < 3000) await t.wait(0.1)
             t.assert.equal(t.spoon.historyDepth({ id }), 0, "historyDepth after closing")

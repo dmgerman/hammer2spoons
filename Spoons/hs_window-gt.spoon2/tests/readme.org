@@ -127,8 +127,11 @@ ends. After each test, also when the test fails or times out, the harness closes
 with its close button and then ends the process, so a test does not close its own windows. An
 =osascript= icon is shown in the Dock while the process runs.
 
-Three things about hs_windowfilter-gt decide how the windows are made and closed. hs_window-gt
-learns that a window was focused, moved or closed only through hs_windowfilter-gt.
+hs_window-gt learns that a window was focused, moved or closed only through Hammerspoon 2's
+=hs.windowfilter=. Before version 2.5.0, it learnt this through hs_windowfilter-gt, for which the
+test windows were designed. Three things about hs_windowfilter-gt decided how the windows are made
+and closed. =hs.windowfilter= also leaves out Hammerspoon 2's own windows, so the first still
+applies. =windowfilter.test.js= tests the behaviour of =hs.windowfilter= that hs_window-gt relies on.
 
 1. Its default filter, which hs_window-gt uses, leaves out Hammerspoon 2's own windows. The test
    windows therefore belong to a separate process rather than being made with =hs.ui.window()=.

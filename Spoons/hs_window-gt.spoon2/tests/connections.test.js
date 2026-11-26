@@ -273,13 +273,37 @@ tests.push({
     }
 })
 
+// Replaces hs.windowfilter.create until the test ends, so that the test can count the filters the
+// Spoon creates and the listeners it registers on them. Returns the counts, which the wrapper
+// updates: created, listeners (registered minus removed).
+function windowfilterCount(t) {
+    const create = hs.windowfilter.create
+    const counts = { created: 0, listeners: 0 }
+    hs.windowfilter.create = function (rules) {
+        const filter = create.call(hs.windowfilter, rules)
+        counts.created += 1
+        const on = filter.on
+        const off = filter.off
+        filter.on = function (event, listener) { counts.listeners += 1; return on.call(filter, event, listener) }
+        filter.off = function (event, listener) { counts.listeners -= 1; return off.call(filter, event, listener) }
+        return filter
+    }
+    t.cleanup(() => { hs.windowfilter.create = create })
+    return counts
+}
+
 tests.push({
     name: "stop() releases keys, isolation, the ring, attached digits and the window filter, and start() works again",
     timeout: 20,
     run: async (t) => {
         const { window, frame } = await windowOpen(t)
-        const windowfilter = hs.spoons["hs_windowfilter-gt"]
-        const filtersBefore = windowfilter.status().filters
+        // The Spoon was started before the test, so stop() and start() first make it create its
+        // filters through the counting wrapper.
+        t.spoon.stop()
+        const counts = windowfilterCount(t)
+        t.spoon.start()
+        t.assert.equal(counts.created, 2, "filters created by start")
+        t.assert.ok(counts.listeners > 0, "start registered no listener")
         const modifiers = t.spoon.config.attachModifiers
         t.spoon.config.attachModifiers = MODIFIERS
         const canvases = t.canvasesCapture()
@@ -293,7 +317,7 @@ tests.push({
 
             t.assert.equal(t.spoon.stop(), t.spoon, "stop returned")
             stopped = true
-            t.assert.equal(windowfilter.status().filters, filtersBefore - 1, "hs_windowfilter-gt's filters after stop")
+            t.assert.equal(counts.listeners, 0, "listeners left on hs.windowfilter after stop")
             t.assert.equal(t.spoon.isolationOn(), false, "isolation is on")
             const shown = canvases.filter((c) => { try { return c.canvas.isShowing() } catch (e) { return false } })
             t.assert.equal(shown.length, 0, "panels or the ring still shown")
@@ -307,7 +331,8 @@ tests.push({
             const alerts = t.alertsCapture()
             t.assert.equal(t.spoon.start(), t.spoon, "start returned")
             stopped = false
-            t.assert.equal(windowfilter.status().filters, filtersBefore, "hs_windowfilter-gt's filters after start")
+            t.assert.equal(counts.created, 4, "filters created after start")
+            t.assert.ok(counts.listeners > 0, "start registered no listener")
             t.assert.ok(t.spoon.attachedWindows()["9"], "start did not attach 9 again")
             t.assert.ok(alerts.some((a) => a.startsWith("Window keys restored:")), `alerts: ${alerts.join(" | ")}`)
         } finally {
@@ -321,12 +346,11 @@ tests.push({
 })
 
 tests.push({
-    name: "start() called twice creates one window filter",
+    name: "start() called twice creates its window filters once",
     run: (t) => {
-        const windowfilter = hs.spoons["hs_windowfilter-gt"]
-        const before = windowfilter.status().filters
+        const counts = windowfilterCount(t)
         t.spoon.start()
-        t.assert.equal(windowfilter.status().filters, before, "hs_windowfilter-gt's filters")
+        t.assert.equal(counts.created, 0, "filters created by a second start")
     }
 })
 

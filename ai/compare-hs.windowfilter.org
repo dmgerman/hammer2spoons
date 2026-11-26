@@ -410,16 +410,25 @@ These differences were checked against our code and need nothing from upstream:
 
 * Open questions
 
-These need a test that changes windows, which was not run, because it would have moved the
-user's windows:
+Bead hammer2spoons-rr1.5 answered the first two on 2026-11-26, with the tests in
+=Spoons/hs_window-gt.spoon2/tests/windowfilter.test.js=:
 
-1. Whether the events arrive in the order the documentation gives, such as =windowUnfocused=
-   before =windowFocused= when the focus moves between two windows of one application.
-2. Whether a window that is created without a title, and receives one later, is accepted by a
-   filter with =allowTitles: 1= once its title is set. Our Spoon rescans for this after
-   =config.createdRescanDelay=.
-3. How upstream behaves when an application does not answer, as Music did during a library
-   sync on 2026-11-23.
+1. The events arrive in the order the documentation gives. When the focus moves between two
+   windows of one application, =windowUnfocused= for the first is emitted before
+   =windowFocused= for the second. =windows("focusedLast")= then lists the second window
+   first and the first window second.
+2. A window created without a title is not accepted by a filter with =allowTitles: 1=, and is
+   accepted, with =windowAllowed=, once its title is set. No rescan is needed.
+3. How upstream behaves when an application does not answer was not tested. The maintainer
+   told the user that a timeout will likely be added, and bead hammer2spoons-rr1.9 tests it
+   then.
+
+The port of =hs_selectWindow-gt= (hammer2spoons-rr1.7) found a fourth behaviour. macOS reports
+a minimized window's subrole as =AXDialog=, and as =AXStandardWindow= again once it is
+restored. =hs.windowfilter= reads the subrole each time it reads a window, so a filter with
+=allowRoles: "AXStandardWindow"= leaves out every minimized window. =hs_windowfilter-gt= kept a
+window standard once it had been reported standard. =hs_selectWindow-gt= therefore allows
+=AXDialog= as well, and the upstream issue draft (hammer2spoons-rr1.8) reports it.
 
 * Possible next beads
 

@@ -23,21 +23,22 @@ that it can be undone.
 
 * Installing
 
-This Spoon requires three other Spoons from this repository, which must be loaded before it:
+This Spoon requires a build of Hammerspoon 2 that includes =hs.windowfilter=, which was added on
+2026-11-25 (Hammerspoon 2 pull request #470). Its events report when the focus moves to another
+window and when a window closes.
+
+This Spoon also requires two other Spoons from this repository, which must be loaded before it:
 
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]. It asks the user for an argument that a function
   needs and was not given, such as the window to swap with, or the window to act on when no window
   is focused.
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]]. Its events report when the focus moves to another window and when a
-  window closes.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]. It displays the window menu.
 
-The following configuration loads all four, and binds ⌥W to the window menu. The first time it
-runs, Hammerspoon 2 downloads the four Spoons:
+The following configuration loads all three, and binds ⌥W to the window menu. The first time it
+runs, Hammerspoon 2 downloads the three Spoons:
 
 #+begin_src js
 hs.spoons.use("hs_interactive-gt", { source: "dmgerman/hammer2spoons" })
-hs.spoons.use("hs_windowfilter-gt", { source: "dmgerman/hammer2spoons" })
 hs.spoons.use("hs_menu-gt", { source: "dmgerman/hammer2spoons" })
 hs.spoons.use("hs_window-gt", {
     source: "dmgerman/hammer2spoons",
@@ -386,7 +387,7 @@ distance at once.
 @@html:<img src="./images/pointer-ring.png" alt="The mouse pointer inside a red ring">@@
 
 =mouseWindowCenterNext= takes the standard windows that are on screen, in the order in which
-hs_windowfilter-gt first saw them. The first call starts at the window after the focused one.
+=hs.windowfilter= first saw them. The first call starts at the window after the focused one.
 When a window opens or closes, the next call starts again from the window after the focused one.
 
 The middle of a screen is the middle of the whole display, including the area of the menu bar
@@ -433,11 +434,12 @@ Screen Recording permission.
 
 ** start() and stop()
 
-=start()= checks that hs_interactive-gt, hs_windowfilter-gt and hs_menu-gt are loaded, subscribes
-to hs_windowfilter-gt's events, and attaches the windows saved in =config.attachFile= again.
+=start()= checks that hs_interactive-gt and hs_menu-gt are loaded and that Hammerspoon 2 has
+=hs.windowfilter=, registers its listeners on =hs.windowfilter=, and attaches the windows saved in
+=config.attachFile= again.
 
 =stop()= releases the keys bound by =bindHotkeys()=, turns isolation off, removes the circle
-around the pointer, and unsubscribes from hs_windowfilter-gt. It also releases the number keys.
+around the pointer, and removes its listeners from =hs.windowfilter=. It also releases the number keys.
 It does not remove them from =config.attachFile=, so the next =start()= attaches them again.
 
 * Configuration
@@ -535,7 +537,8 @@ this Spoon's design.
 
 This Spoon requires the following:
 
-- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]], [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_windowfilter-gt.spoon2][hs_windowfilter-gt]] and
+- A build of Hammerspoon 2 that includes =hs.windowfilter= (pull request #470, 2026-11-25).
+- [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]] and
   [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]], loaded before this Spoon.
 - The Accessibility permission, which Hammerspoon 2 requires to move any window.
 - The Screen Recording permission, for =screenshot()= only.

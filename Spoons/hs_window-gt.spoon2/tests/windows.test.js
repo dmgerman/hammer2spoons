@@ -27,7 +27,7 @@ function focusedId() {
     return window ? window.id : null
 }
 
-// Focuses a window directly, not through the Spoon, and waits for hs_windowfilter-gt to report
+// Focuses a window directly, not through the Spoon, and waits for hs.windowfilter to report
 // it to the Spoon.
 async function focus(t, window) {
     window.focus()

@@ -5,6 +5,15 @@ in its =spoon.json=, and =hs.spoons.update()= reinstalls a Spoon only when that 
 Every release lists the version of each Spoon in it, and what changed in each Spoon since the
 previous release.
 
+* Unreleased
+
+Changes committed since v1.0.0. The changes of the beads under hammer2spoons-cdd, made before this
+section existed, are added to it by hammer2spoons-cdd.17.
+
+| Spoon              | Version | What changed                                                                                                                                                                                                                                                                                                          |
+|--------------------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| hs_window-gt       |   2.5.0 | Uses Hammerspoon 2's =hs.windowfilter= instead of hs_windowfilter-gt, which it no longer requires. It requires a Hammerspoon 2 build with =hs.windowfilter= (#470).                                                                                                                                                   |
+
 * v1.0.0 — 2026-11-24
 
 The first release. It requires Hammerspoon 2 1.0.0 Beta 2 or later.

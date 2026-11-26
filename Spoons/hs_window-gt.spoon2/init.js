@@ -16,10 +16,10 @@
 // window was moved in between, and both positions go on the ring. Undo then returns to where
 // it was left, and undo again to where the last command had put it.
 //
-// The Spoon needs hs_windowfilter-gt and hs_menu-gt, and loads neither itself: the user's
-// configuration loads them first. hs_windowfilter-gt's events report which window was
-// focused before the current one, when a window closes, and when the isolation panels have
-// to be redrawn. hs_menu-gt displays the window menu.
+// The Spoon needs Hammerspoon 2's hs.windowfilter, and hs_menu-gt, which it does not load
+// itself: the user's configuration loads it first. hs.windowfilter's events report which
+// window was focused before the current one, when a window closes, and when the isolation
+// panels have to be redrawn. hs_menu-gt displays the window menu.
 
 // MARK: - User-configurable settings
 
@@ -86,7 +86,7 @@ const config = {
 //
 // Keyed by id, not held on the window: hs.window.focusedWindow() returns a new object
 // every call, so a property set on one is gone by the next lookup. The id is what persists.
-// A window's record is dropped when hs_windowfilter-gt reports that the window has closed.
+// A window's record is dropped when hs.windowfilter reports that the window has closed.
 const history = new Map()
 
 // Isolation: the dark panels on screen, whether isolation is on (which is not the same as
@@ -107,10 +107,14 @@ let highlightTimer = null
 let mouseNextIndex = 0
 let mouseNextOrder = ""
 
-// The filter created in hs_windowfilter-gt by start(), and removed by stop(). It accepts
-// every window the tracker holds. Its events update the focus history, remove the history
-// of closed windows, and redraw the isolation panels.
+// The filters created by start() and removed by stop(). windowFilter accepts every window with
+// a standard role, visible or not, and its events update the focus history, remove the history
+// of closed windows, and redraw the isolation panels. stackedFilter accepts the standard windows
+// on screen, for windowsStacked() and mouseWindowCenterNext(). It has no listener: windowFilter's
+// listeners keep hs.windowfilter observing, so stackedFilter.windows() reads what it holds rather
+// than asking every application.
 let windowFilter = null
+let stackedFilter = null
 
 // Window ids, for windowPrevious(): what is focused now, and what was before it. Updated on
 // every windowFocused event, so a change between two windows of one application counts.
@@ -123,9 +127,19 @@ let focusReassertFor = null
 
 // MARK: - Helpers
 
-// For the message given when hs_windowfilter-gt is not loaded.
+// For the message given when a required Spoon or module is missing.
 const SPOON_NAME = "hs_window-gt"
 const DOCUMENTATION = "https://github.com/dmgerman/hammer2spoons/tree/main/Spoons"
+
+/**
+ * hs.windowfilter, which this Spoon cannot work without. Throws when the running Hammerspoon 2
+ * is older than the module, which upstream added in PR #470.
+ */
+function windowfilterRequired() {
+    if (hs.windowfilter && typeof hs.windowfilter.create === "function") return hs.windowfilter
+    throw new Error(`${SPOON_NAME} needs hs.windowfilter, which this build of Hammerspoon 2 does not ` +
+        "have. It was added on 2026-11-25 (Hammerspoon/Hammerspoon2#470).")
+}
 
 /**
  * The Spoon `name`, which this Spoon cannot work without. Throws, naming the Spoon and
@@ -145,9 +159,10 @@ function alert(message) {
 /**
  * Every window of every ordinary application.
  *
- * Windows of accessory applications, such as Notification Centre, are left out. They are the
- * windows hs_windowfilter-gt holds, minimized ones included, which this Spoon's filter reads in
- * about 1 ms. hs.window.allWindows() asks every application instead: it measured 100 to 120 ms
+ * Windows of accessory applications, such as Notification Centre, are left out before start().
+ * After it, these are the windows hs.windowfilter holds with a standard role, minimized ones
+ * included, which this Spoon's filter reads in about 0.4 ms (measured on 2026-11-26).
+ * hs.window.allWindows() asks every application instead: it measured 100 to 120 ms
  * for 27 windows on 2026-10-24, and an application that does not answer, such as Music during a
  * library sync on 2026-11-23, made a call take seconds (hammer2spoons-ei6.71). It is used only
  * before start() has created the filter.
@@ -164,15 +179,13 @@ function allApplicationWindows() {
 }
 
 /**
- * The windows hs_windowfilter-gt holds, as returned by this Spoon's filter.
+ * The windows hs.windowfilter holds, as returned by this Spoon's filter, oldest first.
  *
- * They come in the order the tracker first saw them, which is stable but means nothing about
- * use or position. It suits going through every window in turn, as mouseWindowCenterNext()
- * does. It does not give "the previous window": that is what currentFocusedId and previousFocusedId
- * are for.
+ * The order does not give "the previous window": that is what currentFocusedId and
+ * previousFocusedId are for.
  */
 function filterWindows() {
-    return windowFilter ? windowFilter.windows() : []
+    return windowFilter ? windowFilter.windows("created") : []
 }
 
 function focused() {
@@ -301,7 +314,7 @@ function coveredFrontWindowsRaise(window, before, after) {
     if (changed.length === 0) return
 
     // Only now are windows looked up, since nothing else needs them, and from the windows
-    // hs_windowfilter-gt holds rather than by asking every application.
+    // hs.windowfilter holds rather than by asking every application.
     const byId = new Map(allApplicationWindows().map((w) => [w.id, w]))
     const pid = window.pid
     for (const { previous, current } of changed) {
@@ -1050,17 +1063,14 @@ function _windowWithWindowSwap(other, win) {
  * windows front to back. hs.window.orderedWindows() is not used, because it lists every window of
  * the frontmost application first and then those of each other application, so a window of
  * another application stacked between two of its windows came after both (hammer2spoons-ei6.63).
- * The windows themselves come from hs_windowfilter-gt's records, which cost about 1 ms and hold
- * whether each window is standard and on screen, so no application is asked for its windows.
+ * The windows themselves come from stackedFilter, whose rules select the standard windows on
+ * screen from what hs.windowfilter holds, so no application is asked for its windows.
  *
  * @param {object} [screen] The screen whose windows come first.
  * @returns {Array} HSWindow objects.
  */
 function windowsStacked(screen) {
-    const records = windowFilter ? windowFilter.records() : []
-    const byId = new Map(records
-        .filter((record) => record.state.standard && record.state.onScreen)
-        .map((record) => [record.state.id, record.window]))
+    const byId = new Map((stackedFilter ? stackedFilter.windows() : []).map((w) => [w.id, w]))
     const screens = hs.screen.all()
     if (screen) screens.sort((a, b) => (a.id === screen.id ? -1 : b.id === screen.id ? 1 : 0))
     const stacked = []
@@ -1099,7 +1109,7 @@ function _windowWithPreviousSwap(win) {
 /**
  * Focus the window that had focus before this one.
  *
- * The previous window is the one hs_windowfilter-gt last reported losing the focus, so a
+ * The previous window is the one hs.windowfilter last reported losing the focus, so a
  * change between two windows of one application counts. When none is known yet, or it has
  * closed, the window directly behind the focused one is taken instead, from windowsStacked().
  */
@@ -1223,7 +1233,7 @@ function _mouseWindowCenter(win) {
 /**
  * Put the pointer in the middle of the next window, advancing on each call.
  *
- * The windows are taken in the order hs_windowfilter-gt holds them, which changes only when
+ * The windows are taken in the order hs.windowfilter first saw them, which changes only when
  * a window opens or closes. Moving the pointer focuses nothing, so the position in that order
  * is kept between calls. A new series starts at the window after the focused one.
  *
@@ -1231,14 +1241,11 @@ function _mouseWindowCenter(win) {
  * carry an index into a list it no longer describes.
  *
  * Only standard windows on screen are included, so the pointer is never put on a
- * Notification Centre widget or the Finder's desktop. Which those are is read from the
- * state the tracker already holds, so no accessibility call is made.
+ * Notification Centre widget or the Finder's desktop. stackedFilter's rules select them from
+ * what hs.windowfilter holds, so no accessibility call is made.
  */
 function mouseWindowCenterNext() {
-    const records = windowFilter ? windowFilter.records() : []
-    const ordered = records
-        .filter((r) => r.state.standard && r.state.onScreen)
-        .map((r) => r.window)
+    const ordered = stackedFilter ? stackedFilter.windows("created") : []
     if (ordered.length < 2) {
         alert("No other window")
         return false
@@ -1900,9 +1907,8 @@ function isolationRefresh() {
  * The panels ignore mouse events, so clicks reach the windows beneath the dimming as
  * usual; nothing covers the focused window in any case.
  *
- * The dimming follows events rather than a timer. The windowFocused, windowMoved and
- * windowResized events from hs_windowfilter-gt redraw it when the focus moves or the focused
- * window changes shape, which includes a change between two windows of one application.
+ * The dimming follows events rather than a timer. The windowFocused and windowMoved events from
+ * hs.windowfilter redraw it when the focus moves or the focused window moves or changes shape, which includes a change between two windows of one application.
  * hs.screen's "change" event redraws it when a screen is added, removed or rearranged. A
  * redraw that would change nothing draws nothing.
  */
@@ -2201,27 +2207,29 @@ function bindHotkeys(mapping) {
 // MARK: - Lifecycle
 
 /**
- * What this Spoon does on hs_windowfilter-gt's events. One handler for every event, so start()
- * subscribes once and stop() unsubscribes once.
+ * What this Spoon does on hs.windowfilter's events. One handler for every event, registered by
+ * start() and removed by stop().
  *
  * - windowFocused: what was focused becomes the previous window, for windowPrevious().
- * - windowDestroyed: the window's history is dropped, since its id may be reused.
- * - windowFocused, windowMoved, windowResized: isolation redraws, when it is on and the event
- *   is about the focused window.
+ * - windowDestroyed: the window's history is dropped, since its id may be reused. Only the id
+ *   of a destroyed window can still be read.
+ * - windowFocused, windowMoved: isolation redraws, when it is on and the event is about the
+ *   focused window. hs.windowfilter reports a resize as windowMoved.
  */
-function windowEvent(event, window, state) {
+function windowEvent(window, appName, event) {
+    if (!window) return
     if (event === "windowDestroyed") {
-        history.delete(state.id)
+        history.delete(window.id)
         return
     }
-    if (event === "windowFocused" && state.id !== currentFocusedId) {
+    if (event === "windowFocused" && window.id !== currentFocusedId) {
         previousFocusedId = currentFocusedId
-        currentFocusedId = state.id
+        currentFocusedId = window.id
     }
-    if (isolationActive && state.focused) isolationRefresh()
+    if (isolationActive && (event === "windowFocused" || window.isFocused)) isolationRefresh()
 }
 
-const WINDOW_EVENTS = ["windowFocused", "windowMoved", "windowResized", "windowDestroyed"]
+const WINDOW_EVENTS = ["windowFocused", "windowMoved", "windowDestroyed"]
 
 function start() {
     if (windowFilter) return module.exports
@@ -2230,9 +2238,10 @@ function start() {
     // starts rather than the first time it is needed.
     spoonRequired("hs_interactive-gt")
     spoonRequired("hs_menu-gt")
-    const windowfilter = spoonRequired("hs_windowfilter-gt")
+    const windowfilter = windowfilterRequired()
     windowFilter = windowfilter.create({})
-    windowFilter.on(WINDOW_EVENTS, windowEvent)
+    for (const event of WINDOW_EVENTS) windowFilter.on(event, windowEvent)
+    stackedFilter = windowfilter.create({ default: { allowRoles: "AXStandardWindow", visible: true, currentSpace: true } })
 
     const window = focused()
     currentFocusedId = window ? window.id : null
@@ -2250,12 +2259,11 @@ function stop() {
     captureStop()
     fullscreenMoveEnd(false)
     if (windowFilter) {
-        // destroy() unsubscribes as well. Without hs_windowfilter-gt, unsubscribing is all
-        // that is left to do.
-        const windowfilter = hs.spoons["hs_windowfilter-gt"]
-        if (windowfilter) windowfilter.destroy(windowFilter)
-        else windowFilter.off()
+        // A filter with a listener stays active after its last reference is dropped, so every
+        // listener is removed.
+        for (const event of WINDOW_EVENTS) windowFilter.off(event, windowEvent)
         windowFilter = null
+        stackedFilter = null
     }
     return module.exports
 }
