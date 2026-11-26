@@ -446,8 +446,9 @@ const readers = {
             const wantCurrent = parameter.includeCurrent !== false
             const wantFullscreen = parameter.includeFullscreen !== false
 
-            // Hammerspoon 1 asked hs.spaces for the space type. Hammerspoon 2 has no
-            // spaces module, so a screen counts as fullscreen when a window on it is.
+            // Hammerspoon 1 asked hs.spaces for the space type. Here a screen counts as
+            // fullscreen when a window on it is fullscreen. Hammerspoon 2 now reports the type
+            // of a screen's current Space too (HSScreen.spaces), which hs_window-gt reads.
             const fullscreen = new Set()
             if (!wantFullscreen) {
                 const filtered = windowfilterWindows("*", { fullscreen: true })

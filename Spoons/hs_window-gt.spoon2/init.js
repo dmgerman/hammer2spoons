@@ -963,8 +963,8 @@ function fullscreenWindowOnScreenPlace(window, current, target) {
  *
  * macOS does not treat a fullscreen window as a window with a frame. It refuses to move
  * one, and a window sent to a screen a fullscreen window occupies is taken into that
- * window's space, after which it is not listed by hs.window.allWindows() nor by its own
- * application. Neither is worth working around, so both are refused here.
+ * window's Space, where it is hidden behind the fullscreen window. Neither is worth working
+ * around, so both are refused here.
  *
  * @param {HSWindow[]} windows  The windows taking part.
  * @param {object[]} destinations  The screens windows are arriving on.

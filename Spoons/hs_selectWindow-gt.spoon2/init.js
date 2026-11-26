@@ -29,11 +29,11 @@
 // Their front-to-back order also leaves out minimized windows and windows of a hidden
 // application, which a switcher is precisely for.
 //
-// Five of the Hammerspoon 1 Spoon's bindings are not ported: all_windows_ws,
-// app_windows_ws, previous_window_ws, previous_app_window_ws and
-// all_windows_move_to_current_workspace. Every one of them narrows by workspace or moves a
-// window between workspaces, and Hammerspoon 2 has no spaces module. The workspace column
-// in the chooser subtext is absent for the same reason.
+// The Hammerspoon 1 Spoon's bindings that narrow by workspace, or move a window between
+// workspaces, are ported with Hammerspoon 2's Spaces functions (HSScreen.spaces,
+// HSWindow.spaces): windowSelect(), applicationWindowSelect() and windowPreviousSelect() take
+// { currentSpace: true }, and windowToCurrentSpaceSelect() brings a window to the current
+// Space. The readme lists them under "Coming from Hammerspoon 1".
 
 // MARK: - User-configurable settings
 
@@ -69,8 +69,8 @@ const config = {
     // Largest the picture may be, as a fraction of the usable screen height. A maximum, not
     // a target: a snapshot smaller than this is drawn at its own size rather than enlarged.
     thumbnailHeightRatio: 0.4,
-    // How far down the screen the top of the picture sits, as a fraction of screen height.
-    // hs.chooser does not report its own frame, so this is set rather than read from it.
+    // How far down the screen the top of the picture sits, as a fraction of screen height, when
+    // the chooser's own frame cannot be read: before it is shown, chooser.frame is null.
     thumbnailTopRatio: 0.12,
     // Gap between the picture and the chooser, in points.
     thumbnailGap: 12,
@@ -282,9 +282,10 @@ function firstRecordPerApplication() {
  * wider than the space beside the chooser.
  *
  * Hammerspoon 1 read the chooser's own y by searching hs.window.allWindows() for
- * Hammerspoon's "Chooser" window. hs.chooser exposes no frame here, and that search costs
- * about 0.1 s while the chooser is opening, so the position is computed from the screen and the
- * chooser's width fraction instead. config.thumbnailTopRatio sets the height it sits at.
+ * Hammerspoon's "Chooser" window, which costs about 0.1 s. chooserGeometry() reads the
+ * chooser's frame instead, which hs.chooser reports while it is visible (Hammerspoon 2 issue
+ * #449). Before it is shown, the position is computed from the screen and the chooser's width
+ * fraction, and config.thumbnailTopRatio sets the height it sits at.
  */
 function thumbnailFrame(image) {
     const screen = hs.screen.main() || hs.screen.primary()
