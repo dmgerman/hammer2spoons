@@ -341,8 +341,8 @@ which leaves this window last. The windows of the other screens are not touched.
 *** windowFocus([win])
 
 =windowFocus= focuses a window, brings its application to the front, and returns whether the
-window accepted the focus. It is more reliable than =win.focus()= alone, for the reason given
-under /Notes/.
+window accepted the focus. It does more than =win.focus()= alone: it also raises the window, and
+it puts back a window that the application covered on another screen, as /Notes/ describes.
 
 ** Windows attached to number keys
 
@@ -460,23 +460,22 @@ describes: each setting is also a property of this Spoon's object, which reads a
 hs.spoons.use("hs_window-gt", { config: { isolationOpacity: 0.7 } })
 #+end_src
 
-| Setting                  | Default     | Meaning |
-|--------------------------+-------------+---------|
-| =historySize=            | =200=       | The number of positions kept in each window's history. The oldest is discarded first. |
-| =isolationColor=         | ="#000000"= | The colour of the panels that dim the screens during isolation. |
-| =isolationOpacity=       | =0.85=      | The opacity of those panels, from 0.0 to 1.0. |
-| =mouseHighlightColor=    | ="#FF0000"= | The colour of the circle drawn around the pointer. |
-| =mouseHighlightSize=     | =60=        | The diameter of the circle, in pixels. |
-| =mouseHighlightWidth=    | =4=         | The width of the circle's line, in pixels. |
-| =mouseHighlightSeconds=  | =0.5=       | The number of seconds the circle is displayed. |
-| =screenshotDir=          | ="/tmp"=    | The directory =screenshot()= writes to. |
-| =screenshotAlertSeconds= | =3=         | The number of seconds the path of a capture is displayed. |
-| =attachModifiers=        | =["alt"]=   | The modifiers pressed with a digit to focus its window. |
-| =attachKeys=             | ="123456789"= | The digits a window can be attached to. |
-| =attachKeyWait=          | =5=         | The number of seconds =keyToWindowAttach()= waits for a digit when none is given. |
-| =attachFile=             | =logs/window-keys.json= in the configuration directory | The file the attachments are saved in. |
-| =focusReassertDelay=     | =0.3=       | The number of seconds after which =windowFocus()= makes the window its application's main window again. 0 turns this off. See /Notes/. |
-| =fullscreenLeaveWait=    | =3=         | The number of seconds =windowToScreenMove()= waits for a window to leave fullscreen before giving up. |
+| Setting                  | Default                                                | Meaning                                                                                               |
+|--------------------------+--------------------------------------------------------+-------------------------------------------------------------------------------------------------------|
+| =historySize=            | =200=                                                  | The number of positions kept in each window's history. The oldest is discarded first.                 |
+| =isolationColor=         | ="#000000"=                                            | The colour of the panels that dim the screens during isolation.                                       |
+| =isolationOpacity=       | =0.85=                                                 | The opacity of those panels, from 0.0 to 1.0.                                                         |
+| =mouseHighlightColor=    | ="#FF0000"=                                            | The colour of the circle drawn around the pointer.                                                    |
+| =mouseHighlightSize=     | =60=                                                   | The diameter of the circle, in pixels.                                                                |
+| =mouseHighlightWidth=    | =4=                                                    | The width of the circle's line, in pixels.                                                            |
+| =mouseHighlightSeconds=  | =0.5=                                                  | The number of seconds the circle is displayed.                                                        |
+| =screenshotDir=          | ="/tmp"=                                               | The directory =screenshot()= writes to.                                                               |
+| =screenshotAlertSeconds= | =3=                                                    | The number of seconds the path of a capture is displayed.                                             |
+| =attachModifiers=        | =["alt"]=                                              | The modifiers pressed with a digit to focus its window.                                               |
+| =attachKeys=             | ="123456789"=                                          | The digits a window can be attached to.                                                               |
+| =attachKeyWait=          | =5=                                                    | The number of seconds =keyToWindowAttach()= waits for a digit when none is given.                     |
+| =attachFile=             | =logs/window-keys.json= in the configuration directory | The file the attachments are saved in.                                                                |
+| =fullscreenLeaveWait=    | =3=                                                    | The number of seconds =windowToScreenMove()= waits for a window to leave fullscreen before giving up. |
 
 * Commands for hs_interactive-gt
 
@@ -521,11 +520,6 @@ this Spoon's design.
   operation involving a fullscreen window, or a screen showing one, and an alert says so. The one
   exception is =windowToScreenMove=, which takes the window out of fullscreen before
   moving it.
-- *windowFocus() raises the window a second time.* After =focus()= returns, an application can
-  make a different one of its windows its main window while it processes the activation, and
-  bring that other window to the front. Hammerspoon 2's =focus()= makes the window main again
-  after 0.3 seconds, but does not raise it. This Spoon makes the window main and also raises it
-  after =config.focusReassertDelay=.
 - *windowFocus() keeps the other screens as they were.* An application that is activated brings
   forward the window it last had as its main window, even when another of its windows was asked
   for. When that window is on another screen, it can cover the window that was in front there,

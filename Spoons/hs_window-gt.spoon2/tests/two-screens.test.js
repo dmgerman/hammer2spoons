@@ -310,7 +310,7 @@ tests.push({
         p1.raise()
         await t.wait(0.05)
         t.assert.equal(frontOf(b, [p1, q]), p1.id, "the other window of the same application covered it")
-        await t.wait(t.spoon.config.focusReassertDelay + 0.7)
+        await t.wait(1.0)
         t.assert.equal(frontOf(b, [p1, q]), q.id, "the front window of the second screen after the switch")
         const focused = hs.window.focusedWindow()
         t.assert.equal(focused ? focused.id : null, p2.id, "the focused window")

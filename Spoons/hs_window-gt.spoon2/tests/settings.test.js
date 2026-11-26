@@ -45,12 +45,6 @@ function colorEqual(t, color, expected, message) {
     }
 }
 
-// The id of the main window of a window's application.
-function mainId(window) {
-    const main = window.application ? window.application.mainWindow : null
-    return main ? main.id : null
-}
-
 // Opens two test windows of one application, at two different frames, and focuses the second.
 async function twoOpen(t) {
     const [first, second] = await t.windowsOpen(2)
@@ -150,37 +144,21 @@ module.exports = [
             })
         }
     },
-    // Hammerspoon 2's own focus(), which windowFocus() calls, asserts its window again 0.3 s
-    // later, whatever this Spoon's setting is. So the second window is made main at 0.45 s,
-    // after that, and the Spoon's assertion comes at 0.6 s. becomeMain() is used rather than
-    // focus(), as a click would make the window main, because focus() would assert the second
-    // window again too.
+    // Hammerspoon 2's own focus() makes its window main again 0.3 s later (#356), so this Spoon
+    // no longer does (hammer2spoons-4ld.3). Its becomeMain() is counted on the window object
+    // passed to windowFocus(); Hammerspoon 2's own assertion is made in Swift and is not counted.
     {
-        name: "focusReassertDelay makes the window main again after that delay",
+        name: "windowFocus does not make the window main a second time, which Hammerspoon 2's focus() does",
         run: async (t) => {
-            const { first, second } = await twoOpen(t)
-            await withConfig(t, { focusReassertDelay: 0.6 }, async () => {
-                t.spoon.windowFocus(first)
-                await t.wait(0.45)
-                second.becomeMain()
-                await t.wait(0.1)
-                t.assert.equal(mainId(first), second.id, "the main window before the delay ran out")
-                await t.wait(0.5)
-                t.assert.equal(mainId(first), first.id, "the main window after the delay")
-            })
-        }
-    },
-    {
-        name: "focusReassertDelay 0 turns the second assertion off",
-        run: async (t) => {
-            const { first, second } = await twoOpen(t)
-            await withConfig(t, { focusReassertDelay: 0 }, async () => {
-                t.spoon.windowFocus(first)
-                await t.wait(0.45)
-                second.becomeMain()
-                await t.wait(0.6)
-                t.assert.equal(mainId(first), second.id, "the main window")
-            })
+            const { first } = await twoOpen(t)
+            let calls = 0
+            const becomeMain = first.becomeMain
+            first.becomeMain = function () { calls += 1; return becomeMain.apply(first, arguments) }
+            t.spoon.windowFocus(first)
+            await t.wait(0.8)
+            t.assert.equal(calls, 0, "becomeMain() calls by the Spoon")
+            const focused = hs.window.focusedWindow()
+            t.assert.equal(focused ? focused.id : null, first.id, "the focused window")
         }
     },
     {

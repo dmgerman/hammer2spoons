@@ -62,11 +62,6 @@ const config = {
     // after Hammerspoon 2 is reloaded or restarted.
     attachFile: `${hs.appinfo.configDir}/logs/window-keys.json`,
 
-    // Seconds after focusing a window before asserting again that it is its application's
-    // main window. See windowFocus() for the measurements. 0 switches the second assertion
-    // off, which loses windows on a screen other than the one in use.
-    focusReassertDelay: 0.3,
-
     // Seconds windowToScreenMove() waits for a window to leave fullscreen before
     // giving up. A window measured on 2026-11-21 left it within 0.1 s.
     fullscreenLeaveWait: 3
@@ -121,9 +116,9 @@ let stackedFilter = null
 let currentFocusedId = null
 let previousFocusedId = null
 
-// The window windowFocus() will assert as main again when its delay runs out. Replaced by
-// each call, so an older assertion cannot undo a newer window choice.
-let focusReassertFor = null
+// The window whose windowFocus() is still to put back the windows its application covered on
+// other screens. Replaced by each call, so that an older call cannot act after a newer one.
+let focusPendingFor = null
 
 // MARK: - Helpers
 
@@ -209,25 +204,16 @@ function focused() {
  * reports the new window, and the screen still shows the old one. AXRaise does cross the
  * space boundary, which is what raise() performs.
  *
- * The second assertion, after config.focusReassertDelay, is a workaround. The application
- * answers the activation after focus() has returned, and can choose its own main window when
- * it does: the window on the screen in use rather than the one that was asked for. It stays
- * until Hammerspoon 2's focus() handles this for every application. Upstream does the same
- * thing for Finder windows inside focus() itself, on the same 0.3 s, and cancels a pending
- * retry when a newer window is asked for. This does both for every application, because
- * Chrome needs it too.
+ * An application answers the activation after focus() has returned, and can then choose its own
+ * main window: the window on the screen in use rather than the one that was asked for. On
+ * 2026-10-08, asking for a Chrome window on the external screen while the keyboard focus was on
+ * the built-in display, focus() + raise() reached the right window in 0 and 3 of 4 trials, and
+ * this Spoon made the window main and raised it again 0.3 s later. Hammerspoon 2's focus() now
+ * does that itself, for every application (#356): on 2026-11-26, focus() + raise() alone reached
+ * the right window in 12 of 12 trials, so this Spoon no longer repeats it (hammer2spoons-4ld.3).
  *
- * Measured on 2026-10-08, asking for a Chrome window on the external screen while the
- * keyboard focus was on the built-in display, four trials each, reading
- * hs.window.focusedWindow() 1.2s afterwards:
- *
- *   focus() + raise()                                     0/4 and 3/4 in two runs
- *   focus() + raise(), becomeMain() + raise() at 0.3s      4/4 and 4/4
- *   AXFrontmost + focus() + raise(), as before #228        0/4
- *
- * The misses put a different window of the right application in front. The variance between
- * the two runs of the first row is why the second assertion is unconditional rather than
- * applied only when the first is seen to have failed.
+ * After 0.4 s, coveredFrontWindowsRaise() puts back the window in front of each other screen if
+ * the application covered it with another of its windows (Hammerspoon 2 issue #488).
  *
  * @param {object} window The window to focus.
  * @returns {boolean} Whether the window accepted focus.
@@ -239,34 +225,30 @@ function _windowFocus(window) {
     const accepted = window.focus()
     window.raise()
 
-    // Dropped if another window is asked for first, so the assertion cannot undo a newer
-    // choice.
-    focusReassertFor = window.id
-    hs.timer.doAfter(Math.max(config.focusReassertDelay, FOCUS_SETTLE_SECONDS), () => {
-        if (focusReassertFor !== window.id) return
-        focusReassertFor = null
+    // Dropped if another window is asked for first, so that it cannot undo a newer choice.
+    focusPendingFor = window.id
+    hs.timer.doAfter(FOCUS_SETTLE_SECONDS, () => {
+        if (focusPendingFor !== window.id) return
+        focusPendingFor = null
         const after = screenWindowIdsRecord()
-        // A window closed in the meantime is left alone: becomeMain() on it makes Hammerspoon 2
-        // log "Failed to make window main" with AXError -25202, an invalid element (seen during
-        // the tests on 2026-11-23, where a test closes its window soon after focusing it). The
-        // window is looked for in the order just read, which costs nothing more. A window whose
-        // screen could not be read counts as open.
+        // A window closed in the meantime is left alone, since its application no longer needs
+        // to be corrected for it. The window is looked for in the order just read, which costs
+        // nothing more. A window whose screen could not be read counts as open.
         const open = after.size < hs.screen.all().length ||
             [...after.values()].some((ids) => ids.includes(window.id))
         if (!open) return
-        if (config.focusReassertDelay > 0) {
-            window.becomeMain()
-            window.raise()
-        }
         coveredFrontWindowsRaise(window, before, after)
     })
 
     return accepted
 }
 
-// How long an application takes to answer its activation, after which the windows it brought
-// forward are in place. The same 0.3 s as Hammerspoon 2's own focus() waits.
-const FOCUS_SETTLE_SECONDS = 0.3
+// How long to wait after focus() before putting back covered windows. An application takes about
+// 0.3 s to answer its activation, and Hammerspoon 2's focus() makes the window main again at
+// 0.3 s, which can bring the application's other window forward once more. Putting windows back
+// at the same moment raced with that and lost (two-screens.test.js, 2026-11-26), so this runs
+// 0.1 s after it.
+const FOCUS_SETTLE_SECONDS = 0.4
 
 /**
  * The ids of the windows on each screen, front to back, by screen id, from the space each screen
@@ -296,7 +278,10 @@ function screenWindowIdsRecord() {
  * on the other screen brought the first Chrome window in front of the Skim window, where it
  * stayed after the focus went to the chosen window (hammer2spoons-ei6.50). raise() brings the
  * covered window forward again without activating its application, so the focus stays where it
- * is.
+ * is. The covering window is visible for the 0.4 s before this runs. Only the front window of
+ * each screen is put back, not windows further back, as the user decided on 2026-11-26.
+ * Reported upstream as Hammerspoon 2 issue #488; this goes when focus() no longer covers
+ * windows (hammer2spoons-qfi).
  *
  * @param {object} window The window that was focused.
  * @param {Map} before The record of screenWindowIdsRecord() taken before focusing it.

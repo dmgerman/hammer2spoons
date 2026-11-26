@@ -34,9 +34,10 @@ async function focus(t, window) {
     await t.wait(0.4)
 }
 
-// Waits until the Spoon's delayed second assertion of the focus has run.
-function reassertWait(t) {
-    return t.wait(t.spoon.config.focusReassertDelay + 0.3)
+// Waits until windowFocus() has finished: Hammerspoon 2's focus() makes the window main again
+// 0.3 s later, and the Spoon then puts back what the application covered on other screens.
+function settleWait(t) {
+    return t.wait(0.6)
 }
 
 // Stacks four test windows on one screen, from front to back a1, c, b, a2, where a1 and a2 belong
@@ -65,7 +66,7 @@ module.exports = [
             t.assert.equal(t.spoon.windowFocus(first), true, "windowFocus returned")
             await t.wait(0.2)
             t.assert.equal(focusedId(), first.id, "the focused window")
-            await reassertWait(t)
+            await settleWait(t)
             t.assert.equal(focusedId(), first.id, "the focused window after the second assertion")
             t.assert.equal(hs.window.orderedWindows()[0].id, first.id, "the frontmost window")
         }
@@ -75,7 +76,7 @@ module.exports = [
         run: async (t) => {
             const { first, second, screen } = await twoOpen(t)
             t.assert.equal(t.spoon.tileWith(second, first), true, "tileWith returned")
-            await reassertWait(t)
+            await settleWait(t)
             t.assert.frameEqual(second.frame, part(screen, 0, 0, 1 / 2, 1), "the other window")
             t.assert.frameEqual(first.frame, part(screen, 1 / 2, 0, 1 / 2, 1), "this window")
             t.assert.equal(focusedId(), first.id, "the focused window")
@@ -96,7 +97,7 @@ module.exports = [
         run: async (t) => {
             const { first, second, a, b } = await twoOpen(t)
             t.assert.equal(t.spoon.windowWithWindowSwap(second, first), true, "returned")
-            await reassertWait(t)
+            await settleWait(t)
             t.assert.frameEqual(first.frame, b, "this window")
             t.assert.frameEqual(second.frame, a, "the other window")
             t.assert.equal(focusedId(), first.id, "the focused window")
@@ -119,7 +120,7 @@ module.exports = [
             await focus(t, second)
             await focus(t, first)
             t.assert.equal(t.spoon.windowWithPreviousSwap(first), true, "returned")
-            await reassertWait(t)
+            await settleWait(t)
             t.assert.frameEqual(first.frame, b, "this window")
             t.assert.frameEqual(second.frame, a, "the window behind it")
         }
@@ -142,9 +143,9 @@ module.exports = [
             await focus(t, first)
             await focus(t, second)
             t.spoon.windowPrevious()
-            await reassertWait(t)
+            await settleWait(t)
             t.spoon.windowPrevious()
-            await reassertWait(t)
+            await settleWait(t)
             t.assert.equal(focusedId(), second.id, "the focused window")
         }
     },
@@ -181,7 +182,7 @@ module.exports = [
             const { a1, a2, c } = await twoApplicationsStacked(t)
             const frames = { a1: copy(a1.frame), a2: copy(a2.frame), c: copy(c.frame) }
             t.assert.equal(t.spoon.windowWithPreviousSwap(a1), true, "returned")
-            await reassertWait(t)
+            await settleWait(t)
             t.assert.frameEqual(a1.frame, frames.c, "this window")
             t.assert.frameEqual(c.frame, frames.a1, "the window directly behind it, of the other application")
             t.assert.frameEqual(a2.frame, frames.a2, "the other window of the same application moved")
@@ -198,7 +199,7 @@ module.exports = [
             await t.wait(0.5)
             t.assert.equal(focusedId(), a1.id, "the focused window after c closed")
             t.assert.equal(t.spoon.windowPrevious(), true, "returned")
-            await reassertWait(t)
+            await settleWait(t)
             t.assert.equal(focusedId(), b.id, "the focused window")
         }
     },
