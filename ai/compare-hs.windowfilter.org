@@ -1,0 +1,380 @@
+#+title: Upstream hs.windowfilter compared with hs_windowfilter-gt
+
+This note is the result of bead hammer2spoons-rr1.2. It compares Hammerspoon 2's
+=hs.windowfilter= module, added by upstream commit 024fe9ce (PR #470), with this repository's
+=hs_windowfilter-gt= Spoon. The upstream module was read in the source and tried through =hs2=
+on a Debug build of c3e77b2a, on 2026-11-26.
+
+* Summary
+
+=hs.windowfilter= can replace =hs_windowfilter-gt= for most of what our Spoons use. It is
+written in Swift, it shares its Accessibility observers with =hs.ax=, and it adds Spaces and the
+order in which windows were focused, which =hs_selectWindow-gt= currently records itself.
+
+Three things that our Spoons rely on are missing upstream:
+
+1. A listener receives the =HSWindow= and the application's name, but no record of the
+   window's state. After =windowDestroyed=, only the window's =id= can be read.
+2. There is no list of the applications that have turned the Accessibility API off.
+   =hs_selectWindow-gt= uses =applicationsAccessibilityDisabled()= to offer the kiosk Firefox
+   in its chooser. Upstream retries such an application five times and then stops, writing
+   only a debug message.
+3. A window's state cannot be read without asking its application. =windows()= returns
+   =HSWindow= objects, and every property read from one, such as =title=, is an Accessibility
+   call.
+
+None of the three prevents a migration, but the second needs a replacement in our code or an
+upstream request.
+
+* Features
+
+This table lists every feature that either implementation has. The sections after it describe
+the differences in detail.
+
+| Feature                                                        | hs_windowfilter-gt                        | hs.windowfilter                             |
+|----------------------------------------------------------------+-------------------------------------------+---------------------------------------------|
+| Implementation                                                 | JavaScript, on =hs.ax= and =hs.application= | Swift, built into Hammerspoon 2            |
+| Accessibility observers shared with =hs.ax=                    | no                                        | yes, through =AXObserverHub=                |
+| Observes windows only while a listener is registered            | yes                                       | yes                                         |
+| Timeout on Accessibility calls                                 | no                                        | 0.25 seconds while reading windows          |
+| Default filter                                                 | =default=: visible windows, except Hammerspoon's | =defaultFilter=: visible windows, except a built-in list of utility applications |
+| Default filter limited to the current Space                    | no                                        | =currentSpaceFilter=                         |
+| Override, per-application and default rules                    | yes                                       | yes                                         |
+| Application named by bundle identifier                         | no, by name only                          | yes, by name or bundle identifier           |
+| Filter defined by one function of the window                   | no                                        | =create(fn)=                                 |
+| Filter for a list of applications                              | =allowApplications= rule                  | =create(["Safari", "Mail"])=, or =apps=      |
+| Title rules                                                    | string, RegExp, function, array           | string, RegExp, array, minimum length       |
+| Application rules inside a rule set                            | =allowApplications=, =rejectApplications= | no; =apps=, =setAppRule()=, =allowApp()=, =rejectApp()= |
+| Role rules                                                     | standard or not standard                  | any subrole; global =allowedWindowRoles=     |
+| Screen and region rules                                        | =allowScreens=, =allowRegions=             | allow and reject for both                   |
+| =visible=, =fullscreen=, =focused=, =hasTitlebar=, =activeApplication= rules | yes                         | yes                                         |
+| =currentSpace= rule                                            | no                                        | yes                                         |
+| Reading and replacing all of a filter's rules                  | no                                        | =rules=, =setRules()=                       |
+| Copying a filter                                               | no                                        | =duplicate()=                               |
+| Pausing a filter's listeners                                   | no                                        | =pause()=, =resume()=                       |
+| Removing a filter                                              | =destroy(filter)=                         | =off()= each listener                       |
+| Window events (created, destroyed, focused, minimized, hidden, visible, on screen, fullscreen, title) | yes | yes                                     |
+| Separate =windowResized= event                                 | yes                                       | no; a resize is =windowMoved=               |
+| Space events (=windowInCurrentSpace=, =windowNotInCurrentSpace=) | no                                      | yes                                         |
+| Membership events (=windowAllowed=, =windowRejected=)          | yes                                       | yes                                         |
+| Set events (=hasWindow=, =hasNoWindows=, =windowsChanged=)     | no                                        | yes                                         |
+| One handler for several events in one call                     | =on([...], fn)=                           | no; one =on()= per event                    |
+| =once()=                                                       | yes                                       | yes                                         |
+| =windowCreated= for windows open when observing starts         | yes                                       | no; =windows()= lists them                  |
+| Record of the window's state passed to a listener              | yes                                       | no; the application's name only             |
+| Title, frame and screen of a destroyed window                  | yes, in the record                        | no; only the id                             |
+| Windows a filter accepts                                       | =windows()=                               | =windows()=                                 |
+| Windows sorted by focus or by creation                         | no                                        | =windows(sortOrder)=, =sortOrder=           |
+| Windows with their state, without Accessibility calls          | =records()=                               | no                                          |
+| State of one window                                            | =windowState(w)=                          | no                                          |
+| Whether a filter accepts a window or an application            | =isWindowAllowed(w)=                      | =isWindowAllowed(w)=, =isAppAllowed(app)=    |
+| Nearest window in a direction, and focusing it                 | no                                        | =windowsToEast()=, =focusWindowEast()= and the other directions |
+| Applications that turned the Accessibility API off             | =applicationsAccessibilityDisabled()=      | no; they are dropped after five attempts    |
+| Diagnostics                                                    | =status()=, =logLevel=                    | no                                          |
+| Debounce delays                                                | settings: =moveDebounce=, =titleDebounce=, =stateDebounce= | fixed at 0.2 seconds              |
+| Applications never observed                                    | setting: =skipApplications=               | fixed list of six bundle identifiers        |
+| Untitled windows that are not standard                         | skipped, setting =untitledNonStandardSkip= | included when their subrole is allowed     |
+| Rescan for a window that had no title at first                 | yes, after =createdRescanDelay=           | no; its later title change is observed      |
+| Hammerspoon's own windows                                      | excluded from =default= only               | always excluded                             |
+
+*What this means.* On rules, events and navigation, upstream has every feature of ours and
+more. Ours has more only in two areas. The first is information that can be read without
+asking an application: the state record, =records()=, =windowState()=, the list of
+applications that turned the Accessibility API off, and =status()=. The second is settings,
+such as the debounce delays and the applications to skip. Moving to upstream therefore loses
+no behaviour that our Spoons rely on. It loses information, and the cost of reading that
+information is what the following sections measure.
+
+* Measurements
+
+The two modules were measured on the same machine, one after the other, with 28 windows open.
+
+| Measurement                                                  | hs.windowfilter    | hs_windowfilter-gt |
+|--------------------------------------------------------------+--------------------+--------------------|
+| =windows()= on a filter with no listener, per call            | 97 ms              | not measured       |
+| =windows()= while a listener is registered, per call          | 0.4 ms             | 0.05 ms (=records()=) |
+| =windows("focusedLast")= while a listener is registered      | 0.4 ms             | no equivalent      |
+| Starting to observe windows                                  | 157 ms             | 300 ms (2026-11-23) |
+| Reading five properties from each of 28 =HSWindow= objects     | 15 ms              | 0 (read from the state) |
+| Windows accepted by =create({})=                              | 28                 | 24                 |
+
+Without a listener, upstream's =windows()= enumerates every application's windows, as
+=hs.window.allWindows()= does. Our Spoons always register a listener before they call
+=windows()=, so the cost they would pay is the 0.4 ms.
+
+The four windows that only upstream accepts are an untitled standard window of NordVPN and three
+untitled =AXDialog= windows of MenuBarAgent. Our Spoon leaves them out because of
+=config.skipApplications= and =config.untitledNonStandardSkip=. Neither module lists the kiosk
+Firefox, because that Firefox does not answer the Accessibility API.
+
+*What this means.*
+
+1. A filter must have a listener before its =windows()= is called from a key or a menu.
+   Without one, every call costs about 0.1 second, as much as =hs.window.allWindows()=, which
+   our Spoons stopped using for that reason. A Spoon that only needs the list of windows has
+   to register a listener anyway, for example on =windowDestroyed=, so that the tracker runs.
+2. The difference between 0.4 ms and 0.05 ms per call has no practical consequence. Both are
+   far below the delay a user notices after pressing a key.
+3. Starting in half the time shortens a reload of the configuration by about 0.15 seconds.
+4. Opening the window chooser would cost about 25 ms more, because its eight fields are read
+   from each window, and 15 ms was measured for five. This is an estimate, because some
+   =HSWindow= properties may not need an Accessibility call. It grows with the number of
+   windows, to about 90 ms for 100 windows, and is
+   still below what a user notices. The larger risk is an application that does not answer,
+   which the next section and /What is missing that we need/ describe.
+5. The chooser would list four more windows, all untitled, unless its filter excludes them.
+   =hs_selectWindow-gt='s filter must therefore add =allowRoles: "AXStandardWindow"= and
+   =allowTitles: 1=.
+
+* How each one tracks windows
+
+The two modules use the same design. Each one registers =AXWindowCreated= and
+=AXFocusedWindowChanged= on every application, and six notifications on every window (destroyed,
+moved, resized, minimized, deminiaturized, title changed). Each one starts when the first listener
+is registered and stops when the last one is removed. Each one derives the events by comparing
+a window's state before and after a change.
+
+Upstream differs in four ways:
+
+1. Its observers are shared with =hs.ax= through =AXObserverHub=, so a notification that both
+   register is registered once per element.
+2. It sets an Accessibility timeout of 0.25 seconds while it reads windows, so an application
+   that does not answer delays it by at most that long. Our Spoon sets no timeout. On 2026-11-23,
+   Music did not answer during a library sync, and a call to =hs.window.allWindows()= took
+   seconds (hammer2spoons-ei6.71).
+3. It reads the Spaces that are shown, and refreshes every window 0.3 seconds after the Space or
+   the screens change.
+4. Its delays are fixed: 0.2 seconds after a move, a resize or a title change, and between
+   0.2 and 1 second between attempts to observe an application that refused. Ours are settings.
+
+*What this means.*
+
+1. Moving to upstream does not change the number of Accessibility observers, because both
+   modules register the same notifications. It does remove our JavaScript callbacks for them.
+2. While both modules run, during a migration, many registrations should be shared, because
+   our Spoon registers through =hs.ax=, which is a client of =AXObserverHub=. This was read in
+   the source and has not been measured.
+3. Upstream's tracker is safer against an application that does not answer. Our Spoon reads
+   windows with no timeout, so such an application can delay Hammerspoon 2 for as long as
+   macOS waits for it. The timeout covers only the tracker's own reads, not properties read
+   later from an =HSWindow=.
+4. The Spaces support is new to us. A =currentSpace= rule could replace the code in
+   =hs_window-gt= and =hs_selectWindow-gt= that reads =HSScreen.spaces= to select the windows
+   of the current Space.
+5. The fixed delays have no consequence for us, because neither Spoon changes our debounce
+   settings.
+
+* API
+
+** Creating a filter and its rules
+
+| hs_windowfilter-gt                           | hs.windowfilter                                         |
+|----------------------------------------------+---------------------------------------------------------|
+| =create(rules)=                              | =create({default: rules})=, or =create(fn)=, or =create(["Safari"])= |
+| =default=                                    | =defaultFilter=, and =currentSpaceFilter=               |
+| =setDefaultFilter(rules)=                    | =setDefaultRule(rule)=                                  |
+| =setApplicationFilter(name, rules)=          | =setAppRule(nameOrBundleID, rule)=, =allowApp()=, =rejectApp()= |
+| =setOverrideFilter(rules)=                   | =setOverrideRule(rule)=                                 |
+| no equivalent                                | =rules=, =setRules()=, =duplicate()=, =setCurrentSpace()= |
+| =destroy(filter)=                            | =off()= for each listener; =pause()= and =resume()=     |
+
+The rule keys differ as follows:
+
+| Rule key                                 | hs_windowfilter-gt                  | hs.windowfilter                                           |
+|------------------------------------------+-------------------------------------+-----------------------------------------------------------|
+| =allowTitles=, =rejectTitles=            | string, RegExp, function, or array   | string or RegExp, or an array; =allowTitles= also takes a minimum length |
+| =allowApplications=, =rejectApplications= | in the rule set                     | not a key: =apps: {name: true or false}= or =setAppRule()= |
+| =allowRoles=                             | ="AXStandardWindow"= or ="AXWindow"=   | any subrole; the default is =allowedWindowRoles=          |
+| =allowScreens=, =allowRegions=           | yes                                 | yes, and =rejectScreens=, =rejectRegions=                 |
+| =currentSpace=                           | no                                  | yes                                                       |
+| =visible=                                | =HSWindow.isVisible=                | neither minimized nor hidden                              |
+
+A function in a title rule has no direct equivalent. =create(fn)= takes a function of the whole
+window instead, but then the filter has no other rules.
+
+*What this means.* Porting the rules is mostly a matter of renaming. There is one trap.
+Upstream's =visible= means that the window is neither minimized nor hidden, and it is true
+for a window on another Space. A rule that should select the windows a user can see must
+therefore add =currentSpace: true=. Without it, a ported rule selects more windows than
+before, and nothing reports an error.
+
+** Events and listeners
+
+Upstream emits every event of ours except =windowResized=, which it reports as =windowMoved=.
+It adds =windowInCurrentSpace=, =windowNotInCurrentSpace=, =hasWindow=, =hasNoWindows= and
+=windowsChanged=.
+
+| What                        | hs_windowfilter-gt                         | hs.windowfilter                                  |
+|-----------------------------+--------------------------------------------+--------------------------------------------------|
+| Listener arguments          | =(event, window, state)=                   | =(window, appName, event)=                       |
+| Several events at once      | =on(["a", "b"], fn)=                       | one =on()= per event                             |
+| Windows open at the start   | =windowCreated= for each, to the first filter | no event; =windows()= lists them               |
+| A destroyed window          | =state= holds its title, frame and screen   | only =window.id= can be read                     |
+
+*What this means.*
+
+1. Every listener must be rewritten, not just renamed, because the order of the arguments
+   changes. Each of our Spoons has one or two listeners, so this is a small change.
+2. A Spoon that builds its own list from =windowCreated= must start from =windows()= instead.
+   =hs_selectWindow-gt= already does this with =records()=.
+3. A listener that needs the title or the frame of a destroyed window cannot get it. Ours
+   need only the =id=, so this has no consequence for them now.
+
+** Reading windows
+
+| hs_windowfilter-gt         | hs.windowfilter                                               |
+|----------------------------+---------------------------------------------------------------|
+| =windows()=                | =windows(sortOrder)=, sorted by focus or by creation           |
+| =records()=                | no equivalent; each property is read from the =HSWindow=      |
+| =isWindowAllowed(w)=       | =isWindowAllowed(w)=, and =isAppAllowed(name)=                |
+| =windowState(w)=           | no equivalent                                                 |
+| =status()=                 | no equivalent                                                 |
+| =applicationsAccessibilityDisabled()= | no equivalent                                      |
+| no equivalent              | =windowsToEast()= and the other directions, =focusWindowEast()= |
+
+*What this means.* What upstream lacks here is all about reading information. The missing
+=records()= and =windowState()= move the cost of reading a window's state from the tracker
+to an Accessibility call for every property. The missing =status()= affects only debugging.
+The missing =applicationsAccessibilityDisabled()= removes a feature of =hs_selectWindow-gt=.
+
+* What our code uses
+
+** hs_window-gt
+
+It creates one filter, =create({})=, and registers one handler on =windowFocused=,
+=windowMoved=, =windowResized= and =windowDestroyed=. It reads =state.id= and
+=state.focused=. Its functions =windowsStacked()= and =mouseWindowCenterNext()= read
+=records()= and keep the windows whose =state.standard= and =state.onScreen= are true.
+
+All of this has an upstream form. =state.id= becomes =window.id=. =windowResized= is dropped,
+because =windowMoved= covers it. The previous window could be read from
+=windows("focusedLast")[1]= instead of being recorded. The =standard= and =onScreen= test
+becomes a rule, ={allowRoles: "AXStandardWindow", visible: true, currentSpace: true}=, on a
+second filter.
+
+*What this means.* =hs_window-gt= can move to upstream without losing anything, and it would
+become shorter, because it would no longer record the previous window itself. It is the
+better candidate to move first.
+
+** hs_selectWindow-gt
+
+It creates =create({rejectApplications: config.skipApplications})= and records the focus order
+itself from =windowFocused= and =windowDestroyed=. The chooser reads, for each record,
+=state.title=, =state.application=, =state.bundleID=, =state.screenName=, =state.minimized=,
+=state.hidden=, =state.focused= and =state.standard=. It also calls
+=applicationsAccessibilityDisabled()= to add the kiosk Firefox to the chooser.
+
+Upstream's =windows("focusedLast")= replaces the recorded focus order. The fields would be read
+from each =HSWindow=, which costs about 0.1 ms per property when the chooser opens: about
+25 ms for eight properties of 28 windows. =applicationsAccessibilityDisabled()= has no replacement.
+
+*What this means.* =hs_selectWindow-gt= can move as well, and would no longer record the
+focus order itself. It would, however, have to find the applications that turned the
+Accessibility API off by itself. That means one Accessibility call per running application
+each time the chooser opens, which is the kind of call an application that does not answer
+can delay. Until upstream provides this list, moving =hs_selectWindow-gt= either keeps that
+code or drops the kiosk Firefox from the chooser.
+
+** The configuration
+
+=menus.js= reads the window list from =hs_windowfilter-gt= for a menu, and =init.js= loads the
+Spoon before =hs_window-gt=. Both would follow whichever module the two Spoons use.
+
+* What is missing that we need
+
+This section lists what =hs.windowfilter= lacks and our Spoons need. It is meant as the basis
+of an upstream issue. Each item gives our use, what upstream does now, and what would meet the
+need. The facts about upstream come from its source at c3e77b2a. The API suggestions are ours,
+and upstream may prefer another form.
+
+** Needed
+
+These two items have no workaround inside =hs.windowfilter=. Without them, our Spoons would
+either lose a feature or keep code of their own beside it.
+
+*** 1. The applications whose windows cannot be observed
+
+- *Our use.* The user runs a second Firefox in kiosk mode, which turns its Accessibility API
+  off. =hs_selectWindow-gt= adds such an application to its window chooser, so that it can
+  still be activated. It finds these applications with
+  =hs_windowfilter-gt.applicationsAccessibilityDisabled()=.
+- *Upstream now.* =WindowTracker.watch()= treats every failure to register
+  =AXWindowCreated= the same way. It retries five times, 0.2 to 1 second apart, and then
+  writes only =AKDebug("WindowTracker: giving up on watching …")=. Nothing in the JavaScript
+  API reports that the application was dropped, or why. =kAXErrorAPIDisabled= is retried as
+  well, although =hs.ax= already documents that retrying it does not help.
+  =WindowTracker.applicationActivated()= then calls =watch()= again for any application it
+  does not observe, which starts the six attempts again, over about three seconds. An
+  application that turned the Accessibility API off is therefore asked again every time it is
+  activated.
+- *What would meet the need.* The tracker treats =kAXErrorAPIDisabled= as final until the
+  application quits, as our Spoon does, and asks it neither again nor on activation. The
+  module lists the running applications it could not observe, with the reason, for example
+  =hs.windowfilter.unobservableApplications()= returning ={application, code}= objects.
+
+*** 2. A window's state without an Accessibility call
+
+- *Our use.* =hs_selectWindow-gt= builds its chooser from the title, application, bundle
+  identifier, screen, and minimized, hidden and focused state of every window.
+  =hs_window-gt= selects the standard windows that are on screen. Both read these values from
+  =records()=, which costs no Accessibility call.
+- *Upstream now.* The tracker already holds these values in a =WindowState= for every window.
+  =windows()= returns only =HSWindow= objects, and every property read from one is an
+  Accessibility call to the application. Five properties of 28 windows took 15 ms. The
+  =HSWindow= getters set no messaging timeout, unlike the tracker, which sets 0.25 seconds. An
+  application that does not answer, as Music did during a library sync on 2026-11-23, can
+  therefore delay each read by the system's default timeout. This last point was read in the
+  source and has not been measured.
+- *What would meet the need.* A form of =windows()= that also returns the tracker's
+  =WindowState= for each window, as a plain object, for example =windows({withState: true})=
+  returning ={window, state}= objects.
+
+** Desirable
+
+These items have a workaround, but the workaround costs code or information in every Spoon that
+uses the module.
+
+1. *The state with each event.* A listener receives =(window, appName, event)=. Passing the
+   =WindowState= that the event was derived from would let a listener read the title or the
+   frame without an Accessibility call. After =windowDestroyed=, it would also give the
+   title and frame the window had. Our Spoons need only the =id= there, which upstream
+   provides.
+2. *Diagnostics.* Our =status()= reports whether windows are observed, and how many
+   applications, windows, filters and listeners there are. Its readme gives it for finding
+   why an expected event was not emitted. Upstream has no equivalent.
+3. *One listener for several events.* =on()= takes one event name. =hs_window-gt= registers
+   one handler for four events, which upstream needs four calls for, and four calls to remove.
+
+** Not needed
+
+These differences were checked against our code and need nothing from upstream:
+
+1. =windowResized= is reported as =windowMoved=, and =hs_window-gt= does the same thing on
+   both.
+2. A function in a title rule. Neither Spoon uses one.
+3. =skipApplications= and =untitledNonStandardSkip=. The same windows are left out by
+   =rejectApp()=, =allowRoles: "AXStandardWindow"= and =allowTitles: 1=.
+4. The debounce settings. Neither Spoon changes them, and upstream's fixed 0.2 seconds is
+   close to our defaults.
+
+* Open questions
+
+These need a test that changes windows, which was not run, because it would have moved the
+user's windows:
+
+1. Whether the events arrive in the order the documentation gives, such as =windowUnfocused=
+   before =windowFocused= when the focus moves between two windows of one application.
+2. Whether a window that is created without a title, and receives one later, is accepted by a
+   filter with =allowTitles: 1= once its title is set. Our Spoon rescans for this after
+   =config.createdRescanDelay=.
+3. How upstream behaves when an application does not answer, as Music did during a library
+   sync on 2026-11-23.
+
+* Possible next beads
+
+1. Move =hs_selectWindow-gt= to =hs.windowfilter=, keeping a small replacement for
+   =applicationsAccessibilityDisabled()=, or ask upstream for one.
+2. Move =hs_window-gt= to =hs.windowfilter=.
+3. Run the open questions above as tests of =hs.windowfilter=.
+4. Once nothing uses it, deprecate =hs_windowfilter-gt=, or keep it only for the state record if
+   that turns out to be needed.
