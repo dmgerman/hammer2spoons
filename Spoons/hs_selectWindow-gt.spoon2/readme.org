@@ -368,30 +368,25 @@ describes: each setting is also a property of this Spoon's object, which reads a
 hs.spoons.use("hs_selectWindow-gt", { config: { showThumbnail: true } })
 #+end_src
 
-| Setting                    | Default | Meaning                                                  |
-|----------------------------+---------+----------------------------------------------------------|
-| =rowsToDisplay=            |      14 | Rows visible in the chooser at once                      |
-| =width=                    |     0.4 | Chooser width, as a fraction of the screen's width       |
-| =wideWidth=                |    0.22 | The fraction used on a display wider than =wideScreenPoints= |
-| =wideScreenPoints=         |    3000 | Above this width, in points, =wideWidth= is used         |
-| =textSize=                 |      17 | Size of a row's title, in points; null keeps the chooser's own, 14 |
-| =subTextSize=              |      14 | Size of the line beneath the title, in points; null keeps the chooser's own, 12 |
-| =querySize=                |      24 | Size of the search field's text, in points; null keeps the chooser's own, 20 |
-| =singleRowSwitch=          |   false | Whether a chooser with a single row switches to it at once, without being shown |
-| =showThumbnail=            |   false | Whether the thumbnail is shown when the chooser opens    |
-| =thumbnailHeightRatio=     |     0.4 | Largest height of the thumbnail, as a fraction of the screen |
+| Setting                    | Default | Meaning                                                                                      |
+|----------------------------+---------+----------------------------------------------------------------------------------------------|
+| =rowsToDisplay=            |      14 | Rows visible in the chooser at once                                                          |
+| =width=                    |     0.4 | Chooser width, as a fraction of the screen's width                                           |
+| =wideWidth=                |    0.22 | The fraction used on a display wider than =wideScreenPoints=                                 |
+| =wideScreenPoints=         |    3000 | Above this width, in points, =wideWidth= is used                                             |
+| =textSize=                 |      17 | Size of a row's title, in points; null keeps the chooser's own, 14                           |
+| =subTextSize=              |      14 | Size of the line beneath the title, in points; null keeps the chooser's own, 12              |
+| =querySize=                |      24 | Size of the search field's text, in points; null keeps the chooser's own, 20                 |
+| =singleRowSwitch=          |   false | Whether a chooser with a single row switches to it at once, without being shown              |
+| =showThumbnail=            |   false | Whether the thumbnail is shown when the chooser opens                                        |
+| =thumbnailHeightRatio=     |     0.4 | Largest height of the thumbnail, as a fraction of the screen                                 |
 | =thumbnailTopRatio=        |    0.12 | The thumbnail's top, as a fraction of the screen, when the chooser's position cannot be read |
-| =thumbnailGap=             |      12 | Space between the thumbnail and the chooser, in points   |
-| =selectionPollSeconds=     |    0.15 | How often the selected row is read, for the thumbnail    |
-| =persistentThumbnailCache= |   false | Keep snapshots after the chooser closes                  |
-| =thumbnailToggleKey=       |   "tab" | Key that turns the thumbnail on and off                  |
-| =thumbnailRefreshKey=      |   "tab" | Key, with Shift, that takes the snapshot again           |
-| =skipApplications=         |  a list | Names of applications whose windows are never listed     |
-| =fullscreenScreenSkip=     |   false | Move the chosen window off a screen showing a fullscreen window |
-
-=selectionPollSeconds= exists because the chooser reports no change of selection. While the
-chooser is open, this Spoon reads the selected row at this interval. A smaller value makes the
-thumbnail follow the selection sooner.
+| =thumbnailGap=             |      12 | Space between the thumbnail and the chooser, in points                                       |
+| =persistentThumbnailCache= |   false | Keep snapshots after the chooser closes                                                      |
+| =thumbnailToggleKey=       |   "tab" | Key that turns the thumbnail on and off                                                      |
+| =thumbnailRefreshKey=      |   "tab" | Key, with Shift, that takes the snapshot again                                               |
+| =skipApplications=         |  a list | Names of applications whose windows are never listed                                         |
+| =fullscreenScreenSkip=     |   false | Move the chosen window off a screen showing a fullscreen window                              |
 
 =persistentThumbnailCache= makes thumbnails appear sooner the next time the chooser opens. The
 snapshots shown are then older.

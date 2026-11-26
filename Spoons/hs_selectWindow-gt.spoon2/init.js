@@ -74,9 +74,6 @@ const config = {
     thumbnailTopRatio: 0.12,
     // Gap between the picture and the chooser, in points.
     thumbnailGap: 12,
-    // How often the selected row is read while the chooser is open. There is no callback
-    // for the selection changing, so it is polled.
-    selectionPollSeconds: 0.15,
     // Snapshots are kept while the chooser is open. Keeping them afterwards makes the next
     // invocation faster and the pictures older; Shift+Tab redraws the selected one.
     persistentThumbnailCache: false,
@@ -102,7 +99,6 @@ const config = {
 let filter = null                  // the hs.windowfilter filter of the windows offered
 let chooser = null
 let promptHeld = false             // whether the open chooser is reported to hs_interactive-gt
-let pollTimer = null
 let overlay = null                 // the canvas showing the thumbnail
 let thumbnails = new Map()         // window id -> HSImage
 let showingThumbnail = config.showThumbnail
@@ -273,8 +269,8 @@ function firstRecordPerApplication() {
 
 // MARK: - The thumbnail
 //
-// Drawn on a canvas beside the chooser. The chooser reports no callback when the selection
-// moves, so the selected row is read on a timer while the chooser is open.
+// Drawn on a canvas beside the chooser. The chooser's onSelectionChange redraws it whenever the
+// selection moves to another row (Hammerspoon 2 issue #390).
 
 /**
  * Where to draw the preview: to the left of the chooser, at most a fraction of the screen
@@ -386,10 +382,10 @@ function showThumbnailFor(id, force) {
         return
     }
 
-    // One request per window at a time. The selected row is polled every
-    // config.selectionPollSeconds and lastDrawnId is not set until the snapshot arrives, so
-    // without this a window slower to capture than the poll interval is asked again on
-    // every tick, and the requests pile up on the window that is already struggling.
+    // One request per window at a time. lastDrawnId is not set until the snapshot arrives, so
+    // without this, moving the selection away from a window and back before its snapshot
+    // arrives would ask for the same window again, and holding down an arrow key would pile
+    // requests on a window that is slow to capture.
     if (pendingSnapshots.has(id) && !force) return
     pendingSnapshots.add(id)
 
@@ -413,21 +409,6 @@ function selectedWindowId() {
     const row = chooser.selectedRow
     const contents = chooser.selectedRowContents(row)
     return contents && contents.id !== undefined ? contents.id : null
-}
-
-function startPolling() {
-    stopPolling()
-    pollTimer = hs.timer.doEvery(config.selectionPollSeconds, () => {
-        if (!chooser || !chooser.isVisible) return
-        const id = selectedWindowId()
-        if (id !== lastDrawnId) showThumbnailFor(id)
-    })
-}
-
-function stopPolling() {
-    if (!pollTimer) return
-    pollTimer.stop()
-    pollTimer = null
 }
 
 // MARK: - Keys bound while the chooser is open
@@ -732,10 +713,14 @@ function chooseFrom(all, placeholder, windowless = [], choose = focusWindowById)
     own.onShow = () => {
         if (chooser !== own) return
         takeSessionKeys()
-        startPolling()
-        // The first row is selected when the chooser opens. It is an application without
-        // windows when there are no windows, and has no thumbnail then.
-        showThumbnailFor(records.length ? records[0].state.id : null)
+    }
+
+    // Called once when the chooser is shown, right after onShow, and then each time the
+    // selection moves to another row. A row of an application without windows has no id, and
+    // no thumbnail.
+    own.onSelectionChange = (row, item) => {
+        if (chooser !== own) return
+        showThumbnailFor(item && item.id !== undefined ? item.id : null)
     }
 
     own.onHide = () => {
@@ -765,7 +750,6 @@ function finishChoosing() {
         const interactive = hs.spoons["hs_interactive-gt"]
         if (interactive) interactive.promptClosed()
     }
-    stopPolling()
     releaseSessionKeys()
     sessionOpeningKey = null
     hideThumbnail()

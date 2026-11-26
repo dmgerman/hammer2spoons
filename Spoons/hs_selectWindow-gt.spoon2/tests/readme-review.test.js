@@ -19,7 +19,7 @@ module.exports = [
             const expected = {
                 rowsToDisplay: 14, width: 0.4, wideWidth: 0.22, wideScreenPoints: 3000,
                 showThumbnail: false, thumbnailHeightRatio: 0.4, thumbnailTopRatio: 0.12,
-                thumbnailGap: 12, selectionPollSeconds: 0.15, persistentThumbnailCache: false,
+                thumbnailGap: 12, persistentThumbnailCache: false,
                 thumbnailToggleKey: "tab", thumbnailRefreshKey: "tab",
                 skipApplications: ["Hammerspoon", "Hammerspoon 2"], fullscreenScreenSkip: false
             }

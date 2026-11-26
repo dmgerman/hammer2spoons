@@ -290,29 +290,30 @@ module.exports = [
         }
     },
     {
-        name: "selectionPollSeconds is how often the selected row is read for the thumbnail",
+        name: "the thumbnail follows the selection as soon as it moves, and no repeating timer runs while the chooser is open",
         run: async (t) => {
             if (!hs.permissions.checkScreenRecording()) t.skip("needs the Screen Recording permission")
             const [a, b] = await t.windowsOpen(2)
             const [c] = await t.windowsOpen(1)
             for (const w of [a, b, c]) await focus(t, w)
-            settingsSet(t, { showThumbnail: true, selectionPollSeconds: 3 })
+            settingsSet(t, { showThumbnail: true })
+            // Counts the repeating timers started until the test ends. Before Hammerspoon 2's
+            // onSelectionChange (issue #390), this Spoon read the selected row on such a timer.
+            const doEvery = hs.timer.doEvery
+            let repeating = 0
+            hs.timer.doEvery = function () { repeating += 1; return doEvery.apply(hs.timer, arguments) }
+            t.cleanup(() => { hs.timer.doEvery = doEvery })
             const canvases = thumbnails(t)
             const chooser = open(t, () => t.spoon.windowSelect())
-            // The selected row is first read 3 s after the chooser opens, and every 3 s after
-            // that. openWait() returns about 0.3 s after the chooser is visible.
             await openWait(t, chooser)
-            const opened = Date.now() - 300
-            const since = () => (Date.now() - opened) / 1000
-            await t.wait(0.4)
+            await t.wait(0.6)
             const shown = canvases.length
             t.assert.ok(shown >= 1, "no thumbnail when the chooser opened")
             await key(t, chooser, [], "down")
-            await t.wait(Math.max(0, 2 - since()))
-            t.assert.equal(canvases.length, shown, "thumbnails drawn within 2 s of the chooser opening")
-            await t.wait(Math.max(0, 3.8 - since()))
-            t.assert.ok(canvases.length > shown, "no thumbnail drawn within 3.8 s of the chooser opening")
+            await t.wait(1)
+            t.assert.ok(canvases.length > shown, "no thumbnail drawn within 1 s of the selection moving")
             await key(t, chooser, [], "escape")
+            t.assert.equal(repeating, 0, "repeating timers started while the chooser was open")
         }
     }
 ]
