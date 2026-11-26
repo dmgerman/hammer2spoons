@@ -66,9 +66,6 @@ const config = {
     // How far down the screen the preview sits when the chooser's own position cannot be
     // read, as a fraction of screen height.
     previewTopRatio: 0.12,
-    // How often the selected row is read while the chooser is open. hs.chooser reports no
-    // callback for the selection moving, so it is polled.
-    previewPollSeconds: 0.15,
     maxEntrySize: 4990,
 
     // Characters of an entry shown in the chooser. The whole entry is copied when it is
@@ -273,7 +270,6 @@ function passwordLike(text) {
 // the selection. Kept so that they can be updated and then removed when the chooser closes.
 let preview = null
 let previewRow = null
-let previewTimer = null
 
 // The pasteboard's change count just after this Spoon last wrote to it. Writing an entry back
 // is a change like any other, and the watcher would otherwise store it again. The count is
@@ -619,8 +615,9 @@ function revealKeysDisable() {
 // few points high, which distinguishes two screenshots but does not let you read either.
 //
 // The same approach as the window preview in hs_selectWindow-gt, and the second use of it.
-// If a third appears it is worth extracting: the sizing, the placement and the polling are
-// not specific to what the picture is of.
+// If a third appears it is worth extracting: the sizing, the placement and the redraw on a change
+// of selection are not specific to what the picture is of. The chooser's onSelectionChange calls
+// previewUpdate() whenever the selection moves to another row (Hammerspoon 2 issue #390).
 
 /**
  * Where the chooser is, so the preview can sit beside it.
@@ -742,18 +739,6 @@ function previewUpdate() {
     previewDraw(image, row)
 }
 
-function previewPollStart() {
-    previewPollStop()
-    if (!config.showPreview) return
-    previewTimer = hs.timer.doEvery(config.previewPollSeconds, () => previewUpdate())
-}
-
-function previewPollStop() {
-    if (!previewTimer) return
-    previewTimer.stop()
-    previewTimer = null
-}
-
 // MARK: - The chooser
 
 // Right-clicking an entry offers what v1 put behind its own context menu. The chooser holds
@@ -866,7 +851,6 @@ function chooserSelect(choice) {
         chooserRefresh()
         return
     }
-    previewPollStop()
     previewHide()
 
     if (choice.action === "pasteImage" && typeof choice.data === "string") {
@@ -913,15 +897,14 @@ function start() {
     chooser.onSelect = chooserSelect
     chooser.contextMenu = CONTEXT_MENU
     chooser.onContextMenuSelect = contextMenuSelect
-    chooser.onShow = () => {
-        revealKeysEnable()
-        previewPollStart()
-    }
+    chooser.onShow = () => revealKeysEnable()
+    // Called once when the chooser is shown, right after onShow, and then each time the
+    // selection moves to another row.
+    chooser.onSelectionChange = () => previewUpdate()
     chooser.onHide = () => {
         promptRelease()
         revealKeysDisable()
         revealReset()
-        previewPollStop()
         previewHide()
         // Rebuild at once, so a revealed entry is not left in the chooser's own list.
         chooserRefresh()
@@ -948,7 +931,6 @@ function start() {
 
 function stop() {
     hotkeysRelease()
-    previewPollStop()
     previewHide()
     if (watcher) {
         hs.pasteboard.off("change", watcher)

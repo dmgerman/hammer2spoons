@@ -225,43 +225,38 @@ describes: each setting is also a property of this Spoon's object, which reads a
 hs.spoons.use("hs_clipboard-gt", { config: { historySize: 200 } })
 #+end_src
 
-| Setting                    | Default                   | Meaning                                         |
-|----------------------------+---------------------------+-------------------------------------------------|
-| =historySize=              | =100=                     | The number of text entries kept.                |
-| =imageHistorySize=         | =10=                      | The number of image entries kept.               |
-| =maxEntrySize=             | =4990=                    | The number of characters kept of one entry.     |
-| =displayMaxLength=         | =200=                     | The number of characters of an entry shown, and searched, in the chooser. |
-| =deduplicate=              | =true=                    | Whether copying an entry that is already in the history moves it to the top instead of adding it again. |
-| =copiedAlert=              | =true=                    | Whether an alert reports each copy.             |
-| =alertDuration=            | =1=                       | Seconds the alert is displayed.                 |
-| =honorIgnoredIdentifiers=  | =true=                    | Whether copies marked as private or temporary are left out of the history. |
-| =ignoredIdentifiers=       | seven markers             | The markers that =honorIgnoredIdentifiers= checks. |
-| =passwordsHide=            | =true=                    | Whether password-like entries are masked and kept off disk. |
-| =passwordTest=             | =null=                    | A function =(text, defaultTest)= that replaces this Spoon's test for passwords. See /A different password test/. |
-| =passwordEntropyThreshold= | =3.5=                     | The entropy, in bits per character, at which an entry looks random. |
-| =passwordMinLength=        | =8=                       | The shortest entry that can be masked.          |
-| =passwordMaxNewlines=      | =1=                       | An entry with more line breaks than this is never masked. |
-| =revealCurrentKey=         | ⌘R                        | The key that reveals the selected entry, as ={mods, key}=. |
-| =revealAllKey=             | ⇧⌘R                       | The key that reveals every masked entry.        |
-| =pasteDelay=               | =0.2=                     | Seconds between closing the chooser and pasting, so that the paste reaches the window that regains the focus. |
-| =showPreview=              | =true=                    | Whether a selected image is drawn beside the chooser. |
-| =previewHeightRatio=       | =0.5=                     | The largest height of that image, as a fraction of the screen's height. |
-| =previewGap=               | =12=                      | Points between the image and the chooser.       |
-| =previewPollSeconds=       | =0.15=                    | Seconds between readings of the selected row.   |
-| =watchInterval=            | =0.8=                     | Seconds between readings of the clipboard.      |
-| =menubarShow=              | =true=                    | Whether the menu bar item is shown.             |
-| =menubarTitle=             | 📋                        | The menu bar item's title.                      |
-| =clipboardDir=             | =clipboard/= in the configuration directory | The directory of the history and the image files. |
-| =historyFile=              | =clipboard/clipboard.json= in the configuration directory | The file of the history. |
+| Setting                    | Default                                                   | Meaning                                                                                                          |
+|----------------------------+-----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------|
+| =historySize=              | =100=                                                     | The number of text entries kept.                                                                                 |
+| =imageHistorySize=         | =10=                                                      | The number of image entries kept.                                                                                |
+| =maxEntrySize=             | =4990=                                                    | The number of characters kept of one entry.                                                                      |
+| =displayMaxLength=         | =200=                                                     | The number of characters of an entry shown, and searched, in the chooser.                                        |
+| =deduplicate=              | =true=                                                    | Whether copying an entry that is already in the history moves it to the top instead of adding it again.          |
+| =copiedAlert=              | =true=                                                    | Whether an alert reports each copy.                                                                              |
+| =alertDuration=            | =1=                                                       | Seconds the alert is displayed.                                                                                  |
+| =honorIgnoredIdentifiers=  | =true=                                                    | Whether copies marked as private or temporary are left out of the history.                                       |
+| =ignoredIdentifiers=       | seven markers                                             | The markers that =honorIgnoredIdentifiers= checks.                                                               |
+| =passwordsHide=            | =true=                                                    | Whether password-like entries are masked and kept off disk.                                                      |
+| =passwordTest=             | =null=                                                    | A function =(text, defaultTest)= that replaces this Spoon's test for passwords. See /A different password test/. |
+| =passwordEntropyThreshold= | =3.5=                                                     | The entropy, in bits per character, at which an entry looks random.                                              |
+| =passwordMinLength=        | =8=                                                       | The shortest entry that can be masked.                                                                           |
+| =passwordMaxNewlines=      | =1=                                                       | An entry with more line breaks than this is never masked.                                                        |
+| =revealCurrentKey=         | ⌘R                                                        | The key that reveals the selected entry, as ={mods, key}=.                                                       |
+| =revealAllKey=             | ⇧⌘R                                                       | The key that reveals every masked entry.                                                                         |
+| =pasteDelay=               | =0.2=                                                     | Seconds between closing the chooser and pasting, so that the paste reaches the window that regains the focus.    |
+| =showPreview=              | =true=                                                    | Whether a selected image is drawn beside the chooser.                                                            |
+| =previewHeightRatio=       | =0.5=                                                     | The largest height of that image, as a fraction of the screen's height.                                          |
+| =previewGap=               | =12=                                                      | Points between the image and the chooser.                                                                        |
+| =watchInterval=            | =0.8=                                                     | Seconds between readings of the clipboard.                                                                       |
+| =menubarShow=              | =true=                                                    | Whether the menu bar item is shown.                                                                              |
+| =menubarTitle=             | 📋                                                        | The menu bar item's title.                                                                                       |
+| =clipboardDir=             | =clipboard/= in the configuration directory               | The directory of the history and the image files.                                                                |
+| =historyFile=              | =clipboard/clipboard.json= in the configuration directory | The file of the history.                                                                                         |
 
 =watchInterval= sets the interval of Hammerspoon 2's clipboard watcher, which every Spoon shares.
 Hammerspoon 2 reads the interval only when the watcher starts, which happens when the first
 Spoon begins to watch the clipboard. That Spoon's value is then used for all of them. A value
 set while another Spoon is watching takes effect only after every Spoon has stopped watching.
-
-=previewPollSeconds= exists because =hs.chooser= reports no change of the selected row. While the
-chooser is open, this Spoon reads the selected row at that interval, and a smaller value makes
-the preview follow the selection sooner.
 
 * Files
 

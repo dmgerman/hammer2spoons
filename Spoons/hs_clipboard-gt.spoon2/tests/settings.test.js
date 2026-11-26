@@ -48,7 +48,7 @@ module.exports = [
                 passwordMinLength: 8, passwordMaxNewlines: 1,
                 revealCurrentKey: { mods: ["cmd"], key: "r" }, revealAllKey: { mods: ["cmd", "shift"], key: "r" },
                 pasteDelay: 0.2, showPreview: true, previewHeightRatio: 0.5, previewGap: 12,
-                previewPollSeconds: 0.15, watchInterval: 0.8, menubarShow: true, menubarTitle: "📋"
+                watchInterval: 0.8, menubarShow: true, menubarTitle: "📋"
             }
             const wrong = Object.keys(expected)
                 .filter((k) => JSON.stringify(c[k]) !== JSON.stringify(expected[k]))

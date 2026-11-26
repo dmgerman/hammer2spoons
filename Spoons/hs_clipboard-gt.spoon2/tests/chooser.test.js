@@ -233,5 +233,35 @@ module.exports = [
             t.assert.ok(preview.frame.h <= screen.h * t.spoon.config.previewHeightRatio + 1, `the preview is ${preview.frame.h} points high, against ${screen.h * t.spoon.config.previewHeightRatio}`)
             await key(t, chooser, [], "escape")
         }
+    },
+    {
+        name: "the preview follows the selection as soon as it moves, and no repeating timer runs while the history is open",
+        timeout: 15,
+        run: async (t) => {
+            const chooser = chooserCapture(t)
+            fresh(t)
+            // Two shapes, so that the two previews have different frames.
+            await copyImage(t, imageMake(400, 200))
+            await copyImage(t, imageMake(200, 400))
+            // Counts the repeating timers started until the test ends. Before Hammerspoon 2's
+            // onSelectionChange (issue #390), this Spoon read the selected row on such a timer.
+            const doEvery = hs.timer.doEvery
+            let repeating = 0
+            hs.timer.doEvery = function () { repeating += 1; return doEvery.apply(hs.timer, arguments) }
+            t.cleanup(() => { hs.timer.doEvery = doEvery })
+            let canvases = null
+            await historyOpen(t, chooser, () => { canvases = t.canvasesCapture() })
+            await t.wait(0.6)
+            const shown = canvases.length
+            t.assert.ok(shown >= 1, "no preview when the history opened")
+            const first = canvases[shown - 1].frame
+            await key(t, chooser, [], "down")
+            await t.wait(1)
+            t.assert.ok(canvases.length > shown, "no preview drawn within 1 s of the selection moving")
+            const second = canvases[canvases.length - 1].frame
+            t.assert.ok(Math.abs(first.w - second.w) > 1 || Math.abs(first.h - second.h) > 1, "the preview did not change to the other image")
+            await key(t, chooser, [], "escape")
+            t.assert.equal(repeating, 0, "repeating timers started while the history was open")
+        }
     }
 ]
