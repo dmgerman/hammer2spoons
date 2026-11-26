@@ -1,27 +1,15 @@
 #+TITLE: hammer2spoons
 
-#+BEGIN_QUOTE
-*WARNING: hs_window-gt and hs_selectWindow-gt cannot be used with any released Hammerspoon 2
-yet.*
-
-They require =hs.windowfilter=, which Hammerspoon 2 added on 2026-11-25 and 2026-11-26 (pull
-requests #470 and #480). No release includes it yet: the latest, =1.0.0-beta.3=, does not. With a
-released Hammerspoon 2, =start()= of each of the two Spoons throws an error that names
-=hs.windowfilter=. Until the next release of Hammerspoon 2, these two Spoons need a build of
-Hammerspoon 2 from its =main= branch.
-#+END_QUOTE
-
 hammer2spoons is a collection of Spoons for [[https://github.com/cmsj/Hammerspoon2][Hammerspoon 2]]. The Spoons let the user
 manage windows and applications from the keyboard.
 
-- Windows are placed, resized and moved between screens with one key each, and every change can
-  be undone.
-- A window is switched to by typing part of its title, with the most recently used windows listed
-  first.
-- A Spoon that performs actions provides an on-screen menu of them, in which a letter selects each
-  option.
-- Apple Music is controlled from a menu, and albums are played from a list kept in a text file.
-- Every Spoon is installed and updated from this repository with =hs.spoons.use()=.
+- *hs_window-gt*: windows can be placed, resized and moved (including between screens) with one
+  key each, and every change can be undone.
+- *hs_selectWindow-gt*: ability to switch to a window by providing part of its title or
+  application name, listed in most-recently-used order.
+- *hs_menu-gt*: support for the creation of on-screen menus with keyboard hotkeys.
+- *hs_appleMusic-gt*: control of Apple Music via a menu, including album management via a user's
+  list.
 
 @@html:<img src="./Spoons/hs_window-gt.spoon2/images/window-menu.png" alt="The window menu of hs_window-gt: thirty-four options, each with an icon and the letter that selects it">@@
 
@@ -46,13 +34,12 @@ switch between and place windows, then the tools, then the Spoons the others bui
 | [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]  | Defines named commands, binds keys to them by name, and runs any of them from a chooser, as Emacs's M-x does, asking for any argument a command needs.                                            | none                                        | Accessibility, for its window and screen readers           |
 | [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_menu-gt.spoon2][hs_menu-gt]]         | Shows menus of commands on screen, where a letter beneath each option selects it, with submenus.                                                                                                  | none                                        | none                                                       |
 
-One Spoon uses another when it is loaded, without requiring it: hs_menu-gt runs an option's
-command by name through hs_interactive-gt, which only options with =command:= or =altCommand:=
-need.
+hs_menu-gt does not require hs_interactive-gt, but uses it when it is loaded: a menu option with
+=command:= or =altCommand:= runs a command defined in hs_interactive-gt, by its name.
 
-hs_window-gt and hs_selectWindow-gt require a build of Hammerspoon 2 that includes
-=hs.windowfilter=, which was added on 2026-11-25. Before it, they required hs_windowfilter-gt,
-which =hs.windowfilter= replaces. hs_windowfilter-gt has been removed from this repository.
+hs_window-gt and hs_selectWindow-gt need Hammerspoon 2's =hs.windowfilter=, which is included
+since release 1.0.0 Beta 4. It replaces hs_windowfilter-gt, a Spoon these two used before, which
+has been removed from this repository.
 
 hs_interactive-gt is required by every Spoon that asks the user for input, such as the window to
 act on, and hs_menu-gt by every Spoon that offers a menu of its actions.
@@ -100,8 +87,8 @@ The readme of each Spoon documents its installation and configuration in full.
 
 * Requirements
 
-The Spoons require Hammerspoon 2 1.0.0 Beta 2 or later. They are tested with a build of its main
-branch at commit =c7908c01=, which that release includes. A Spoon that needs a later change to
+The Spoons require Hammerspoon 2 1.0.0 Beta 4 or later. They are tested with a build of its main
+branch at commit =ea1ed63b=, which that release includes. A Spoon that needs a later change to
 Hammerspoon 2 says so in its readme.
 
 * License
