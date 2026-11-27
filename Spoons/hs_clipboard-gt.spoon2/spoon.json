@@ -2,6 +2,7 @@
     "name": "hs_clipboard-gt",
     "author": "Daniel German <dmg@turingmachine.org>",
     "license": "MIT - https://opensource.org/licenses/MIT",
-    "version": "2.0.9",
-    "description": "Keeps a history of the text and images copied to the clipboard, and copies an entry selected in a chooser back to the clipboard."
+    "version": "2.0.10",
+    "description": "Keeps a history of the text and images copied to the clipboard, and copies an entry selected in a chooser back to the clipboard.",
+    "minimumHSVersion": "1.0.0-beta.4"
 }

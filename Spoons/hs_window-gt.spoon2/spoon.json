@@ -2,6 +2,7 @@
     "name": "hs_window-gt",
     "author": "Daniel German <dmg@turingmachine.org>",
     "license": "MIT - https://opensource.org/licenses/MIT",
-    "version": "2.5.1",
-    "description": "Places, moves and resizes windows with keys, across screens, undoes each change, and attaches windows to number keys that switch to them."
+    "version": "2.5.2",
+    "description": "Places, moves and resizes windows with keys, across screens, undoes each change, and attaches windows to number keys that switch to them.",
+    "minimumHSVersion": "1.0.0-beta.4"
 }

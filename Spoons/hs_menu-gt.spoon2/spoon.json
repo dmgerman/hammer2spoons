@@ -2,6 +2,7 @@
     "name": "hs_menu-gt",
     "author": "Daniel German <dmg@turingmachine.org>",
     "license": "MIT - https://opensource.org/licenses/MIT",
-    "version": "0.3.13",
-    "description": "Shows menus of commands on screen, where a letter beneath each option selects it, with submenus."
+    "version": "0.3.14",
+    "description": "Shows menus of commands on screen, where a letter beneath each option selects it, with submenus.",
+    "minimumHSVersion": "1.0.0-beta.4"
 }
