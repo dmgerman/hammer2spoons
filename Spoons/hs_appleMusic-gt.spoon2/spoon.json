@@ -2,7 +2,7 @@
     "name": "hs_appleMusic-gt",
     "author": "Daniel German <dmg@turingmachine.org>",
     "license": "MIT - https://opensource.org/licenses/MIT",
-    "version": "2.1.6",
+    "version": "3.0.0",
     "description": "Experimental. Controls Apple Music: playback, volume, track information, and playing albums from a curated list, including albums held only in the Apple Music catalogue.",
     "minimumHSVersion": "1.0.0-beta.4"
 }

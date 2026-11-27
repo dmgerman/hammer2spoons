@@ -112,7 +112,8 @@ reached. Both work on whatever Apple Music is playing, whether or not the album 
 
 Apple Music has no command that skips an album, so this Spoon skips one track at a time until the
 album changes. The skipping takes about =config.albumSkipInterval= seconds per track, and stops
-after =config.maxAlbumSkipAttempts= tracks, with an alert, when no other album is reached.
+after =config.maxAlbumSkipAttempts= tracks, with an alert, when no other album is reached. Pressing
+/Next album/ or /Prev album/ again stops a skip in progress and starts a new one.
 
 ** Adding an album to the list
 
@@ -210,8 +211,8 @@ and =albumPrevious()= display the alert "Music is not running" and do nothing el
 | =trackNext()=, =trackPrevious()= | Goes to the next or the previous track.                                                                                                                                                            |
 | =albumNext()=                    | Goes forward to the first track of the next album, and displays its name.                                                                                                                          |
 | =albumPrevious()=                | Goes back to the first track of the previous album, and displays its name.                                                                                                                         |
-| =playerState()=                  | Returns ="playing"=, ="paused"=, ="stopped"= or ="not running"=. Returns ="unknown"= when Apple Music does not answer.                                                                             |
-| =isPlaying()=                    | Returns true when Apple Music is playing.                                                                                                                                                          |
+| =playerState()=                  | Returns a promise of ="playing"=, ="paused"=, ="stopped"= or ="not running"=. The promise gives ="unknown"= when Apple Music does not answer. |
+| =isPlaying()=                    | Returns a promise of true when Apple Music is playing. |
 | =isRunning()=                    | Returns true when Apple Music is running. It does not launch Apple Music.                                                                                                                          |
 | =focus()=                        | Makes Apple Music the frontmost application, launching it when it is not running. Only Apple Music's main window is raised, so the MiniPlayer and Apple Music's other windows stay where they are. |
 
@@ -224,9 +225,9 @@ These functions describe the track that Apple Music is playing.
 
 | Function                 | Description                                                                                                                                                      |
 |--------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| =currentTrack()=         | Returns ={name, artist, album, duration}= for the track playing, with =duration= in seconds. Returns null when Apple Music is not running or nothing is playing. |
-| =currentArtist()=        | Returns the artist of the track playing, or null.                                                                                                                |
-| =currentAlbum()=         | Returns the album of the track playing, or null.                                                                                                                 |
+| =currentTrack()=         | Returns a promise of ={name, artist, album, duration}= for the track playing, with =duration= in seconds. The promise gives null when Apple Music is not running, nothing is playing, or Apple Music does not answer. |
+| =currentArtist()=        | Returns a promise of the artist of the track playing, or of null. |
+| =currentAlbum()=         | Returns a promise of the album of the track playing, or of null. |
 | =currentTrackShow()=     | Displays a description of the track, with the address of its album when the address is found, and copies the same text to the clipboard.                         |
 | =currentTrackText()=     | Returns a promise of the text that =currentTrackShow()= displays, or of null when nothing is playing.                                                            |
 | =currentAlbumURL()=      | Returns a promise of the Apple Music address of the album playing. The promise gives null when nothing is playing or the album cannot be identified.             |
@@ -249,10 +250,10 @@ of it.
 
 | Function                   | Description                                                                                                                                           |
 |----------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| =volumeGet()=              | Returns Apple Music's volume, or null when Apple Music is not running.                                                                                |
-| =volumeShow()=             | Displays Apple Music's volume, and returns it.                                                                                                        |
-| =volumeSet(level)=         | Sets Apple Music's volume to =level=. Returns the volume set, or null when Apple Music is not running.                                                |
-| =volumeAdjust(delta)=      | Changes Apple Music's volume by =delta=, which may be negative. Displays the new volume and returns it.                                               |
+| =volumeGet()=              | Returns a promise of Apple Music's volume, or of null when Apple Music is not running or does not answer. |
+| =volumeShow()=             | Displays Apple Music's volume, and returns a promise of it. |
+| =volumeSet(level)=         | Sets Apple Music's volume to =level=. Returns a promise of the volume set, or of null when Apple Music is not running or does not answer. |
+| =volumeAdjust(delta)=      | Changes Apple Music's volume by =delta=, which may be negative. Displays the new volume and returns a promise of it. |
 | =systemVolume()=           | Returns the output device's volume. Returns null when there is no output device, or when its volume cannot be set.                                    |
 | =systemVolumeSet(percent)= | Sets the output device's volume, displays the volume the device then has, and returns it. Returns null, with an alert, when the volume cannot be set. |
 
@@ -337,6 +338,7 @@ hs.spoons.use("hs_appleMusic-gt", { config: { alertDuration: 5 } })
 | =autoPlayInterval=       | =300=                                       | Seconds between auto-play's readings of Apple Music's state.                                                |
 | =maxAlbumSkipAttempts=   | =20=                                        | Tracks =albumNext()= and =albumPrevious()= skip before they stop.                                           |
 | =albumSkipInterval=      | =0.3=                                       | Seconds between those skips.                                                                                |
+| =answerTimeout=          | =5=                                         | Seconds this Spoon waits for Apple Music to answer, before it gives up with an alert.                       |
 | =durationTolerance=      | =2=                                         | The largest difference, in seconds, between two lengths of a track that are taken as the same recording.    |
 | =playButtonTitle=        | ="Play"=                                    | The title of the Play button on an album's page in Apple Music.                                             |
 | =playButtonPollInterval= | =0.4=                                       | Seconds between searches for that button while the page loads.                                              |

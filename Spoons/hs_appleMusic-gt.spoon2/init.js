@@ -51,7 +51,12 @@ const config = {
     playButtonTimeout: 10,
 
     // How many search results to consider before matching on name.
-    searchLimit: 25
+    searchLimit: 25,
+
+    // Seconds to wait for Apple Music to answer a question or a command. A step that is not
+    // answered in time gives up with an alert, so that a busy Apple Music cannot stop
+    // Hammerspoon 2 from responding.
+    answerTimeout: 5
 }
 
 const MUSIC_BUNDLE_ID = "com.apple.Music"
@@ -62,7 +67,9 @@ const EXAMPLE_ALBUM_LIST = `${__dirname}/albums.txt`
 // MARK: - State
 
 let autoPlayTimer = null
-let albumSkipTimer = null
+// Incremented to stop an album skip in progress: a skip stops when this differs from the value it
+// started with.
+let albumSkipRun = 0
 let playButtonTimer = null
 
 // MARK: - Talking to Music
@@ -77,18 +84,37 @@ function forAppleScript(text) {
 }
 
 /**
- * Run AppleScript against Music and return its result.
+ * Run AppleScript against Music, without waiting for it: Hammerspoon 2 keeps responding while
+ * Music answers. hs.osascript.applescriptSync() would block all of Hammerspoon 2 until Music
+ * answered, with no time limit: on 2026-11-27 a slow Apple Music froze it until the user killed
+ * it (hammer2spoons-9i2).
  *
  * @param {string} body The statements inside `tell application "Music"`.
- * @returns {?string} The result as text, or null if the script failed.
+ * @returns {Promise<?string>} The result as text, or null when the script failed or Music did not
+ *          answer within config.answerTimeout seconds. It never rejects. A late answer is ignored,
+ *          but the script itself cannot be cancelled and still runs in Music.
  */
 function musicTell(body) {
-    const outcome = hs.osascript.applescriptSync(`tell application "Music"\n${body}\nend tell`)
-    if (!outcome || !outcome.success) {
-        console.error(`[hs_appleMusic-gt] AppleScript failed: ${outcome ? outcome.raw : "no result"}`)
-        return null
-    }
-    return outcome.result === undefined || outcome.result === null ? "" : String(outcome.result)
+    const asked = hs.osascript.applescript(`tell application "Music"\n${body}\nend tell`)
+        .then((outcome) => {
+            if (!outcome || !outcome.success) {
+                console.error(`[hs_appleMusic-gt] AppleScript failed: ${outcome ? outcome.raw : "no result"}`)
+                return null
+            }
+            return outcome.result === undefined || outcome.result === null ? "" : String(outcome.result)
+        })
+        .catch((e) => {
+            console.error(`[hs_appleMusic-gt] AppleScript failed: ${e}`)
+            return null
+        })
+    let timer = null
+    const late = new Promise((resolve) => {
+        timer = hs.timer.doAfter(config.answerTimeout, () => {
+            alert(`Apple Music did not answer within ${config.answerTimeout} s`)
+            resolve(null)
+        })
+    })
+    return Promise.race([asked, late]).finally(() => timer.stop())
 }
 
 /** Whether Music is running. Asked of the application list, so Music is not launched. */
@@ -103,14 +129,15 @@ function runningRequire() {
     return false
 }
 
-/** "playing", "paused", "stopped", or "not running". */
-function playerState() {
+/** A promise of "playing", "paused", "stopped", "not running", or "unknown" when Music did not answer. */
+async function playerState() {
     if (!isRunning()) return "not running"
-    return musicTell("get player state as text") || "unknown"
+    return (await musicTell("get player state as text")) || "unknown"
 }
 
-function isPlaying() {
-    return playerState() === "playing"
+/** A promise of whether Music is playing. */
+async function isPlaying() {
+    return (await playerState()) === "playing"
 }
 
 // MARK: - Playback
@@ -154,14 +181,15 @@ function trackPrevious() {
  * The duration is read along with the names because it is what tells one release of a track
  * from another when the album's page is looked up.
  *
- * @returns {?object} `{name, artist, album, duration}`, or null when nothing is playing.
- *          `duration` is in seconds, and is null when Music does not report one.
+ * @returns {Promise<?object>} `{name, artist, album, duration}`, or null when nothing is playing
+ *          or Music did not answer. `duration` is in seconds, and is null when Music does not
+ *          report one.
  */
-function currentTrack() {
+async function currentTrack() {
     if (!isRunning()) return null
     // One call rather than four, so the four fields describe the same track even if it
     // changes while they are read. Tab-separated: none of the fields may contain a tab.
-    const line = musicTell(
+    const line = await musicTell(
         'try\n' +
         'return (get name of current track) & "\\t" & (get artist of current track) & "\\t" ' +
         '& (get album of current track) & "\\t" & (get duration of current track)\n' +
@@ -206,19 +234,21 @@ function trackDescribe(track, url) {
  *
  * @returns {Promise<?string>} Null when nothing is playing.
  */
-function currentTrackText() {
-    const track = currentTrack()
-    if (!track) return Promise.resolve(null)
+async function currentTrackText() {
+    const track = await currentTrack()
+    if (!track) return null
     return albumURLResolve(track).then((url) => trackDescribe(track, url))
 }
 
-function currentArtist() {
-    const track = currentTrack()
+/** A promise of the artist of the track playing, or null. */
+async function currentArtist() {
+    const track = await currentTrack()
     return track ? track.artist : null
 }
 
-function currentAlbum() {
-    const track = currentTrack()
+/** A promise of the album of the track playing, or null. */
+async function currentAlbum() {
+    const track = await currentTrack()
     return track ? track.album : null
 }
 
@@ -231,12 +261,17 @@ function currentAlbum() {
  */
 function currentTrackShow() {
     if (!runningRequire()) return module.exports
-    const track = currentTrack()
-    if (!track) {
-        alert("Nothing is playing")
-        return module.exports
-    }
+    currentTrack().then((track) => {
+        if (!track) {
+            alert("Nothing is playing")
+            return
+        }
+        currentTrackShowFor(track)
+    })
+    return module.exports
+}
 
+function currentTrackShowFor(track) {
     albumURLResolve(track).then((url) => {
         const text = trackDescribe(track, url)
         hs.pasteboard.writeString(text)
@@ -247,21 +282,20 @@ function currentTrackShow() {
         hs.pasteboard.writeString(text)
         alert(text)
     })
-    return module.exports
 }
 
 // MARK: - Volume
 
-/** Music's own volume, 0 to 100, or null when it cannot be read. */
-function volumeGet() {
+/** A promise of Music's own volume, 0 to 100, or null when it cannot be read. */
+async function volumeGet() {
     if (!isRunning()) return null
-    const value = musicTell("get sound volume")
+    const value = await musicTell("get sound volume")
     return value === null || value === "" ? null : Number(value)
 }
 
-/** Show the volume as well as returning it, for a menu button that reports it. */
-function volumeShow() {
-    const volume = volumeGet()
+/** Show the volume as well as returning a promise of it, for a menu button that reports it. */
+async function volumeShow() {
+    const volume = await volumeGet()
     alert(volume === null ? "Music is not running" : `Volume ${volume}`)
     return volume
 }
@@ -270,17 +304,16 @@ function volumeShow() {
  * Set the volume.
  *
  * @param {number} level 0 to 100. Values outside that are clamped.
- * @returns {?number} The volume set, or null when Music is not running.
+ * @returns {Promise<?number>} The volume set, or null when Music is not running or did not answer.
  */
-function volumeSet(level) {
+async function volumeSet(level) {
     if (!runningRequire()) return null
     const wanted = Math.max(0, Math.min(100, Math.round(Number(level))))
     if (!Number.isFinite(wanted)) {
         alert(`Illegal volume [${level}]`)
         return null
     }
-    musicTell(`set sound volume to ${wanted}`)
-    return wanted
+    return (await musicTell(`set sound volume to ${wanted}`)) === null ? null : wanted
 }
 
 // MARK: - The system's volume
@@ -343,97 +376,77 @@ function systemVolumeSet(percent) {
 /**
  * Change the volume by `delta`, which may be negative.
  *
- * @returns {?number} The new volume, or null when Music is not running.
+ * @returns {Promise<?number>} The new volume, or null when Music is not running or did not answer.
  */
-function volumeAdjust(delta) {
-    const current = volumeGet()
+async function volumeAdjust(delta) {
+    const current = await volumeGet()
     if (current === null) {
         alert("Music is not running")
         return null
     }
-    const volume = volumeSet(current + Number(delta))
+    const volume = await volumeSet(current + Number(delta))
     if (volume !== null) alert(`Volume ${volume}`)
     return volume
 }
 
 // MARK: - Skipping a whole album
 //
-// Music has no "next album", so tracks are skipped until the album name changes. Done on a
-// timer rather than in a loop: each skip has to reach Music and be reflected back before
-// the next album name is worth reading, and a loop would block everything else meanwhile.
+// Music has no "next album", so tracks are skipped until the album name changes. Each skip is
+// awaited, and then the album name is read config.albumSkipInterval seconds later, because each
+// skip has to reach Music and be reflected back before the album name is worth reading. Every
+// question to Music is asynchronous, so Hammerspoon 2 keeps responding throughout.
 
+const pause = (seconds) => new Promise((resolve) => hs.timer.doAfter(seconds, resolve))
+
+/** Stop an album skip in progress. */
 function albumSkipStop() {
-    if (albumSkipTimer) {
-        albumSkipTimer.stop()
-        albumSkipTimer = null
-    }
+    albumSkipRun += 1
 }
 
 function newAlbumSkipTo(direction) {
     if (!runningRequire()) return module.exports
-
-    const startAlbum = currentAlbum()
-    if (startAlbum === null) {
-        alert("Nothing is playing")
-        return module.exports
-    }
-
     albumSkipStop()
-    let attempts = 0
-
-    const step = () => {
-        attempts += 1
-        if (direction === "next") trackNext()
-        else trackPrevious()
-
-        albumSkipTimer = hs.timer.doAfter(config.albumSkipInterval, () => {
-            const album = currentAlbum()
-
-            if (album !== null && album !== startAlbum) {
-                albumSkipTimer = null
-                // Going back lands on the last track of the previous album, so walk to its
-                // first track: keep going back while the album stays the same, then
-                // forward once.
-                if (direction === "previous") firstTrackSeek(album)
-                else alert(`Album: ${album}`)
-                return
-            }
-
-            if (attempts >= config.maxAlbumSkipAttempts) {
-                albumSkipTimer = null
-                alert(`No other album within ${config.maxAlbumSkipAttempts} tracks`)
-                return
-            }
-            step()
-        })
-    }
-
-    step()
+    albumSkip(direction, albumSkipRun)
     return module.exports
 }
 
-function firstTrackSeek(targetAlbum) {
-    let attempts = 0
-
-    const step = () => {
-        attempts += 1
-        trackPrevious()
-
-        albumSkipTimer = hs.timer.doAfter(config.albumSkipInterval, () => {
-            const album = currentAlbum()
-
-            if (album !== targetAlbum || attempts >= config.maxAlbumSkipAttempts) {
-                // One track too far, or far enough: come forward to the first track.
-                trackNext()
-                albumSkipTimer = null
-                alert(`Album: ${targetAlbum}`)
-                return
-            }
-            step()
-        })
+async function albumSkip(direction, run) {
+    const startAlbum = await currentAlbum()
+    if (run !== albumSkipRun) return
+    if (startAlbum === null) {
+        alert("Nothing is playing")
+        return
     }
 
-    step()
+    for (let attempts = 1; attempts <= config.maxAlbumSkipAttempts; attempts++) {
+        await musicTell(direction === "next" ? "next track" : "previous track")
+        await pause(config.albumSkipInterval)
+        if (run !== albumSkipRun) return
+        const album = await currentAlbum()
+        if (run !== albumSkipRun) return
+        if (album !== null && album !== startAlbum) {
+            // Going back lands on the last track of the previous album, so walk to its first
+            // track: keep going back while the album stays the same, then forward once.
+            if (direction === "previous") await firstTrackSeek(album, run)
+            else alert(`Album: ${album}`)
+            return
+        }
+    }
+    alert(`No other album within ${config.maxAlbumSkipAttempts} tracks`)
+}
+
+async function firstTrackSeek(targetAlbum, run) {
+    for (let attempts = 1; attempts <= config.maxAlbumSkipAttempts; attempts++) {
+        await musicTell("previous track")
+        await pause(config.albumSkipInterval)
+        if (run !== albumSkipRun) return
+        const album = await currentAlbum()
+        if (run !== albumSkipRun) return
+        if (album !== targetAlbum) break
+    }
+    // One track too far, or far enough: come forward to the first track.
+    await musicTell("next track")
+    alert(`Album: ${targetAlbum}`)
 }
 
 function albumNext() {
@@ -583,13 +596,17 @@ function albumChoose(path) {
  */
 function currentAlbumAdd(path) {
     if (!runningRequire()) return module.exports
+    currentTrack().then((track) => {
+        if (!track || !track.album || !track.artist) {
+            alert("Nothing is playing")
+            return
+        }
+        currentAlbumAddFor(track, path)
+    })
+    return module.exports
+}
 
-    const track = currentTrack()
-    if (!track || !track.album || !track.artist) {
-        alert("Nothing is playing")
-        return module.exports
-    }
-
+function currentAlbumAddFor(track, path) {
     // The example list is copied first when the user has none, so the album is added to it.
     const file = albumListFile(path)
     const name = `${track.artist} — ${track.album}`
@@ -725,9 +742,9 @@ function albumURLResolve(track) {
  * @returns {Promise<?string>} Null when nothing is playing, or when the album could not be
  *          identified.
  */
-function currentAlbumURL() {
-    const track = currentTrack()
-    return track ? albumURLResolve(track) : Promise.resolve(null)
+async function currentAlbumURL() {
+    const track = await currentTrack()
+    return track ? albumURLResolve(track) : null
 }
 
 /**
@@ -913,8 +930,8 @@ function albumPlay(band, album) {
 // Starts a random album whenever Music has stopped. A paused Music is left alone: pausing
 // is a decision, stopping is the end of an album.
 
-function autoPlayCheck() {
-    const state = playerState()
+async function autoPlayCheck() {
+    const state = await playerState()
     if (state !== "stopped" && state !== "not running") return
 
     const choice = albumRandomPick()
