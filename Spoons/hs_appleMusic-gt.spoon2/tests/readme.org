@@ -1,0 +1,27 @@
+#+title: hs_appleMusic-gt's tests
+
+These are the tests of hs_appleMusic-gt. They run inside the running Hammerspoon 2, on a fresh
+copy of the Spoon. They are marked =export-ignore=, so users who install the Spoon do not download
+them.
+
+The harness, the runner, the test windows, the makefile and the self-tests are copies of the
+files in =tests-common/= at the top of the repository. They are never edited here.
+=tests-common/readme.org= explains how they are kept the same, and hs_window-gt's
+=tests/readme.org= describes how a run works and everything a test receives.
+
+* Running the tests
+
+#+begin_src sh
+make test                                          # every tests/*.test.js, without choosers
+tests/run tests/selftest/harness.test.js           # the given files, asking on screen first
+#+end_src
+
+Run only the files a change can affect.
+
+* The copy under test
+
+=tests/spoon.js= points the copy's =albumListPath= into the run's directory, so that the user's
+=albums.txt= is never read or written. =tests/protection.test.js= checks it.
+
+The copy's =start()= only checks that hs_interactive-gt and hs_menu-gt are loaded. Nothing
+touches the Music application until a test calls a function that does.
