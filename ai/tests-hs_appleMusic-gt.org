@@ -139,6 +139,45 @@ The cause of the last two failures is not known. Three explanations have not bee
 The next step was a probe that opens the page and records, every second for 20 s, whether Play
 is present and at which level, once from stopped and once while another album plays.
 
+* What Music exposes to the Accessibility API
+
+Probed on 2026-11-27 with Music showing an album page and its queue panel open, walking the tree in
+20 ms slices: no slice took more than 73 ms.
+
+1. The album page: artwork, title, artist and year, a *Play* button, Shuffle, "Add to Library" and
+   the track list. Its scroll area has the identifier =detailsScroller=, and the Play button the
+   identifier =play=. The button can therefore be found by its identifier under =detailsScroller=,
+   rather than by searching the whole tree, which took about 12 s (see "The freeze in the
+   Play-button search").
+2. The mini player: Previous, Pause, Next, shuffle, repeat, Lyrics, AirPlay, Volume and "playing
+   next", which opens the queue panel. Their identifiers start with =Music.miniPlayer.=, such as
+   =Music.miniPlayer.queueButton=.
+3. AutoPlay and AutoMix are checkboxes, whose state can be read.
+4. The queue panel (=play queue= / =headerContainer=), only while it is open, is a table of rows.
+   A row with one static text is a section heading. The sections seen were *History* (199 tracks,
+   oldest first) and *Continue Playing* (the 10 tracks AutoPlay would play). A track's row has two
+   static texts, its title and "Artist — Album", and a More button. A *Playing Next* section is
+   expected when something has been queued by hand, which was not the case.
+
+A test can therefore read the recent history and check that it spans two albums, instead of
+asking the user. It opens the panel with the "playing next" button when it is closed, and closes
+it again afterwards.
+
+Further findings of 2026-11-27, with the user watching:
+
+1. Previous does not reach the History. Fifteen presses of the mini player's Previous stayed on the
+   same track. AppleScript's =previous track=, sent twice, steps back within the album being played,
+   but at its first track it only restarts it. Prev album can therefore not reach an album played
+   earlier, in daily use as in the tests.
+2. Pressing a button that opens a menu (the album page's More, =moreBtn=, or =AXShowMenu= on an
+   album tile) fails with =kAXErrorCannotComplete= after about 1.5 s, but the menu does open: Music
+   does not answer the Accessibility API while its menu is open. The menu can then be used with
+   keys sent to Music alone: "play n" selects Play Next, and Return chooses it.
+3. Play Next adds the album after the track playing, as a /Queue/ section of the queue panel,
+   between History and Continue Playing. The Clear button on that section's heading empties it, and
+   pressing it through the Accessibility API works.
+4. For a catalogue track, Music reports the track number as 0.
+
 * Asking Music from the tests
 
 =hs.osascript.applescriptSync()= blocks all of Hammerspoon 2 until Music answers. Music can take

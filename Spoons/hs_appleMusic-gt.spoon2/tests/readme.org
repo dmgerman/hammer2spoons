@@ -25,3 +25,12 @@ Run only the files a change can affect.
 
 The copy's =start()= only checks that hs_interactive-gt and hs_menu-gt are loaded. Nothing
 touches the Music application until a test calls a function that does.
+
+* Skipping to another album
+
+=tests/skipping.test.js= uses what Music is playing, such as a playlist, which Music continues
+with another album. Music's Previous does not reach its History, so an album played earlier cannot
+be used. The test reads the album that follows from Music's queue panel, through the Accessibility
+API, and is skipped when none follows. It skips forward into that album and back, then plays the
+user's track again from its start and puts back whether Music was playing. An alert names each
+step as it starts.
