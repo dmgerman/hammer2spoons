@@ -34,9 +34,9 @@ const config = {
     durationTolerance: 2,
 
     // albumNext and albumPrevious skip a track at a time until the album changes. The
-    // limit stops a long playlist of single-track albums from skipping forever.
-    maxAlbumSkipAttempts: 20,
-    albumSkipInterval: 0.3,
+    // limit stops a long playlist of single-track albums from skipping forever. An expanded
+    // edition can have more than 20 tracks.
+    maxAlbumSkipAttempts: 50,
 
     // Auto-play starts a random album whenever Music reports "stopped". Seconds between the
     // checks: Music announces each change of its state as a distributed notification, but
@@ -70,6 +70,8 @@ let autoPlayTimer = null
 // Incremented to stop an album skip in progress: a skip stops when this differs from the value it
 // started with.
 let albumSkipRun = 0
+// Called with each of Music's playerInfo notifications while a skip waits for one, or null.
+let playerInfoWaiter = null
 let playButtonTimer = null
 
 // MARK: - Talking to Music
@@ -391,22 +393,62 @@ async function volumeAdjust(delta) {
 
 // MARK: - Skipping a whole album
 //
-// Music has no "next album", so tracks are skipped until the album name changes. Each skip is
-// awaited, and then the album name is read config.albumSkipInterval seconds later, because each
-// skip has to reach Music and be reflected back before the album name is worth reading. Every
-// question to Music is asynchronous, so Hammerspoon 2 keeps responding throughout.
+// Music has no "next album", so tracks are skipped until the album name changes. After each skip,
+// the album is read from the playerInfo notification that Music posts when the track changes.
+// When none arrives within config.answerTimeout seconds, Music is asked instead. Hammerspoon 2
+// keeps responding throughout.
 
-const pause = (seconds) => new Promise((resolve) => hs.timer.doAfter(seconds, resolve))
+const PLAYER_INFO = "com.apple.Music.playerInfo"
+
+function playerInfoHandle(object, info) {
+    if (playerInfoWaiter) playerInfoWaiter(info)
+}
+
+/**
+ * The next playerInfo notification. Call it before the command that changes the track, so that
+ * the notification cannot arrive before it is waited for.
+ *
+ * @returns {Promise<?object>} The notification's userInfo, or null after config.answerTimeout seconds.
+ */
+function playerInfoNext() {
+    return new Promise((resolve) => {
+        const timer = hs.timer.doAfter(config.answerTimeout, () => {
+            playerInfoWaiter = null
+            resolve(null)
+        })
+        playerInfoWaiter = (info) => {
+            timer.stop()
+            playerInfoWaiter = null
+            resolve(info)
+        }
+    })
+}
+
+/** Skip a track, and return a promise of the album then playing, or null. */
+async function trackSkip(direction, run) {
+    const changed = playerInfoNext()
+    musicTell(direction === "next" ? "next track" : "previous track")
+    const info = await changed
+    if (run !== albumSkipRun) return null
+    if (info && info.Album !== undefined) return info.Album
+    return currentAlbum()
+}
 
 /** Stop an album skip in progress. */
 function albumSkipStop() {
     albumSkipRun += 1
+    playerInfoWaiter = null
+    hs.distributednotifications.off(PLAYER_INFO, playerInfoHandle)
 }
 
 function newAlbumSkipTo(direction) {
     if (!runningRequire()) return module.exports
     albumSkipStop()
-    albumSkip(direction, albumSkipRun)
+    const run = albumSkipRun
+    hs.distributednotifications.on(PLAYER_INFO, playerInfoHandle)
+    albumSkip(direction, run).finally(() => {
+        if (run === albumSkipRun) albumSkipStop()
+    })
     return module.exports
 }
 
@@ -419,10 +461,7 @@ async function albumSkip(direction, run) {
     }
 
     for (let attempts = 1; attempts <= config.maxAlbumSkipAttempts; attempts++) {
-        await musicTell(direction === "next" ? "next track" : "previous track")
-        await pause(config.albumSkipInterval)
-        if (run !== albumSkipRun) return
-        const album = await currentAlbum()
+        const album = await trackSkip(direction, run)
         if (run !== albumSkipRun) return
         if (album !== null && album !== startAlbum) {
             // Going back lands on the last track of the previous album, so walk to its first
@@ -437,16 +476,17 @@ async function albumSkip(direction, run) {
 
 async function firstTrackSeek(targetAlbum, run) {
     for (let attempts = 1; attempts <= config.maxAlbumSkipAttempts; attempts++) {
-        await musicTell("previous track")
-        await pause(config.albumSkipInterval)
+        const album = await trackSkip("previous", run)
         if (run !== albumSkipRun) return
-        const album = await currentAlbum()
-        if (run !== albumSkipRun) return
-        if (album !== targetAlbum) break
+        if (album !== targetAlbum) {
+            // One track too far: come forward to the first track.
+            await trackSkip("next", run)
+            if (run !== albumSkipRun) return
+            alert(`Album: ${targetAlbum}`)
+            return
+        }
     }
-    // One track too far, or far enough: come forward to the first track.
-    await musicTell("next track")
-    alert(`Album: ${targetAlbum}`)
+    alert(`Album: ${targetAlbum}, ${config.maxAlbumSkipAttempts} tracks back, not at its first track`)
 }
 
 function albumNext() {

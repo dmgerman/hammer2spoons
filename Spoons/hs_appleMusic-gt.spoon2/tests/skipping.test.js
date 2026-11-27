@@ -56,6 +56,17 @@ module.exports = [
             t.spoon.albumPrevious()
             const back = await trackWait(t, (track) => track.album === start.album, 60)
             t.assert.equal(back.album, start.album, "the album after Prev album")
+
+            // On the album's first track, the track before belongs to another album. When Music
+            // stays on the same track, nothing comes before it, and there is nothing to check.
+            await t.wait(3)
+            announce(`Next: one track back from "${back.name}", to check that it is the album's first track`)
+            await musicAsk("previous track")
+            await t.wait(1)
+            const before = await trackNow()
+            if (before.name !== back.name) {
+                t.assert.ok(before.album !== start.album, `the track before "${back.name}", which Prev album left playing, is "${before.name}" on the same album`)
+            }
         }
     }
 ]

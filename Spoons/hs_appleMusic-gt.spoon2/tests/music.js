@@ -139,21 +139,31 @@ function albumAfter(currentAlbum) {
 }
 
 /**
- * Plays again the track called `name` in the current queue, stepping back with `previous track`
- * (sent twice, because once only restarts a track that has played a few seconds) and then forward,
- * until Music reports it. The position within the track is not restored: Music's scripting cannot
- * return to it. Resolves to whether the track was found.
+ * Plays again the track called `name` in the current queue, stepping forward first, because after
+ * a test skips to another album and back the track is usually ahead, and then back, until Music
+ * reports it. A `previous track` only restarts a track that has played a few seconds, so when the
+ * name has not changed a second one is sent. The position within the track is not restored:
+ * Music's scripting cannot return to it. Resolves to whether the track was found.
  */
 async function trackReturn(name) {
-    for (const command of ["previous track", "next track"]) {
-        for (let i = 0; i < 25; i++) {
-            if (await musicAsk("get name of current track") === name) return true
-            await musicAsk(command)
-            if (command === "previous track") await musicAsk(command)
-            await new Promise((r) => hs.timer.doAfter(0.8, r))
+    const now = () => musicAsk("get name of current track")
+    const settle = () => new Promise((r) => hs.timer.doAfter(0.8, r))
+    for (let i = 0; i < 25; i++) {
+        if (await now() === name) return true
+        await musicAsk("next track")
+        await settle()
+    }
+    for (let i = 0; i < 50; i++) {
+        const before = await now()
+        if (before === name) return true
+        await musicAsk("previous track")
+        await settle()
+        if (await now() === before) {
+            await musicAsk("previous track")
+            await settle()
         }
     }
-    return await musicAsk("get name of current track") === name
+    return await now() === name
 }
 
 module.exports = { MUSIC_BUNDLE_ID, musicAsk, musicRunning, musicKeep, musicStateWait, announce,
