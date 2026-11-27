@@ -88,7 +88,7 @@ The readme of each Spoon documents its installation and configuration in full.
 * Requirements
 
 The Spoons require Hammerspoon 2 1.0.0 Beta 4 or later. They are tested with a build of its main
-branch at commit =ea1ed63b=, which that release includes. A Spoon that needs a later change to
+branch at commit =7f2c41e9=, eight commits after that release. A Spoon that needs a later change to
 Hammerspoon 2 says so in its readme.
 
 * License

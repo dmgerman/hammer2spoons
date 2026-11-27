@@ -372,6 +372,8 @@ German, released under the MIT License.
 
 This Spoon requires the following:
 
+- Hammerspoon 2 1.0.0 Beta 4 or later, for the notifications that /Next album/, /Prev album/ and
+  auto-play receive from Apple Music.
 - Apple Music. A subscription is required to play albums that are not in the library.
 - [[https://github.com/dmgerman/hammer2spoons/tree/main/Spoons/hs_interactive-gt.spoon2][hs_interactive-gt]]
   and
