@@ -43,3 +43,11 @@ player state in place of Music. The album list is an empty file, so when auto-pl
 that the list is empty and turns itself off, and the tests look for that alert. A posted
 notification reaches every application, so another application that listens to Music also
 receives these.
+
+* Playing an album
+
+=tests/playing.test.js= plays Kind of Blue with /Random album/, In a Silent Way with /Choose
+album/, and Meddle with =albumPlay()=, each through the album's page and its Play button. Each
+replaces what Music was playing, and Music's scripting cannot return to a playlist afterwards; the
+volume, and whether Music was playing, are put back. Run it only when the user agrees.
+
