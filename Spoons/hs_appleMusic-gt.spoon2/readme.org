@@ -137,19 +137,17 @@ Auto-play keeps music playing: when Apple Music stops, this Spoon plays another 
 random from the list. It is turned on and off with /Auto-play/ (=t= in the menu), and it is off
 when this Spoon is loaded.
 
-While auto-play is on, this Spoon reads Apple Music's player state every
-=config.autoPlayInterval= seconds, five minutes by default, and once more when auto-play is turned
-on:
+Apple Music posts a notification each time its player state changes. While auto-play is on, this
+Spoon receives them, and also reads the player state once when auto-play is turned on:
 
-- When Apple Music is stopped or not running, this Spoon plays an album picked at random from the
-  list.
-- When Apple Music is playing or paused, this Spoon does nothing, so a paused album stays paused.
+- When Apple Music stops, this Spoon plays an album picked at random from the list, about a second
+  later. A stop the user makes counts too; a pause does not.
+- When Apple Music plays or pauses, this Spoon does nothing, so a paused album stays paused.
+- When Apple Music is not running, it posts nothing, and this Spoon does not launch it.
 - When the list is empty, auto-play turns itself off.
 
-Up to =config.autoPlayInterval= seconds can therefore pass between the end of one album and the
-start of the next. A smaller value shortens that wait, at the cost of reading the player state
-more often. This Spoon reads it on a timer because Apple Music announces each change of its player
-state as a distributed notification, which Hammerspoon 2 has no module to receive.
+Apple Music's own AutoPlay, which continues with similar music when the queue ends, keeps Apple
+Music from stopping, so this Spoon's auto-play acts only when Apple Music's AutoPlay is off.
 
 ** The list file
 
@@ -292,7 +290,7 @@ These functions control auto-play, which /Album playing management/ describes.
 
 | Function              | Description                                                                                                 |
 |-----------------------+-------------------------------------------------------------------------------------------------------------|
-| =autoPlayStart()=     | Turns auto-play on, and reads Apple Music's state at once. Returns false when auto-play was already on.     |
+| =autoPlayStart()=     | Turns auto-play on, and reads Apple Music's state once. Returns false when auto-play was already on.        |
 | =autoPlayStop()=      | Turns auto-play off. Returns false when auto-play was already off.                                          |
 | =autoPlayToggle()=    | Turns auto-play on or off, and displays whether it is now on or off. Returns true when auto-play is now on. |
 | =autoPlayIsEnabled()= | Returns true when auto-play is on.                                                                          |
@@ -321,8 +319,7 @@ These functions and values display the music menu and bind a key to it.
 * Configuration
 
 The settings are the fields of this Spoon's =config= object, and take effect when they are
-assigned, such as =hs.spoons["hs_appleMusic-gt"].config.alertDuration = 5=. The one exception is
-=autoPlayInterval=, which takes effect the next time auto-play is turned on.
+assigned, such as =hs.spoons["hs_appleMusic-gt"].config.alertDuration = 5=.
 
 The =config= option of =hs.spoons.use()= sets them too, as the Hammerspoon 2 Spoons guide
 describes: each setting is also a property of this Spoon's object, which reads and writes
@@ -339,7 +336,6 @@ hs.spoons.use("hs_appleMusic-gt", { config: { alertDuration: 5 } })
 | =trackFormat=            | ="{name} - {artist} [{album}]"=             | The description of a track. ={name}=, ={artist}=, ={album}= and ={url}= are replaced by the track's values. |
 | =trackURLFormat=         | ="{name} - {artist} [{album}]\n{url}"=      | Used instead of =trackFormat= when the album's address was found.                                           |
 | =alertDuration=          | =3=                                         | Seconds an alert is displayed.                                                                              |
-| =autoPlayInterval=       | =300=                                       | Seconds between auto-play's readings of Apple Music's state.                                                |
 | =maxAlbumSkipAttempts=   | =50=                                        | Tracks =albumNext()= and =albumPrevious()= skip before they stop.                                           |
 | =answerTimeout=          | =5=                                         | Seconds this Spoon waits for Apple Music to answer, before it gives up with an alert.                       |
 | =durationTolerance=      | =2=                                         | The largest difference, in seconds, between two lengths of a track that are taken as the same recording.    |

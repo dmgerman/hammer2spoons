@@ -34,3 +34,12 @@ be used. The test reads the album that follows from Music's queue panel, through
 API, and is skipped when none follows. It skips forward into that album and back, then plays the
 user's track again from its start and puts back whether Music was playing. An alert names each
 step as it starts.
+
+* Auto-play
+
+=tests/autoplay.test.js= neither stops nor plays Music. It posts Music's playerInfo notification
+itself, with =hs.distributednotifications.post()=, and answers the Spoon's question about the
+player state in place of Music. The album list is an empty file, so when auto-play acts it reports
+that the list is empty and turns itself off, and the tests look for that alert. A posted
+notification reaches every application, so another application that listens to Music also
+receives these.

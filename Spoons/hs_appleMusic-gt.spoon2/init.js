@@ -38,12 +38,6 @@ const config = {
     // edition can have more than 20 tracks.
     maxAlbumSkipAttempts: 50,
 
-    // Auto-play starts a random album whenever Music reports "stopped". Seconds between the
-    // checks: Music announces each change of its state as a distributed notification, but
-    // Hammerspoon 2 has no module to receive one, so its state is asked for on a timer. A
-    // longer interval costs less and leaves a longer silence after an album ends.
-    autoPlayInterval: 300,
-
     // The album page takes a moment to render after the URL opens, so its Play button is
     // waited for rather than expected.
     playButtonTitle: "Play",
@@ -66,7 +60,10 @@ const EXAMPLE_ALBUM_LIST = `${__dirname}/albums.txt`
 
 // MARK: - State
 
-let autoPlayTimer = null
+let autoPlayEnabled = false
+// While auto-play starts an album, the Stopped that Music may post as the album page opens is
+// ignored until this time, in milliseconds.
+let autoPlayQuietUntil = 0
 // Incremented to stop an album skip in progress: a skip stops when this differs from the value it
 // started with.
 let albumSkipRun = 0
@@ -970,10 +967,23 @@ function albumPlay(band, album) {
 // Starts a random album whenever Music has stopped. A paused Music is left alone: pausing
 // is a decision, stopping is the end of an album.
 
-async function autoPlayCheck() {
-    const state = await playerState()
-    if (state !== "stopped" && state !== "not running") return
+/**
+ * Music's playerInfo notification: auto-play acts when Music reports that it stopped. It checks a
+ * second later that Music is still running and still stopped: Music posts Stopped, without a track,
+ * each time it starts playing an album, followed by Playing within the same second (measured on
+ * 2026-11-27), and a Music that is quitting must not be launched again.
+ */
+function autoPlayHandle(object, info) {
+    if (info["Player State"] !== "Stopped" || Date.now() < autoPlayQuietUntil) return
+    hs.timer.doAfter(1, () => {
+        if (!autoPlayEnabled || !isRunning()) return
+        playerState().then((state) => {
+            if (autoPlayEnabled && state === "stopped" && Date.now() >= autoPlayQuietUntil) autoPlayAlbumStart()
+        })
+    })
+}
 
+function autoPlayAlbumStart() {
     const choice = albumRandomPick()
     if (!choice) {
         alert(`Auto-play off: no albums in ${albumListFile()}`)
@@ -981,27 +991,35 @@ async function autoPlayCheck() {
         return
     }
 
+    autoPlayQuietUntil = Date.now() + (config.playButtonTimeout + config.answerTimeout) * 1000
     alert(`Auto-play: ${entryDescribe(choice)}`)
     entryPlay(choice)
 }
 
-/** Start the watcher. Checks at once rather than waiting out the first interval. */
+/**
+ * Turn auto-play on: listen for Music's playerInfo notification, which Music posts at each change
+ * of its state, and ask Music its state once, in case it has already stopped. A Music that is not
+ * running posts nothing, so auto-play does not launch it.
+ */
 function autoPlayStart() {
-    if (autoPlayTimer) return false
-    autoPlayTimer = hs.timer.doEvery(config.autoPlayInterval, () => autoPlayCheck())
-    autoPlayCheck()
+    if (autoPlayEnabled) return false
+    autoPlayEnabled = true
+    hs.distributednotifications.on(PLAYER_INFO, autoPlayHandle)
+    playerState().then((state) => {
+        if (autoPlayEnabled && state === "stopped") autoPlayAlbumStart()
+    })
     return true
 }
 
 function autoPlayStop() {
-    if (!autoPlayTimer) return false
-    autoPlayTimer.stop()
-    autoPlayTimer = null
+    if (!autoPlayEnabled) return false
+    autoPlayEnabled = false
+    hs.distributednotifications.off(PLAYER_INFO, autoPlayHandle)
     return true
 }
 
 function autoPlayIsEnabled() {
-    return autoPlayTimer !== null
+    return autoPlayEnabled
 }
 
 /** Turn auto-play on or off, and say which it now is. */

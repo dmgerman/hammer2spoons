@@ -238,3 +238,20 @@ to have another album queued before or after the one playing.
    search, at 2.1 s, but took 24.6 s with =findByRole=, during which Hammerspoon 2 was frozen.
 2. Skipping "takes about =config.albumSkipInterval= seconds per track". Not measured.
 3. The example list holds every Radiohead studio album: tested, 9 albums.
+
+* Music's playerInfo notification (2026-11-27)
+
+=hs.distributednotifications= (upstream #479, in 1.0.0 Beta 4) receives =com.apple.Music.playerInfo=.
+Its userInfo has Name, Artist, Album, Composer, Genre, Total Time (ms) and Player State; there is
+no store address. Measured with the user:
+
+- =next track= and =previous track= post one notification each, 0.1 to 0.5 s after the command,
+  already naming the new track and album. Skipping 20 tracks took about 6 s.
+- Starting an album posts Stopped, without a track, then Playing within the same second.
+- Stopping posts Paused, then Stopped, without a track.
+- Playing and pausing post Playing and Paused.
+
+hs_appleMusic-gt 3.1.0 skips albums by these notifications (hammer2spoons-cdd.19), and 3.2.0's
+auto-play acts on Stopped after checking a second later that Music is still stopped
+(hammer2spoons-cdd.18).
+
