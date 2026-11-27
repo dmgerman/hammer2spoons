@@ -8,21 +8,28 @@
 
 const { musicAsk, musicRunning, musicKeep, announce, albumAfter, trackReturn } = require("./music.js")
 
-const trackNow = async () => ({
-    name: await musicAsk("get name of current track"),
-    album: await musicAsk("get album of current track")
-})
+// The name and the album in one question, so that a skip cannot fall between the two.
+async function trackNow() {
+    const line = await musicAsk('return (get name of current track) & tab & (get album of current track)')
+    const [name, album] = String(line).split("\t")
+    return { name, album }
+}
 
-// Polls Music until `done(track)` is true, announcing each answer, for at most `seconds`.
-async function trackWait(t, done, seconds) {
+// Waits for the Spoon's alert that the skip has ended, for at most `seconds`, then reads the track.
+// Polling the album instead read it while the Spoon was still skipping.
+async function skipWait(t, alerts, seconds) {
     const began = Date.now()
-    let track = await trackNow()
-    while (!done(track) && Date.now() - began < seconds * 1000) {
-        await t.wait(1)
-        track = await trackNow()
-        announce(`Now on "${track.album}": ${track.name}`)
+    const count = alerts.length
+    while (Date.now() - began < seconds * 1000) {
+        const done = alerts.slice(count).find((m) => m.startsWith("Album: ") || m.startsWith("No other album"))
+        if (done) {
+            const track = await trackNow()
+            announce(`Now on "${track.album}": ${track.name}`)
+            return { alert: done, track }
+        }
+        await t.wait(0.5)
     }
-    return track
+    return { alert: null, track: await trackNow() }
 }
 
 module.exports = [
@@ -46,15 +53,20 @@ module.exports = [
                 await trackReturn(start.name)
             })
 
+            const alerts = t.alertsCapture()
             announce(`Next: Next album, from "${start.album}" to "${nextAlbum}"`)
             t.spoon.albumNext()
-            const next = await trackWait(t, (track) => track.album === nextAlbum, 40)
+            const nextSkip = await skipWait(t, alerts, 40)
+            const next = nextSkip.track
+            t.assert.equal(nextSkip.alert, `Album: ${nextAlbum}`, "the alert of Next album")
             t.assert.equal(next.album, nextAlbum, "the album after Next album")
             t.assert.equal(next.name, after.title, "the track after Next album")
 
             announce(`Next: Prev album, from "${nextAlbum}" back to "${start.album}"`)
             t.spoon.albumPrevious()
-            const back = await trackWait(t, (track) => track.album === start.album, 60)
+            const backSkip = await skipWait(t, alerts, 60)
+            const back = backSkip.track
+            t.assert.equal(backSkip.alert, `Album: ${start.album}`, "the alert of Prev album")
             t.assert.equal(back.album, start.album, "the album after Prev album")
 
             // On the album's first track, the track before belongs to another album. When Music
